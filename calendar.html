@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Numerology Calendar</title>
+
+<style>
+:root{
+  --bg:#e9e6df;        /* warm paper */
+  --panel:#f4f1ea;     /* soft card */
+  --text:#2c2a28;      /* dark ink */
+  --muted:#7a766f;
+
+  --good-bg:#d7eadf;
+  --good-txt:#1f5134;
+
+  --bad-bg:#efd6d6;
+  --bad-txt:#6b2a2a;
+
+  --accent:#8c7ae6;
+}
+
+body{
+  margin:0;
+  font-family:system-ui;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+}
+
+.app{text-align:center;}
+
+.topbar{
+  display:flex;
+  gap:14px;
+  align-items:center;
+  justify-content:center;
+  margin-bottom:14px;
+}
+
+button{
+  background:var(--panel);
+  color:var(--text);
+  border:1px solid #00000018;
+  padding:8px 14px;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+.month-label{
+  font-size:26px;
+  font-weight:700;
+  letter-spacing:2px;
+  min-width:140px;
+}
+
+.calendar{
+  display:grid;
+  grid-template-columns:repeat(7,48px);
+  gap:10px;
+  justify-content:center;
+  padding:18px;
+  background:var(--panel);
+  border-radius:16px;
+}
+
+.day-name{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.date{
+  width:48px;height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:12px;
+  font-weight:600;
+  cursor:pointer;
+  position:relative;
+}
+
+.good{ background:var(--good-bg); color:var(--good-txt);}
+.bad{ background:var(--bad-bg); color:var(--bad-txt);}
+.empty{ visibility:hidden;}
+
+.selected::after{
+  content:"";
+  position:absolute;
+  inset:-3px;
+  border:2px solid var(--accent);
+  border-radius:14px;
+}
+
+.info{
+  margin-top:18px;
+  width:110px;
+  height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:12px;
+  font-weight:600;
+  letter-spacing:2px;
+  margin:auto;
+  background:var(--panel);
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <button id="prev">←</button>
+    <div id="label" class="month-label"></div>
+    <button id="next">→</button>
+  </div>
+
+  <div id="calendar" class="calendar"></div>
+  <div id="info" class="info">—</div>
+</div>
+
+<script>
+const badVals=[2,4,8];
+
+let current=new Date();
+current.setDate(1);
+
+const today=new Date();
+let selectedEl=null;
+let selectedDate=new Date(today);
+
+function digitSum(n){
+  return n.toString().split('').reduce((a,b)=>a+ +b,0);
+}
+
+function digitalRoot(n){
+  while(n>9) n=digitSum(n);
+  return n;
+}
+
+function goodOrBad(n){
+  return badVals.includes(digitalRoot(n))?"bad":"good";
+}
+
+function yearMonthValue(y,m){
+  return digitalRoot(digitSum(y)+digitSum(m));
+}
+
+function dayValue(d){
+  return digitalRoot(digitSum(d));
+}
+
+function updateInfo(y,m,d){
+  const ym=yearMonthValue(y,m);
+  const dv=dayValue(d);
+
+  const info=document.getElementById("info");
+  info.textContent=`${ym}, ${dv}`;
+
+  const combinedRoot=digitalRoot(ym+dv);
+  info.className="info "+(badVals.includes(combinedRoot)?"bad":"good");
+}
+
+function select(el,y,m,d){
+  if(selectedEl) selectedEl.classList.remove("selected");
+  selectedEl=el;
+  el.classList.add("selected");
+
+  selectedDate=new Date(y,m-1,d);
+  updateInfo(y,m,d);
+}
+
+function render(){
+  const cal=document.getElementById("calendar");
+  cal.innerHTML="";
+  selectedEl=null;
+
+  const y=current.getFullYear();
+  const m=current.getMonth()+1;
+
+  const label=document.getElementById("label");
+  label.textContent=`${y}-${String(m).padStart(2,'0')}`;
+  label.className="month-label "+goodOrBad(digitSum(y)+digitSum(m));
+
+  const names=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  names.forEach(d=>{
+    const e=document.createElement("div");
+    e.textContent=d;
+    e.className="day-name";
+    cal.appendChild(e);
+  });
+
+  const firstDay=new Date(y,m-1,1).getDay();
+  const daysInMonth=new Date(y,m,0).getDate();
+
+  for(let i=0;i<firstDay;i++){
+    const e=document.createElement("div");
+    e.className="date empty";
+    cal.appendChild(e);
+  }
+
+  for(let d=1; d<=daysInMonth; d++){
+    const el=document.createElement("div");
+    el.className="date "+goodOrBad(digitSum(d));
+    el.textContent=d;
+
+    el.onclick=()=>{
+      const combined=digitSum(y)+digitSum(m)+digitSum(d);
+      el.classList.remove("good","bad");
+      el.classList.add(goodOrBad(combined));
+      select(el,y,m,d);
+    };
+
+    cal.appendChild(el);
+
+    if(
+      d===selectedDate.getDate() &&
+      m-1===selectedDate.getMonth() &&
+      y===selectedDate.getFullYear()
+    ){
+      select(el,y,m,d);
+    }
+  }
+}
+
+function moveSelection(days){
+  selectedDate.setDate(selectedDate.getDate()+days);
+  current=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1);
+  render();
+}
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowLeft") moveSelection(-1);
+  if(e.key==="ArrowRight") moveSelection(1);
+  if(e.key==="ArrowUp") moveSelection(-7);
+  if(e.key==="ArrowDown") moveSelection(7);
+});
+
+document.getElementById("prev").onclick=()=>{
+  current.setMonth(current.getMonth()-1);
+  render();
+};
+
+document.getElementById("next").onclick=()=>{
+  current.setMonth(current.getMonth()+1);
+  render();
+};
+
+render();
+</script>
+
+</body>
+</html>
