@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sequential Download Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e1117;
+    --surface: #161b22;
+    --surface-raised: #1c2129;
+    --border: #2a3140;
+    --border-active: #3d4f6a;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-muted: #545d68;
+    --accent: #58a6ff;
+    --accent-glow: rgba(88, 166, 255, 0.15);
+    --success: #3fb950;
+    --success-glow: rgba(63, 185, 80, 0.12);
+    --warning: #d29922;
+    --error: #f85149;
+    --error-glow: rgba(248, 81, 73, 0.12);
+    --downloading: #bc8cff;
+    --downloading-glow: rgba(188, 140, 255, 0.15);
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(88, 166, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(88, 166, 255, 0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 40px;
+    animation: fadeInDown 0.5s ease;
+  }
+
+  .header-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+    opacity: 0.8;
+  }
+
+  .header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--text-primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header p {
+    margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 300;
+    line-height: 1.5;
+  }
+
+  /* Input area */
+  .input-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 12px;
+    animation: fadeInUp 0.5s ease 0.1s both;
+  }
+
+  .input-area label {
+    display: block;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .input-row input[type="text"] {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    color: var(--text-primary);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .input-row input[type="text"]::placeholder {
+    color: var(--text-muted);
+  }
+
+  .input-row input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .btn {
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: var(--radius);
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-add {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .btn-add:hover {
+    background: #79bbff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+
+  .btn-add:active { transform: translateY(0); }
+
+  /* Delay select */
+  .delay-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 12px;
+    color: var(--text-primary);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238b949e' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+    min-width: 130px;
+  }
+
+  .delay-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .delay-select option {
+    background: var(--surface);
+    color: var(--text-primary);
+  }
+
+  /* Controls row */
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 28px;
+    animation: fadeInUp 0.5s ease 0.15s both;
+  }
+
+  .btn-start {
+    background: var(--success);
+    color: #000;
+  }
+
+  .btn-start:hover {
+    background: #56d364;
+    box-shadow: 0 4px 16px var(--success-glow);
+  }
+
+  .btn-start:disabled {
+    background: var(--border);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .btn-clear {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+
+  .btn-clear:hover {
+    border-color: var(--error);
+    color: var(--error);
+    background: var(--error-glow);
+  }
+
+  .btn-clear:disabled {
+    border-color: var(--border);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    background: transparent;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    animation: fadeInUp 0.5s ease 0.2s both;
+  }
+
+  .stat {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+
+  .stat .val { color: var(--text-primary); font-weight: 500; }
+
+  .stat--active { border-color: var(--downloading); color: var(--downloading); }
+  .stat--active .val { color: var(--downloading); }
+
+  .stat--waiting { border-color: var(--warning); color: var(--warning); }
+  .stat--waiting .val { color: var(--warning); }
+
+  .stat--done { border-color: var(--success); color: var(--success); }
+  .stat--done .val { color: var(--success); }
+
+  .stat--error { border-color: var(--error); color: var(--error); }
+  .stat--error .val { color: var(--error); }
+
+  /* Download list */
+  .list-header {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    padding-left: 4px;
+  }
+
+  .download-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .download-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: all 0.3s;
+    animation: slideIn 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .download-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+
+  .download-item.queued::before { background: var(--text-muted); }
+
+  .download-item.downloading {
+    border-color: var(--border-active);
+    background: var(--surface-raised);
+  }
+
+  .download-item.downloading::before { background: var(--downloading); box-shadow: 0 0 8px var(--downloading-glow); }
+
+  .download-item.waiting {
+    border-color: rgba(210, 153, 34, 0.3);
+    background: var(--surface-raised);
+  }
+
+  .download-item.waiting::before { background: var(--warning); box-shadow: 0 0 8px rgba(210, 153, 34, 0.15); }
+
+  .download-item.complete::before { background: var(--success); }
+  .download-item.error::before { background: var(--error); }
+
+  .item-index {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    min-width: 28px;
+    text-align: centre;
+  }
+
+  .item-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+
+  .queued .item-icon { background: rgba(84, 93, 104, 0.2); color: var(--text-muted); }
+  .waiting .item-icon { background: rgba(210, 153, 34, 0.15); color: var(--warning); }
+  .downloading .item-icon { background: var(--downloading-glow); color: var(--downloading); }
+  .complete .item-icon { background: var(--success-glow); color: var(--success); }
+  .error .item-icon { background: var(--error-glow); color: var(--error); }
+
+  .item-details {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .item-filename {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .item-url {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 3px;
+  }
+
+  .item-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .queued .item-status { color: var(--text-muted); }
+  .waiting .item-status { color: var(--warning); }
+  .downloading .item-status { color: var(--downloading); }
+  .complete .item-status { color: var(--success); }
+  .error .item-status { color: var(--error); }
+
+  .item-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    font-size: 18px;
+    line-height: 1;
+    transition: all 0.2s;
+    opacity: 0.5;
+  }
+
+  .item-remove:hover { color: var(--error); opacity: 1; background: var(--error-glow); }
+
+  /* Delay badge */
+  .item-delay-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    background: rgba(210, 153, 34, 0.12);
+    color: var(--warning);
+    border: 1px solid rgba(210, 153, 34, 0.25);
+    white-space: nowrap;
+  }
+
+  .item-countdown {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--warning);
+    white-space: nowrap;
+    animation: pulse 1.5s ease infinite;
+    min-width: 56px;
+    text-align: right;
+  }
+
+  /* Progress bar for downloading item */
+  .progress-track {
+    height: 3px;
+    background: var(--border);
+    border-radius: 3px;
+    margin-top: 8px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .downloading .progress-track { display: block; }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--downloading);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    animation: indeterminate 1.8s ease-in-out infinite;
+    width: 40%;
+  }
+
+  /* Spinner */
+  .spinner {
+    animation: spin 1s linear infinite;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    animation: fadeInUp 0.4s ease;
+  }
+
+  .empty-state svg { margin-bottom: 16px; opacity: 0.3; }
+
+  .empty-state p {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* All done banner */
+  .done-banner {
+    background: var(--success-glow);
+    border: 1px solid rgba(63, 185, 80, 0.3);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-top: 16px;
+    display: none;
+    align-items: center;
+    gap: 12px;
+    animation: fadeInUp 0.4s ease;
+    font-size: 14px;
+    color: var(--success);
+  }
+
+  .done-banner.visible { display: flex; }
+
+  /* Animations */
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-16px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .container { padding: 32px 16px 60px; }
+    .header h1 { font-size: 24px; }
+    .input-row { flex-direction: column; }
+    .item-url { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="header-label">Utility</div>
+    <h1>Sequential Download Manager</h1>
+    <p>Add your download links below. Files are downloaded one at a time, in order, so you can track progress and avoid overwhelming your connection.</p>
+  </div>
+
+  <div class="input-area">
+    <label for="urlInput">Add download link</label>
+    <div class="input-row">
+      <input type="text" id="urlInput" placeholder="https://example.com/file.zip" autocomplete="off" spellcheck="false">
+      <select class="delay-select" id="delaySelect" title="Delay before download starts">
+        <option value="0">No delay</option>
+        <option value="15">15 min delay</option>
+        <option value="30">30 min delay</option>
+        <option value="60">60 min delay</option>
+      </select>
+      <button class="btn btn-add" id="addBtn" onclick="addLink()">Add</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-start" id="startBtn" onclick="startDownloads()" disabled>
+      ▶ Start Downloads
+    </button>
+    <button class="btn btn-clear" id="clearBtn" onclick="clearAll()" disabled>
+      Clear All
+    </button>
+  </div>
+
+  <div class="stats-bar" id="statsBar" style="display:none;">
+    <div class="stat">Total: <span class="val" id="statTotal">0</span></div>
+    <div class="stat stat--waiting">Waiting: <span class="val" id="statWaiting">0</span></div>
+    <div class="stat stat--active">Active: <span class="val" id="statActive">0</span></div>
+    <div class="stat stat--done">Done: <span class="val" id="statDone">0</span></div>
+    <div class="stat stat--error">Failed: <span class="val" id="statFailed">0</span></div>
+  </div>
+
+  <div id="listSection" style="display:none;">
+    <div class="list-header">Download Queue</div>
+    <div class="download-list" id="downloadList"></div>
+  </div>
+
+  <div class="done-banner" id="doneBanner">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.2"/><path d="M6 10l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span id="doneText">All downloads complete!</span>
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+      <rect x="8" y="6" width="32" height="36" rx="4" stroke="currentColor" stroke-width="2"/>
+      <path d="M24 20v10M19 25l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <p>No downloads queued yet.<br>Paste a link above to get started.</p>
+  </div>
+</div>
+
+<script>
+  const downloads = [];
+  let isRunning = false;
+  let currentIndex = -1;
+  let countdownInterval = null;
+
+  const urlInput = document.getElementById('urlInput');
+  const delaySelect = document.getElementById('delaySelect');
+  const startBtn = document.getElementById('startBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const downloadList = document.getElementById('downloadList');
+  const emptyState = document.getElementById('emptyState');
+  const listSection = document.getElementById('listSection');
+  const statsBar = document.getElementById('statsBar');
+  const doneBanner = document.getElementById('doneBanner');
+
+  urlInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') addLink();
+  });
+
+  function extractFilename(url) {
+    try {
+      const u = new URL(url);
+      const path = u.pathname;
+      const parts = path.split('/').filter(Boolean);
+      if (parts.length > 0) {
+        const last = decodeURIComponent(parts[parts.length - 1]);
+        if (last.includes('.') && last.length < 120) return last;
+      }
+    } catch {}
+    return url.length > 50 ? url.substring(0, 50) + '…' : url;
+  }
+
+  function addLink() {
+    const url = urlInput.value.trim();
+    if (!url) return;
+
+    let finalUrl = url;
+    if (!/^https?:\/\//i.test(finalUrl)) {
+      finalUrl = 'https://' + finalUrl;
+    }
+
+    const delayMinutes = parseInt(delaySelect.value, 10) || 0;
+
+    const item = {
+      id: Date.now() + Math.random(),
+      url: finalUrl,
+      filename: extractFilename(finalUrl),
+      status: 'queued', // queued | waiting | downloading | complete | error
+      delayMinutes: delayMinutes,
+      delayRemainingSec: 0
+    };
+
+    downloads.push(item);
+    urlInput.value = '';
+    urlInput.focus();
+    render();
+  }
+
+  function removeItem(id) {
+    const idx = downloads.findIndex(d => d.id === id);
+    if (idx === -1) return;
+    if (downloads[idx].status === 'downloading' || downloads[idx].status === 'waiting') return;
+    downloads.splice(idx, 1);
+    render();
+  }
+
+  function clearAll() {
+    if (isRunning) return;
+    downloads.length = 0;
+    currentIndex = -1;
+    doneBanner.classList.remove('visible');
+    render();
+  }
+
+  function formatCountdown(totalSec) {
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function delayLabel(mins) {
+    if (mins === 0) return '';
+    if (mins < 60) return `${mins} min delay`;
+    return `${mins / 60} hr delay`;
+  }
+
+  function render() {
+    const hasItems = downloads.length > 0;
+    emptyState.style.display = hasItems ? 'none' : 'block';
+    listSection.style.display = hasItems ? 'block' : 'none';
+    statsBar.style.display = hasItems ? 'flex' : 'none';
+
+    const queued = downloads.filter(d => d.status === 'queued').length;
+    startBtn.disabled = isRunning || queued === 0;
+    clearBtn.disabled = isRunning;
+
+    // Stats
+    document.getElementById('statTotal').textContent = downloads.length;
+    document.getElementById('statWaiting').textContent = downloads.filter(d => d.status === 'waiting').length;
+    document.getElementById('statActive').textContent = downloads.filter(d => d.status === 'downloading').length;
+    document.getElementById('statDone').textContent = downloads.filter(d => d.status === 'complete').length;
+    document.getElementById('statFailed').textContent = downloads.filter(d => d.status === 'error').length;
+
+    // Render list
+    downloadList.innerHTML = '';
+    downloads.forEach((item, i) => {
+      const el = document.createElement('div');
+      el.className = `download-item ${item.status}`;
+
+      // Build the right-side content based on status
+      let rightContent = '';
+      if (item.status === 'waiting') {
+        rightContent = `<span class="item-countdown" id="countdown-${item.id}">${formatCountdown(item.delayRemainingSec)}</span>`;
+      } else {
+        rightContent = `<span class="item-status">${statusLabel(item.status)}</span>`;
+      }
+
+      // Delay badge for queued items with a delay set
+      let delayBadge = '';
+      if (item.status === 'queued' && item.delayMinutes > 0) {
+        delayBadge = `<span class="item-delay-badge">${delayLabel(item.delayMinutes)}</span>`;
+      }
+
+      const canRemove = item.status !== 'downloading' && item.status !== 'waiting';
+
+      el.innerHTML = `
+        <span class="item-index">${String(i + 1).padStart(2, '0')}</span>
+        <div class="item-icon">${getIcon(item.status)}</div>
+        <div class="item-details">
+          <div class="item-filename" title="${escapeHtml(item.filename)}">${escapeHtml(item.filename)}</div>
+          <div class="item-url" title="${escapeHtml(item.url)}">${escapeHtml(item.url)}</div>
+          <div class="progress-track"><div class="progress-fill"></div></div>
+        </div>
+        ${delayBadge}
+        ${rightContent}
+        ${canRemove ? `<button class="item-remove" onclick="removeItem(${item.id})" title="Remove">&times;</button>` : ''}
+      `;
+      downloadList.appendChild(el);
+    });
+  }
+
+  function getIcon(status) {
+    switch (status) {
+      case 'queued':
+        return `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"/></svg>`;
+      case 'waiting':
+        return `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      case 'downloading':
+        return `<svg class="spinner" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5" stroke-dasharray="20 12" stroke-linecap="round"/></svg>`;
+      case 'complete':
+        return `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      case 'error':
+        return `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 5l6 6M11 5l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+    }
+  }
+
+  function statusLabel(status) {
+    const map = { queued: 'Queued', waiting: 'Waiting…', downloading: 'Downloading…', complete: 'Complete', error: 'Failed' };
+    return map[status] || status;
+  }
+
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  /**
+   * Returns a promise that resolves after the given delay (in minutes),
+   * updating the item's countdown every second for the live display.
+   */
+  function waitForDelay(item) {
+    return new Promise(resolve => {
+      if (item.delayMinutes <= 0) { resolve(); return; }
+
+      item.status = 'waiting';
+      item.delayRemainingSec = item.delayMinutes * 60;
+      render();
+
+      countdownInterval = setInterval(() => {
+        item.delayRemainingSec--;
+
+        // Update just the countdown element to avoid full re-render flicker
+        const countdownEl = document.getElementById(`countdown-${item.id}`);
+        if (countdownEl) {
+          countdownEl.textContent = formatCountdown(item.delayRemainingSec);
+        }
+
+        if (item.delayRemainingSec <= 0) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+          resolve();
+        }
+      }, 1000);
+    });
+  }
+
+  async function startDownloads() {
+    if (isRunning) return;
+    isRunning = true;
+    doneBanner.classList.remove('visible');
+    startBtn.disabled = true;
+    clearBtn.disabled = true;
+
+    for (let i = 0; i < downloads.length; i++) {
+      if (downloads[i].status !== 'queued') continue;
+
+      currentIndex = i;
+
+      // Handle delay if set
+      if (downloads[i].delayMinutes > 0) {
+        await waitForDelay(downloads[i]);
+      }
+
+      downloads[i].status = 'downloading';
+      render();
+
+      try {
+        await triggerDownload(downloads[i].url, downloads[i].filename);
+        downloads[i].status = 'complete';
+      } catch (err) {
+        console.error('Download error:', err);
+        downloads[i].status = 'error';
+      }
+
+      render();
+
+      // Small delay between downloads to let the browser process
+      await new Promise(r => setTimeout(r, 600));
+    }
+
+    isRunning = false;
+    currentIndex = -1;
+    render();
+
+    const doneCount = downloads.filter(d => d.status === 'complete').length;
+    const failCount = downloads.filter(d => d.status === 'error').length;
+    const doneText = document.getElementById('doneText');
+
+    if (failCount === 0) {
+      doneText.textContent = `All ${doneCount} download${doneCount !== 1 ? 's' : ''} complete!`;
+    } else {
+      doneText.textContent = `Finished — ${doneCount} complete, ${failCount} failed.`;
+    }
+    doneBanner.classList.add('visible');
+  }
+
+  /**
+   * Triggers a browser download by creating a hidden anchor element.
+   */
+  function triggerDownload(url, filename) {
+    return new Promise((resolve, reject) => {
+      try {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename || '';
+        a.style.display = 'none';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+
+        setTimeout(() => {
+          document.body.removeChild(a);
+          resolve();
+        }, 1500);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  // Initial render
+  render();
+</script>
+
+</body>
+</html>
