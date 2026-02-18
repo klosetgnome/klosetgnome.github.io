@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Tools</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=DM+Mono:wght@400&display=swap');
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #f4f1ec;
+            --surface: #fff;
+            --text: #2c2a26;
+            --text-muted: #7a756b;
+            --accent: #c0512d;
+            --border: #d9d4cb;
+            --serif: 'Source Serif 4', Georgia, serif;
+            --mono: 'DM Mono', 'Courier New', monospace;
+        }
+
+        body {
+            font-family: var(--serif);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 0;
+        }
+
+        /* ── Header ── */
+        header {
+            padding: 28px 40px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        header h1 {
+            font-family: var(--mono);
+            font-size: 13px;
+            font-weight: 400;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        header h1 span {
+            color: var(--accent);
+        }
+
+        /* ── Main ── */
+        main {
+            max-width: 860px;
+            margin: 60px auto;
+            padding: 0 40px;
+        }
+
+        .section-label {
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 400;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+        }
+
+        /* ── Tool List ── */
+        .tool-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .tool-item {
+            display: flex;
+            align-items: baseline;
+            gap: 24px;
+            padding: 28px 0;
+            border-top: 1px solid var(--border);
+            text-decoration: none;
+            color: inherit;
+            transition: background 0.2s ease;
+        }
+
+        .tool-item:last-child {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tool-item:hover {
+            background: rgba(192, 81, 45, 0.04);
+        }
+
+        .tool-item:hover .tool-name {
+            color: var(--accent);
+        }
+
+        .tool-number {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            width: 28px;
+        }
+
+        .tool-info {
+            flex: 1;
+        }
+
+        .tool-name {
+            font-family: var(--serif);
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            transition: color 0.2s ease;
+        }
+
+        .tool-desc {
+            font-size: 15px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .tool-arrow {
+            font-size: 18px;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+
+        .tool-item:hover .tool-arrow {
+            transform: translateX(4px);
+            color: var(--accent);
+        }
+
+        /* ── Footer ── */
+        footer {
+            max-width: 860px;
+            margin: 80px auto 40px;
+            padding: 0 40px;
+            text-align: center;
+        }
+
+        footer p {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1><span>Tool</span> Directory</h1>
+    </header>
+
+    <main>
+        <p class="section-label">Available Tools</p>
+
+        <div class="tool-list">
+
+            <!-- ✏️ TOOL 1 — edit the href, name, and description below -->
+            <a href="ddg_a.html" class="tool-item">
+                <span class="tool-number">01</span>
+                <div class="tool-info">
+                    <div class="tool-name">Daily Description Generator A</div>
+                    <div class="tool-desc">Generate episode copy, headlines, and descriptions for DNP.</div>
+                </div>
+                <span class="tool-arrow">→</span>
+            </a>
+
+            <!-- ✏️ TOOL 2 — edit the href, name, and description below -->
+            <a href="ddg_b.html" class="tool-item">
+                <span class="tool-number">02</span>
+                <div class="tool-info">
+                    <div class="tool-name">Daily Description Generator B</div>
+                    <div class="tool-desc">Generate episode copy, headlines, and descriptions for CHS.</div>
+                </div>
+                <span class="tool-arrow">→</span>
+            </a>
+
+            <!-- ✏️ TOOL 3 — edit the href, name, and description below -->
+            <a href="ddg_c.html" class="tool-item">
+                <span class="tool-number">03</span>
+                <div class="tool-info">
+                    <div class="tool-name">Daily Description Generator C</div>
+                    <div class="tool-desc">Generate episode copy, headlines, and descriptions for playtime.</div>
+                </div>
+                <span class="tool-arrow">→</span>
+            </a>
+
+            <!-- ✏️ To add more tools, copy a block above, paste here, and update the number, href, name, and desc -->
+
+        </div>
+    </main>
+
+    <footer>
+        <p>Tools Directory &nbsp;|&nbsp; Powered by Gnome.</p>
+    </footer>
+
+</body>
+</html>
