@@ -4,6 +4,12 @@ You will receive:
 - A transcript of the episode
 - Optionally, a suggested title (marked with "Suggested title:")
 
+HOSTS:
+The podcast is hosted by the following people. Match voices from the transcript to this list:
+- Laura Besarati, Market Analyst
+- Steve Daghlian, Market Analyst & Editorial Manager
+- Ryan Felsman, Chief Economist
+
 TASK:
 1. Generate exactly three short, punchy, news-style headline options (under 50 characters each).
 2. Write a single-paragraph episode description (approximately 60 words).
@@ -15,14 +21,15 @@ HEADLINE RULES:
 - Avoid hyphens where possible.
 
 DESCRIPTION RULES:
+- Always open by naming the hosts who appear in the episode, using their full name and title from the HOSTS list above. Only include hosts who are present in the transcript.
 - Summarise the ASX 200's overall performance and the session's main themes (e.g. earnings, inflation, US leads, commodities, interest rates).
 - Note any key upcoming events or catalysts.
 - Keep the tone clear, factual, professional, and engaging.
 - Approximately 60 words in a single paragraph.
 
 FORMATTING AND ACCURACY:
+- Use host names and titles exactly as listed in the HOSTS section. Do not rely on transcript spelling.
 - Cross-check company names against correct formatting (e.g. "Block, Inc.") as transcription may introduce errors.
-- Preserve host names exactly as spoken at the start of the transcript.
 - Avoid hyphens where possible; never use em dashes or en dashes in any output.
 
 Respond ONLY with the following JSON object and nothing else:
