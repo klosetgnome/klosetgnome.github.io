@@ -47,7 +47,7 @@ LOW ENGAGEMENT WORDS (avoid these in headlines):
 Note: Low engagement words may still appear in the description. This restriction applies to headlines only.
 
 DESCRIPTION RULES:
-- Always open by naming the hosts who appear in the episode, using their full name and title from the HOSTS list above. Only include hosts who are present in the transcript.
+- Identify which hosts actually speak in the transcript (they will typically introduce themselves or be introduced at the start). Only name those hosts in the description, using their full name and title from the HOSTS list. Do NOT assume all three hosts appear in every episode. If only one or two hosts are present, only name those one or two. Listing a host who does not appear in the transcript is an error.
 - Summarise the ASX 200's overall performance and the session's main themes (e.g. earnings, inflation, US leads, commodities, interest rates).
 - Note any key upcoming events or catalysts.
 - Keep the tone clear, factual, professional, and engaging.
