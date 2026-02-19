@@ -521,7 +521,15 @@
       document.getElementById('h1').textContent   = parsed.headline1   || '';
       document.getElementById('h2').textContent   = parsed.headline2   || '';
       document.getElementById('h3').textContent   = parsed.headline3   || '';
-      document.getElementById('desc').textContent = parsed.description || '';
+      
+      // Parse markdown in description: **text** → bold, \n → line breaks
+      var descEl = document.getElementById('desc');
+      var description = parsed.description || '';
+      description = description
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+      descEl.innerHTML = description;
+      
       results.classList.add('visible');
       document.getElementById('pageTitle').style.display = 'none';
       document.getElementById('subtitle').style.display = 'none';
