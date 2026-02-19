@@ -47,7 +47,7 @@
     .card { width: 100%; max-width: 740px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
     .card-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); padding: 12px 16px 0; display: block; }
     .card-hint { font-family: var(--mono); font-size: 9px; letter-spacing: 0.06em; color: var(--border-strong); padding: 2px 16px 0; display: block; }
-    textarea { display: block; width: 100%; min-height: 220px; resize: vertical; font-family: var(--mono); font-size: 12.5px; line-height: 1.7; color: var(--text); background: transparent; border: none; outline: none; padding: 10px 16px 16px; }
+    textarea { display: block; width: 100%; min-height: 120px; resize: vertical; font-family: var(--mono); font-size: 12.5px; line-height: 1.7; color: var(--text); background: transparent; border: none; outline: none; padding: 10px 16px 16px; }
     textarea::placeholder { color: var(--border-strong); }
     input.title-input {
       display: block; width: 100%; font-family: var(--mono); font-size: 12.5px;
@@ -55,6 +55,48 @@
       border: none; outline: none; padding: 10px 16px 12px;
     }
     input.title-input::placeholder { color: var(--border-strong); }
+
+    /* ── Drop-zone ───────────────────────────────────────────────────── */
+    .drop-zone { position: relative; width: 100%; }
+
+    .drop-overlay {
+      display: none; position: absolute; inset: 0; z-index: 10;
+      background: rgba(200, 66, 10, 0.06);
+      border: 2px dashed var(--accent); border-radius: var(--radius);
+      align-items: center; justify-content: center; pointer-events: none;
+    }
+    .drop-overlay.active { display: flex; }
+    .drop-overlay-label {
+      font-family: var(--mono); font-size: 12px; font-weight: 500;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
+    }
+
+    .drop-prompt {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 10px; padding: 32px 16px; min-height: 180px; text-align: center; cursor: default;
+    }
+    .drop-prompt.hidden { display: none; }
+    .drop-prompt-icon { color: var(--border-strong); }
+    .drop-prompt-icon svg { width: 32px; height: 32px; }
+    .drop-prompt-text { font-family: var(--mono); font-size: 12px; color: var(--text-muted); line-height: 1.8; }
+    .drop-prompt-text .browse { color: var(--accent); cursor: pointer; }
+    .drop-prompt-text .browse:hover { text-decoration: underline; }
+
+    .file-loaded-bar {
+      display: none; align-items: center; gap: 10px;
+      padding: 10px 16px; border-top: 1px solid var(--border);
+      font-family: var(--mono); font-size: 11px; color: var(--text-muted);
+    }
+    .file-loaded-bar.visible { display: flex; }
+    .file-loaded-bar .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 500; }
+    .file-loaded-bar .file-size { color: var(--border-strong); flex-shrink: 0; }
+    .file-loaded-bar .file-remove {
+      flex-shrink: 0; background: none; border: 1px solid var(--border);
+      border-radius: var(--radius); font-family: var(--mono); font-size: 10px;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
+      padding: 4px 10px; cursor: pointer; transition: border-color 0.15s, color 0.15s;
+    }
+    .file-loaded-bar .file-remove:hover { border-color: var(--accent); color: var(--accent); }
 
     .submit-row { width: 100%; max-width: 740px; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
     button.submit {
@@ -108,7 +150,7 @@
 <main>
   <div class="page-title">
     <h1 id="pageTitle">Transcript to Episode Copy for Finance</h1>
-    <p id="subtitle">Paste a podcast transcript below and generate headlines and a description.</p>
+    <p id="subtitle">Drop a .txt transcript file below and generate headlines and a description.</p>
   </div>
 
   <div class="results" id="results">
@@ -116,30 +158,22 @@
     <div class="result-row headline">
       <div class="row-meta"><span class="row-tag">Headline 1</span></div>
       <div class="row-content" id="h1"></div>
-      <button class="copy-btn" data-target="h1" title="Copy">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-      </button>
+      <button class="copy-btn" data-target="h1" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
     </div>
     <div class="result-row headline">
       <div class="row-meta"><span class="row-tag">Headline 2</span></div>
       <div class="row-content" id="h2"></div>
-      <button class="copy-btn" data-target="h2" title="Copy">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-      </button>
+      <button class="copy-btn" data-target="h2" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
     </div>
     <div class="result-row headline">
       <div class="row-meta"><span class="row-tag">Headline 3</span></div>
       <div class="row-content" id="h3"></div>
-      <button class="copy-btn" data-target="h3" title="Copy">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-      </button>
+      <button class="copy-btn" data-target="h3" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
     </div>
     <div class="result-row description">
       <div class="row-meta"><span class="row-tag">Description</span></div>
       <div class="row-content" id="desc"></div>
-      <button class="copy-btn" data-target="desc" title="Copy">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-      </button>
+      <button class="copy-btn" data-target="desc" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
     </div>
   </div>
 
@@ -156,9 +190,38 @@
     <input type="text" id="titleInput" class="title-input" placeholder="Type a headline or main title..." />
   </div>
 
-  <div class="card">
+  <div class="card" id="transcriptCard">
     <span class="card-label">Transcript</span>
-    <textarea id="transcript" placeholder="Paste the full episode transcript here..."></textarea>
+    <div class="drop-zone" id="dropZone">
+      <!-- Drag overlay -->
+      <div class="drop-overlay" id="dropOverlay">
+        <span class="drop-overlay-label">Drop .txt file here</span>
+      </div>
+
+      <!-- Default state: drop prompt -->
+      <div class="drop-prompt" id="dropPrompt">
+        <div class="drop-prompt-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <div class="drop-prompt-text">
+          Drag &amp; drop a .txt transcript file here<br>
+          or <span class="browse" id="browseLink">browse to select one</span>
+        </div>
+      </div>
+
+      <!-- Hidden file input -->
+      <input type="file" id="fileInput" accept=".txt,text/plain" style="display:none;" />
+
+      <!-- Paste fallback textarea -->
+      <textarea id="transcript" placeholder="…or paste the full episode transcript here"></textarea>
+    </div>
+
+    <!-- File-loaded indicator -->
+    <div class="file-loaded-bar" id="fileBar">
+      <span class="file-name" id="fileName"></span>
+      <span class="file-size" id="fileSize"></span>
+      <button class="file-remove" id="fileRemove">Clear</button>
+    </div>
   </div>
 
   <div class="submit-row">
@@ -183,27 +246,115 @@
 (function () {
   // =========================================================================
   // WORKER URL — Change this to your Cloudflare Worker URL after deploying.
-  // e.g. 'https://ddg-proxy.your-subdomain.workers.dev'
   // =========================================================================
   var WORKER_URL = 'https://ddg-proxy.klosetgnome.workers.dev';
 
   // =========================================================================
-  // PROMPT FILE PATH — Path to your external prompt file
-  // Change this to match where you store prompt.txt on your server
+  // PROMPT FILE PATH
   // =========================================================================
   var PROMPT_FILE = './ddg_a.txt';
 
-  var modelEl = document.getElementById('model');
-  var modelStatus = document.getElementById('modelStatus');
-  var promptLoaded = false;
-  var PROMPT = '';
+  var modelEl       = document.getElementById('model');
+  var modelStatus   = document.getElementById('modelStatus');
+  var promptLoaded  = false;
+  var PROMPT        = '';
 
-  // Warn if opened from disk
+  // ── Drop-zone elements ──────────────────────────────────────────────
+  var dropZone      = document.getElementById('dropZone');
+  var dropOverlay   = document.getElementById('dropOverlay');
+  var dropPrompt    = document.getElementById('dropPrompt');
+  var fileInput     = document.getElementById('fileInput');
+  var transcriptEl  = document.getElementById('transcript');
+  var fileBar       = document.getElementById('fileBar');
+  var fileNameEl    = document.getElementById('fileName');
+  var fileSizeEl    = document.getElementById('fileSize');
+  var fileRemoveBtn = document.getElementById('fileRemove');
+
+  // State: text read from a dropped / browsed file (null = none loaded)
+  var loadedFileText = null;
+
   if (window.location.protocol === 'file:') {
     document.getElementById('warnBanner').classList.add('visible');
   }
 
-  // Hardcoded fallback model list
+  // ── File helpers ────────────────────────────────────────────────────
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+
+  function handleFile(file) {
+    if (!file) return;
+    if (file.type && !file.type.startsWith('text/') && !file.name.endsWith('.txt')) {
+      showError('Only .txt (plain text) files are supported.');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      loadedFileText = e.target.result;
+      fileNameEl.textContent = file.name;
+      fileSizeEl.textContent  = formatBytes(file.size);
+      fileBar.classList.add('visible');
+      dropPrompt.classList.add('hidden');
+      transcriptEl.style.display = 'none';
+    };
+    reader.onerror = function () { showError('Could not read the file. Please try again.'); };
+    reader.readAsText(file);
+  }
+
+  function clearFile() {
+    loadedFileText = null;
+    fileInput.value = '';
+    fileBar.classList.remove('visible');
+    dropPrompt.classList.remove('hidden');
+    transcriptEl.style.display = '';
+    transcriptEl.value = '';
+    transcriptEl.focus();
+  }
+
+  // ── Drag-and-drop events ────────────────────────────────────────────
+  var dragCounter = 0;
+
+  dropZone.addEventListener('dragenter', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter++;
+    dropOverlay.classList.add('active');
+  });
+  dropZone.addEventListener('dragover', function (e) {
+    e.preventDefault(); e.stopPropagation();
+  });
+  dropZone.addEventListener('dragleave', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter--;
+    if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('active'); }
+  });
+  dropZone.addEventListener('drop', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter = 0;
+    dropOverlay.classList.remove('active');
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length > 0) handleFile(files[0]);
+  });
+
+  // ── Browse link / file input ────────────────────────────────────────
+  document.getElementById('browseLink').addEventListener('click', function () { fileInput.click(); });
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files && fileInput.files.length > 0) handleFile(fileInput.files[0]);
+  });
+
+  // ── Clear button ────────────────────────────────────────────────────
+  fileRemoveBtn.addEventListener('click', clearFile);
+
+  // If user starts typing in the textarea, drop loaded-file state
+  transcriptEl.addEventListener('input', function () {
+    if (loadedFileText) {
+      loadedFileText = null;
+      fileBar.classList.remove('visible');
+    }
+  });
+
+  // ── Model list ──────────────────────────────────────────────────────
   var FALLBACK_MODELS = [
     ['deepseek/deepseek-chat:free',                   'DeepSeek: V3 Chat (free)'],
     ['deepseek/deepseek-r1:free',                     'DeepSeek: R1 (free)'],
@@ -228,21 +379,10 @@
     ['qwen/qwen2.5-vl-72b-instruct:free',             'Qwen: QwQ 32B (free)']
   ];
 
-  // =========================================================================
-  // DEFAULT MODEL SELECTION (change these to set your preferred defaults)
-  //
-  // The dropdown will auto-select the FIRST model in this list that exists
-  // in the loaded model list. Models are tried in order, so put your most
-  // preferred model first.
-  //
-  // To find the correct model ID, open https://openrouter.ai/models and
-  // look for the model slug (e.g. "stepfun/step-3.5-flash:free"). The ID
-  // must end with ":free" to match the free-tier filter.
-  // =========================================================================
   var PREFERRED = [
-    'stepfun/step-3.5-flash:free',      // 1st choice: StepFun Step 3.5 Flash
-    'aicee-ai/trinity-mini:free',        // 2nd choice: AIcee AI Trinity Mini
-    'google/gemini-2.0-flash-exp:free',  // 3rd choice: fallback
+    'stepfun/step-3.5-flash:free',
+    'aicee-ai/trinity-mini:free',
+    'google/gemini-2.0-flash-exp:free',
   ];
 
   function populateDropdown(models, sourceLabel) {
@@ -252,8 +392,6 @@
     }
     modelEl.innerHTML = html;
     modelStatus.textContent = '(' + models.length + ' free models' + (sourceLabel ? ' \u2014 ' + sourceLabel : '') + ')';
-
-    // Select preferred model
     for (var p = 0; p < PREFERRED.length; p++) {
       var found = false;
       for (var o = 0; o < modelEl.options.length; o++) {
@@ -263,10 +401,9 @@
     }
   }
 
-  // Start with fallback immediately so the dropdown is never empty
   populateDropdown(FALLBACK_MODELS, 'fallback');
 
-  // Load the external prompt file
+  // Load prompt
   (async function loadPrompt() {
     try {
       var res = await fetch(PROMPT_FILE);
@@ -280,43 +417,31 @@
     }
   })();
 
-  // Attempt to fetch live model list from OpenRouter
+  // Fetch live models
   (async function fetchModels() {
     try {
       var res = await fetch(WORKER_URL + '/models');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       var data = await res.json();
-
-      // Filter to free models only (pricing per prompt and completion token is "0")
-      var freeModels = (data.data || []).filter(function (m) {
-        return m.id && m.id.endsWith(':free');
-      });
-
+      var freeModels = (data.data || []).filter(function (m) { return m.id && m.id.endsWith(':free'); });
       if (freeModels.length === 0) throw new Error('No free models returned');
-
-      // Sort alphabetically by model name
-      freeModels.sort(function (a, b) {
-        return (a.name || a.id).localeCompare(b.name || b.id);
-      });
-
+      freeModels.sort(function (a, b) { return (a.name || a.id).localeCompare(b.name || b.id); });
       var models = freeModels.map(function (m) {
         var label = m.name || m.id;
-        // Avoid duplicate "(free)" if the name already contains it
         if (!/\bfree\b/i.test(label)) label += ' (free)';
         return [m.id, label];
       });
-
       populateDropdown(models, 'live');
     } catch (e) {
       console.warn('Could not fetch models from OpenRouter, using fallback list:', e.message);
-      // Fallback already loaded, just update the status label
       modelStatus.textContent = '(' + FALLBACK_MODELS.length + ' free models \u2014 fallback)';
     }
   })();
 
+  // ── Submit ──────────────────────────────────────────────────────────
   document.getElementById('submitBtn').addEventListener('click', async function () {
     var titleVal   = document.getElementById('titleInput').value.trim();
-    var transcript = document.getElementById('transcript').value.trim();
+    var transcript = loadedFileText ? loadedFileText.trim() : transcriptEl.value.trim();
     var model      = modelEl.value;
     var errorBox   = document.getElementById('errorBox');
     var progress   = document.getElementById('progressWrap');
@@ -326,15 +451,12 @@
     errorBox.classList.remove('visible');
     results.classList.remove('visible');
 
-    if (!transcript) { showError('Please paste a transcript before submitting.'); return; }
+    if (!transcript) { showError('Please drop a transcript file or paste text before submitting.'); return; }
     if (!promptLoaded) { showError('Prompt file is still loading. Please wait a moment and try again.'); return; }
     if (!PROMPT) { showError('Prompt file could not be loaded. Make sure prompt.txt exists in the same directory.'); return; }
 
-    // Build user message: prepend suggested title if provided
     var userMessage = '';
-    if (titleVal) {
-      userMessage = 'Suggested title: ' + titleVal + '\n\n';
-    }
+    if (titleVal) { userMessage = 'Suggested title: ' + titleVal + '\n\n'; }
     userMessage += transcript;
 
     progress.classList.add('visible');
@@ -343,9 +465,7 @@
     try {
       var res = await fetch(WORKER_URL + '/chat/completions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: model,
           max_tokens: 1024,
@@ -357,7 +477,6 @@
       });
 
       var data = await res.json();
-
       if (!res.ok) {
         throw new Error((data && data.error && data.error.message) || ('API error ' + res.status + ': ' + JSON.stringify(data)));
       }
@@ -365,20 +484,15 @@
       var text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
       if (!text) throw new Error('Model returned an empty response. Try a different model.');
 
-      // Strip markdown fences, then try to extract a JSON object even if wrapped in extra text
       var clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
       var parsed;
       try {
         parsed = JSON.parse(clean);
       } catch (e) {
-        // Try to extract the first { ... } block from the response
         var match = clean.match(/\{[\s\S]*\}/);
         if (match) {
-          try {
-            parsed = JSON.parse(match[0]);
-          } catch (e2) {
-            throw new Error('Could not parse JSON from model response.\n\nRaw output:\n' + text);
-          }
+          try { parsed = JSON.parse(match[0]); }
+          catch (e2) { throw new Error('Could not parse JSON from model response.\n\nRaw output:\n' + text); }
         } else {
           throw new Error('Model did not return JSON. It may have refused the input or asked a follow-up question. Try a different model or provide a fuller transcript.\n\nRaw output:\n' + text);
         }
@@ -389,7 +503,6 @@
       document.getElementById('h3').textContent   = parsed.headline3   || '';
       document.getElementById('desc').textContent = parsed.description || '';
       results.classList.add('visible');
-      // Hide title and subtitle so results are immediately visible
       document.getElementById('pageTitle').style.display = 'none';
       document.getElementById('subtitle').style.display = 'none';
       results.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -416,14 +529,14 @@
     document.getElementById('submitBtn').disabled = false;
   }
 
+  // ── Copy buttons ────────────────────────────────────────────────────
   document.querySelectorAll('.copy-btn').forEach(function (btn) {
     btn.addEventListener('click', async function () {
       var el = document.getElementById(btn.dataset.target);
       var text = el ? el.textContent.trim() : '';
       if (!text) return;
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch (e) {
+      try { await navigator.clipboard.writeText(text); }
+      catch (e) {
         var ta = document.createElement('textarea');
         ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
         document.body.appendChild(ta); ta.select();
