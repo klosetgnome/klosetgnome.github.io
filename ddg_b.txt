@@ -70,18 +70,18 @@ LOW ENGAGEMENT PATTERNS (avoid these in headlines):
 Note: Low engagement words may still appear in the description. This restriction applies to headlines only.
 
 DESCRIPTION FORMAT:
-The description MUST be structured as multiple sections separated by blank lines. Do NOT write a single block of text. Follow this template exactly:
+The description MUST be structured as multiple sections separated by blank lines. Use Markdown formatting for emphasis. Follow this template exactly:
 
 ---BEGIN TEMPLATE---
-{Day} Headlines: {Short phrase}, {Short phrase}, {Short phrase}, {Short phrase}, And {final phrase with conversational sign-off if appropriate}.
+**{Day} Headlines:** {Short phrase}, {Short phrase}, {Short phrase}, {Short phrase}, And {final phrase with conversational sign-off if appropriate}.
 
-Deep Dive: {1-2 sentences setting up the deep dive topic. Explain WHY it matters and WHO is involved. Do NOT reveal specific numbers, findings, conclusions, or advice from the episode.}
+**Deep Dive:** {1-2 sentences setting up the deep dive topic. Explain WHY it matters and WHO is involved. Do NOT reveal specific numbers, findings, conclusions, or advice from the episode.}
 
 {Optional: 1-2 additional sentences of background or context. Continue to set the scene without spoiling.}
 
-In today's episode of The Briefing, {host full name} {sits down with / is joined by / chats with} {guest full name and relevance} to discuss {questions or themes explored, NOT answers given}.
+In today's episode of The Briefing, **{host full name}** {sits down with / is joined by / chats with} **{guest full name and relevance}** to discuss {questions or themes explored, NOT answers given}.
 
-Follow The Briefing:
+**Follow The Briefing:**
 TikTok: @thebriefingpod
 Instagram: @thebriefingpodcast
 YouTube: @TheBriefingPodcast
@@ -89,13 +89,20 @@ YouTube: @TheBriefingPodcast
 
 DESCRIPTION RULES:
 - Each section above must be separated by a blank line (\n\n in the JSON output). This is mandatory.
+- Use **text** (Markdown bold) to emphasise section headers and key names. This will be rendered as bold text in the podcast metadata.
 - The Headlines section is a comma-separated list of SHORT phrases (3-8 words each). Not full sentences.
 - The Deep Dive section sets the scene. It must not contain percentages, dollar amounts, or conclusions from the episode.
 - Identify which hosts actually speak in the transcript. Only name those hosts, using their full name exactly as listed in the HOSTS section. Listing a host who does not appear is an error.
-- If there is a guest interview, name the guest and briefly note their relevance.
+- If there is a guest interview, name the guest and briefly note their relevance, bolded for emphasis.
 - Frame the host/guest line around questions, not answers. "to discuss whether switching funds could save you money" NOT "to explain how switching saves thousands."
 - Tone: conversational, confident, accessible. Like a smart mate filling you in. Not formal, not clickbait.
-- Always include the "Follow The Briefing" block at the end, exactly as shown.
+- Always include the "Follow The Briefing" block at the end, exactly as shown, with section header and links in bold.
+
+MARKDOWN FORMATTING:
+- Use **text** for emphasis on section headers like **Deep Dive:** and **Monday Headlines:**
+- Use **name** for all host names and guest names to make them stand out
+- Use **Follow The Briefing:** as a bolded section header
+- Markdown formatting will be converted to HTML when displayed, creating visual hierarchy in the metadata
 
 SELF-CHECK BEFORE RESPONDING:
 Review your output against this checklist. If any check fails, revise before responding.
@@ -105,9 +112,10 @@ Review your output against this checklist. If any check fails, revise before res
 4. Does the description reveal conclusions, advice, or findings from the episode? If yes, reframe as questions or stakes.
 5. Is the description structured with blank lines between sections? If no, add them.
 6. Have you only named hosts who are audibly present in the transcript? If unsure, re-check.
+7. Are section headers and names properly formatted with **text** in Markdown? If no, add them.
 
 EXAMPLE OUTPUT (for reference only — do not copy this content):
-{"headline1":"Hume's plan to rebuild the Libs + ISIS ban","headline2":"Inside the new Liberal leadership + ISIS crackdown","headline3":"Can the Libs win back voters + ISIS blocked","description":"Thursday Headlines: Australian citizen with ISIS links banned from returning, MPs caught taking gambling freebies, Supermarkets under fire over pricing, Shark attacks surge, And we've picked up another medal at the Winter Olympics!\n\nDeep Dive: Jane Hume is the new deputy leader of the Liberal party after helping to roll Sussan Ley and install Angus Taylor in the top job.\n\nThe pair have since named their shadow cabinet and have promised to restore faith in the party after years of internal turmoil and policy missteps.\n\nIn today's episode of The Briefing, Sacha Barbour Gatt sits down with Jane Hume to discuss the new-look Libs and whether they can win back not only their old base, but new voters too.\n\nFollow The Briefing:\nTikTok: @thebriefingpod\nInstagram: @thebriefingpodcast\nYouTube: @TheBriefingPodcast"}
+{"headline1":"Hume's plan to rebuild the Libs + ISIS ban","headline2":"Inside the new Liberal leadership + ISIS crackdown","headline3":"Can the Libs win back voters + ISIS blocked","description":"**Thursday Headlines:** Australian citizen with ISIS links banned from returning, MPs caught taking gambling freebies, Supermarkets under fire over pricing, Shark attacks surge, And we've picked up another medal at the Winter Olympics!\n\n**Deep Dive:** Jane Hume is the new deputy leader of the Liberal party after helping to roll Sussan Ley and install Angus Taylor in the top job.\n\nThe pair have since named their shadow cabinet and have promised to restore faith in the party after years of internal turmoil and policy missteps.\n\nIn today's episode of The Briefing, **Sacha Barbour Gatt** sits down with **Jane Hume** to discuss the new-look Libs and whether they can win back not only their old base, but new voters too.\n\n**Follow The Briefing:**\nTikTok: @thebriefingpod\nInstagram: @thebriefingpodcast\nYouTube: @TheBriefingPodcast"}
 
 FORMATTING AND ACCURACY:
 - Use Australian English spelling throughout (e.g. "organisation", "labour", "defence").
