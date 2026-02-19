@@ -149,8 +149,16 @@
 
 <main>
   <div class="page-title">
-    <h1 id="pageTitle">Transcript to Episode Copy for Finance</h1>
+    <h1 id="pageTitle">Transcript to Episode Copy</h1>
     <p id="subtitle">Drop a .txt transcript file below and generate headlines and a description.</p>
+  </div>
+
+  <div class="field-group">
+    <label>Podcast Category</label>
+    <select id="categorySelect">
+      <option value="finance" data-prompt="ddg_a.txt">Finance</option>
+      <option value="news" data-prompt="ddg_b.txt">News</option>
+    </select>
   </div>
 
   <div class="results" id="results">
@@ -181,7 +189,7 @@
     <strong>Local file detected.</strong> Browsers block API requests when a file is opened directly from disk (<code>file://</code>) due to CORS restrictions.<br>
     You need to serve this file over HTTP. The simplest way is to open a terminal in the same folder and run:<br>
     <code>python3 -m http.server 8080</code><br>
-    Then open <code>http://localhost:8080/ddg.html</code> in your browser.
+    Then open <code>http://localhost:8080/index.html</code> in your browser.
   </div>
 
   <div class="card">
@@ -249,13 +257,9 @@
   // =========================================================================
   var WORKER_URL = 'https://ddg-proxy.klosetgnome.workers.dev';
 
-  // =========================================================================
-  // PROMPT FILE PATH
-  // =========================================================================
-  var PROMPT_FILE = './ddg_a.txt';
-
   var modelEl       = document.getElementById('model');
   var modelStatus   = document.getElementById('modelStatus');
+  var categorySelect = document.getElementById('categorySelect');
   var promptLoaded  = false;
   var PROMPT        = '';
 
@@ -392,7 +396,7 @@
       html += '<option value="' + models[i][0] + '">' + models[i][1] + '</option>';
     }
     modelEl.innerHTML = html;
-    modelStatus.textContent = '(' + models.length + ' free models' + (sourceLabel ? ' \u2014 ' + sourceLabel : '') + ')';
+    modelStatus.textContent = '(' + models.length + ' free models' + (sourceLabel ? ' — ' + sourceLabel : '') + ')';
     for (var p = 0; p < PREFERRED.length; p++) {
       var found = false;
       for (var o = 0; o < modelEl.options.length; o++) {
@@ -404,19 +408,34 @@
 
   populateDropdown(FALLBACK_MODELS, 'fallback');
 
-  // Load prompt
-  (async function loadPrompt() {
-    try {
-      var res = await fetch(PROMPT_FILE);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      PROMPT = await res.text();
-      promptLoaded = true;
-      console.log('Prompt loaded from ' + PROMPT_FILE);
-    } catch (e) {
-      console.error('Could not load prompt file:', e.message);
-      showError('Failed to load prompt file. Make sure prompt.txt is in the same directory as this HTML file.');
-    }
-  })();
+  // ── Prompt loading function ─────────────────────────────────────────
+  function loadPrompt(promptFile) {
+    return fetch(promptFile)
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.text();
+      })
+      .then(function (text) {
+        PROMPT = text;
+        promptLoaded = true;
+        console.log('Prompt loaded from ' + promptFile);
+      })
+      .catch(function (e) {
+        console.error('Could not load prompt file:', e.message);
+        showError('Failed to load prompt file "' + promptFile + '". Make sure it exists in the same directory as this HTML file.');
+        promptLoaded = false;
+      });
+  }
+
+  // Load initial prompt (Finance by default)
+  loadPrompt('./ddg_a.txt');
+
+  // ── Category change handler ─────────────────────────────────────────
+  categorySelect.addEventListener('change', function () {
+    var selectedOption = categorySelect.options[categorySelect.selectedIndex];
+    var promptFile = selectedOption.getAttribute('data-prompt');
+    loadPrompt(promptFile);
+  });
 
   // Fetch live models
   (async function fetchModels() {
@@ -435,7 +454,7 @@
       populateDropdown(models, 'live');
     } catch (e) {
       console.warn('Could not fetch models from OpenRouter, using fallback list:', e.message);
-      modelStatus.textContent = '(' + FALLBACK_MODELS.length + ' free models \u2014 fallback)';
+      modelStatus.textContent = '(' + FALLBACK_MODELS.length + ' free models — fallback)';
     }
   })();
 
@@ -454,7 +473,7 @@
 
     if (!transcript) { showError('Please drop a transcript file or paste text before submitting.'); return; }
     if (!promptLoaded) { showError('Prompt file is still loading. Please wait a moment and try again.'); return; }
-    if (!PROMPT) { showError('Prompt file could not be loaded. Make sure prompt.txt exists in the same directory.'); return; }
+    if (!PROMPT) { showError('Prompt file could not be loaded. Make sure the prompt file exists in the same directory.'); return; }
 
     var userMessage = '';
     if (titleVal) { userMessage = 'Suggested title: ' + titleVal + '\n\n'; }
