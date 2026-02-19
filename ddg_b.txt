@@ -11,6 +11,9 @@ The podcast is hosted by the following people. Match voices from the transcript 
 - Chris Spyrou, Host/Producer
 - Natarsha Belling, News Presenter
 
+CONTENT SCOPE:
+This is a general news podcast covering politics, crime, social issues, and current affairs. Brief mentions of the ASX, share prices, currency movements, or financial markets in a headlines segment do NOT count as core stories. Do not feature market or finance updates in headlines or the description unless they are the subject of a dedicated deep dive segment lasting several minutes.
+
 TASK:
 1. Generate exactly three headline options for the episode title.
 2. Write a single-paragraph episode description (approximately 60 words).
@@ -50,11 +53,12 @@ LOW ENGAGEMENT PATTERNS (avoid these in headlines):
 - Vague: Update, Latest, News, Today, Discusses
 - Passive: After, Following, Amid, Due to
 - Bureaucratic: Report, Policy, Legislation, Statement, Announces
+- Financial: ASX, shares, markets, dollar, rates (unless the deep dive topic)
 Note: Low engagement words may still appear in the description. This restriction applies to headlines only.
 
 DESCRIPTION RULES:
 - Identify which hosts actually speak in the transcript (they will typically introduce themselves or be introduced at the start). Only name those hosts in the description, using their full name and title from the HOSTS list. Do NOT assume all hosts appear in every episode. If only one or two hosts are present, only name those one or two. Listing a host who does not appear in the transcript is an error.
-- Summarise the episode's main stories: lead with the deep dive topic if there is one, then note the key headlines covered.
+- Summarise the episode's main stories: lead with the deep dive topic if there is one, then note the key headlines covered. Exclude brief market updates, ASX movements, or currency reports unless they are the focus of a dedicated segment.
 - If the episode includes a guest interview, name the guest and their relevance.
 - Keep the tone clear, factual, professional, and engaging.
 - Approximately 60 words in a single paragraph.
