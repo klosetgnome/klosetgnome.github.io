@@ -2,111 +2,188 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Cal</title>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=DM+Mono:wght@400&display=swap');
+
 :root{
-  --bg:#e9e6df;        /* warm paper */
-  --panel:#f4f1ea;     /* soft card */
-  --text:#2c2a28;      /* dark ink */
-  --muted:#7a766f;
+  --bg: #f4f1ec;
+  --surface: #fff;
+  --text: #2c2a26;
+  --text-muted: #7a756b;
+  --accent: #c0512d;
+  --border: #d9d4cb;
+  --serif: 'Source Serif 4', Georgia, serif;
+  --mono: 'DM Mono', 'Courier New', monospace;
+  
+  --good-bg: #d7eadf;
+  --good-txt: #1f5134;
+  --bad-bg: #efd6d6;
+  --bad-txt: #6b2a2a;
+}
 
-  --good-bg:#d7eadf;
-  --good-txt:#1f5134;
-
-  --bad-bg:#efd6d6;
-  --bad-txt:#6b2a2a;
-
-  --accent:#8c7ae6;
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body{
-  margin:0;
-  font-family:system-ui;
-  background:var(--bg);
-  color:var(--text);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  height:100vh;
+  margin: 0;
+  font-family: var(--serif);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px;
 }
 
-.app{text-align:center;}
+.app{
+  text-align: center;
+}
 
 .topbar{
-  display:flex;
-  gap:14px;
-  align-items:center;
-  justify-content:center;
-  margin-bottom:14px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
 }
 
 button{
-  background:var(--panel);
-  color:var(--text);
-  border:1px solid #00000018;
-  padding:8px 14px;
-  border-radius:10px;
-  cursor:pointer;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background: rgba(192, 81, 45, 0.08);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .month-label{
-  font-size:26px;
-  font-weight:700;
-  letter-spacing:2px;
-  min-width:140px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  min-width: 160px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.month-label.good {
+  background: var(--good-bg);
+  color: var(--good-txt);
+}
+
+.month-label.bad {
+  background: var(--bad-bg);
+  color: var(--bad-txt);
 }
 
 .calendar{
-  display:grid;
-  grid-template-columns:repeat(7,48px);
-  gap:10px;
-  justify-content:center;
-  padding:18px;
-  background:var(--panel);
-  border-radius:16px;
+  display: grid;
+  grid-template-columns: repeat(7, 56px);
+  gap: 8px;
+  justify-content: center;
+  padding: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 32px;
 }
 
 .day-name{
-  font-size:12px;
-  color:var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  padding-bottom: 8px;
 }
 
 .date{
-  width:48px;height:48px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  border-radius:12px;
-  font-weight:600;
-  cursor:pointer;
-  position:relative;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
 }
 
-.good{ background:var(--good-bg); color:var(--good-txt);}
-.bad{ background:var(--bad-bg); color:var(--bad-txt);}
-.empty{ visibility:hidden;}
+.good{
+  background: var(--good-bg);
+  color: var(--good-txt);
+}
+
+.good:hover {
+  border-color: var(--good-txt);
+}
+
+.bad{
+  background: var(--bad-bg);
+  color: var(--bad-txt);
+}
+
+.bad:hover {
+  border-color: var(--bad-txt);
+}
+
+.empty{
+  visibility: hidden;
+}
 
 .selected::after{
-  content:"";
-  position:absolute;
-  inset:-3px;
-  border:2px solid var(--accent);
-  border-radius:14px;
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
 }
 
 .info{
-  margin-top:18px;
-  width:110px;
-  height:48px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  border-radius:12px;
-  font-weight:600;
-  letter-spacing:2px;
-  margin:auto;
-  background:var(--panel);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-family: var(--mono);
+  letter-spacing: 2px;
+  font-size: 12px;
+  text-transform: uppercase;
+  min-width: 120px;
+  border: 1px solid transparent;
+}
+
+.info.good {
+  background: var(--good-bg);
+  color: var(--good-txt);
+}
+
+.info.bad {
+  background: var(--bad-bg);
+  color: var(--bad-txt);
 }
 </style>
 </head>
@@ -115,9 +192,9 @@ button{
 
 <div class="app">
   <div class="topbar">
-    <button id="prev">←</button>
+    <button id="prev">← Prev</button>
     <div id="label" class="month-label"></div>
-    <button id="next">→</button>
+    <button id="next">Next →</button>
   </div>
 
   <div id="calendar" class="calendar"></div>
