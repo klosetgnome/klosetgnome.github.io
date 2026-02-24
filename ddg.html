@@ -83,38 +83,6 @@
       width: 100%;
     }
 
-    /* Page title */
-    .page-title {
-      text-align: center;
-      margin-bottom: 12px;
-      animation: fadeInDown 0.5s ease;
-    }
-
-    .page-title .header-label {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 10px;
-      opacity: 0.8;
-    }
-
-    .page-title h1 {
-      font-family: var(--serif);
-      font-size: 32px;
-      font-weight: 600;
-      letter-spacing: -0.3px;
-      color: var(--text-primary);
-    }
-
-    .page-title p {
-      margin-top: 8px;
-      color: var(--text-secondary);
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
     /* Warning banner */
     .warn-banner {
       width: 100%;
@@ -555,7 +523,6 @@
     @media (max-width: 600px) {
       .site-header { padding: 20px 16px; }
       main { padding: 32px 16px 60px; }
-      .page-title h1 { font-size: 24px; }
       .field-group select { min-width: 0; width: 100%; }
       .submit-row { flex-direction: column; align-items: stretch; }
       .row-meta { width: 90px; padding: 12px 10px; }
@@ -566,14 +533,10 @@
 <body>
 
 <header class="site-header">
-  <h1><a href="index.html" style="text-decoration:none;color:inherit;"><span>DEV.</span>NIALFERNANDES.COM</a></h1>
+  <h1><a href="index.html" style="text-decoration:none;color:inherit;"><span>DAILY</span> DESCRIPTION GENERATOR</a></h1>
 </header>
 
 <main>
-  <div class="page-title">
-    <h1 id="pageTitle">Daily Description Generator</h1>
-    <p id="subtitle">Drop a .txt transcript file below and generate headlines and a description.</p>
-  </div>
 
   <div class="field-group">
     <label>Podcast Category</label>
@@ -946,8 +909,6 @@
       descEl.innerHTML = description;
 
       results.classList.add('visible');
-      document.getElementById('pageTitle').style.display = 'none';
-      document.getElementById('subtitle').style.display = 'none';
       results.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     } catch (err) {
