@@ -1,7 +1,7 @@
-M: NRL D | BST ST | CMU
-T: NRL D | BST N | 
-W: NRL D | BST BT | CMU
-Th: NRL D | BST ST | CMU
-F: NRL D | BST BT | PDD
-Sa: SSRM | LiGM
-Su: REST
+M: NRL Dly | BST Smt | CMU
+T: NRL Dly | BST Nws | 
+W: NRL Dly | BST Btk | CMU
+Th: NRL Dly | BST Smt | CMU
+F: NRL Dly | BST Btk | 
+Sa: SAT Srm | LIV Gme
+Su: REST DAY
