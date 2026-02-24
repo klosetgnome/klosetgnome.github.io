@@ -43,7 +43,7 @@
     overflow-x: hidden;
   }
 
-  /* ── Header (matches index.html) ── */
+  /* ── Header ── */
   .site-header {
     padding: 28px 40px;
     border-bottom: 2px solid var(--border);
@@ -61,52 +61,12 @@
     color: var(--accent);
   }
 
-  .site-header h1 a {
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .site-header h1 a:hover {
-    color: var(--accent);
-  }
-
   .container {
     position: relative;
     z-index: 1;
     max-width: 780px;
     margin: 0 auto;
     padding: 48px 24px 80px;
-  }
-
-  /* Page header */
-  .header {
-    margin-bottom: 40px;
-    animation: fadeInDown 0.5s ease;
-  }
-
-  .header-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 10px;
-    opacity: 0.8;
-  }
-
-  .header h2 {
-    font-family: var(--serif);
-    font-size: 32px;
-    font-weight: 600;
-    letter-spacing: -0.3px;
-    color: var(--text-primary);
-  }
-
-  .header p {
-    margin-top: 8px;
-    color: var(--text-secondary);
-    font-size: 15px;
-    line-height: 1.6;
   }
 
   /* Input area */
@@ -545,7 +505,6 @@
   @media (max-width: 600px) {
     .site-header { padding: 20px 16px; }
     .container { padding: 32px 16px 60px; }
-    .header h2 { font-size: 24px; }
     .input-row { flex-direction: column; }
     .item-url { display: none; }
   }
@@ -554,14 +513,10 @@
 <body>
 
 <header class="site-header">
-  <h1><a href="index.html" style="text-decoration:none;color:inherit;"><span>DEV.</span>NIALFERNANDES.COM</a></h1>
+  <h1><span>SEQUENTIAL</span> DOWNLOAD MANAGER</h1>
 </header>
 
 <div class="container">
-  <div class="header">
-    <h2>Sequential Download Manager</h2>
-    <p>Add your download links below. Files are downloaded one at a time, in order, so you can track progress and avoid overwhelming your connection.</p>
-  </div>
 
   <div class="input-area">
     <label for="urlInput">Add download link</label>
