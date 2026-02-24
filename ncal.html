@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>My Cal</title>
+<title>N Cal</title>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=DM+Mono:wght@400&display=swap');
@@ -18,7 +18,7 @@
   --border: #d9d4cb;
   --serif: 'Source Serif 4', Georgia, serif;
   --mono: 'DM Mono', 'Courier New', monospace;
-  
+
   --good-bg: #d7eadf;
   --good-txt: #1f5134;
   --bad-bg: #efd6d6;
@@ -95,6 +95,14 @@ button:hover {
   color: var(--bad-txt);
 }
 
+/* Main row: calendar + tasks side by side */
+.main-row {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
 .calendar{
   display: grid;
   grid-template-columns: repeat(7, 56px);
@@ -104,7 +112,7 @@ button:hover {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  margin-bottom: 32px;
+  align-content: start;
 }
 
 .day-name{
@@ -186,6 +194,88 @@ button:hover {
   background: var(--bad-bg);
   color: var(--bad-txt);
 }
+
+/* Task panel */
+.task-panel {
+  width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  text-align: left;
+}
+
+.task-panel-header {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.task-item {
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-family: var(--serif);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  border: 1px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.task-item.good {
+  background: var(--good-bg);
+  color: var(--good-txt);
+}
+
+.task-item.good:hover {
+  border-color: var(--good-txt);
+}
+
+.task-item.bad {
+  background: var(--bad-bg);
+  color: var(--bad-txt);
+}
+
+.task-item.bad:hover {
+  border-color: var(--bad-txt);
+}
+
+.task-item.neutral {
+  background: #f0ece5;
+  color: var(--text-muted);
+}
+
+.task-empty {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  padding: 8px 0;
+}
+
+.task-error {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--bad-txt);
+  letter-spacing: 0.5px;
+  padding: 8px 0;
+  line-height: 1.5;
+}
 </style>
 </head>
 
@@ -198,12 +288,28 @@ button:hover {
     <button id="next">Next →</button>
   </div>
 
-  <div id="calendar" class="calendar"></div>
+  <div class="main-row">
+    <div id="calendar" class="calendar"></div>
+
+    <div class="task-panel">
+      <div class="task-panel-header" id="task-header">Tasks</div>
+      <div class="task-list" id="task-list">
+        <span class="task-empty">Loading…</span>
+      </div>
+    </div>
+  </div>
+
   <div id="info" class="info">—</div>
 </div>
 
 <script>
 const badVals=[2,4,8];
+
+// Day key map: JS getDay() 0=Sun … 6=Sat
+// ncal.txt format: "M: Task 1 | Task 2"
+// Keys used: Su, M, T, W, Th, F, Sa
+const DAY_KEYS = ["Su","M","T","W","Th","F","Sa"];
+const DAY_LABELS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
 let current=new Date();
 current.setDate(1);
@@ -211,6 +317,44 @@ current.setDate(1);
 const today=new Date();
 let selectedEl=null;
 let selectedDate=new Date(today);
+
+// Tasks store: { "M": ["Task 1","Task 2"], ... }
+let tasks = {};
+let tasksLoaded = false;
+let tasksError = null;
+
+// Fetch and parse ncal.txt
+fetch("ncal.txt")
+  .then(r => {
+    if (!r.ok) throw new Error(`Could not load ncal.txt (${r.status})`);
+    return r.text();
+  })
+  .then(text => {
+    tasks = parseTasks(text);
+    tasksLoaded = true;
+    updateTaskPanel();
+  })
+  .catch(err => {
+    tasksError = err.message;
+    tasksLoaded = true;
+    updateTaskPanel();
+  });
+
+function parseTasks(text) {
+  const result = {};
+  const lines = text.split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const colonIdx = trimmed.indexOf(":");
+    if (colonIdx === -1) continue;
+    const key = trimmed.slice(0, colonIdx).trim();
+    const rest = trimmed.slice(colonIdx + 1).trim();
+    const items = rest.split("|").map(s => s.trim()).filter(Boolean);
+    if (items.length) result[key] = items;
+  }
+  return result;
+}
 
 function digitSum(n){
   return n.toString().split('').reduce((a,b)=>a+ +b,0);
@@ -233,6 +377,13 @@ function dayValue(d){
   return digitalRoot(digitSum(d));
 }
 
+function getDayState(y, m, d) {
+  const ym = yearMonthValue(y, m);
+  const dv = dayValue(d);
+  const combinedRoot = digitalRoot(ym + dv);
+  return badVals.includes(combinedRoot) ? "bad" : "good";
+}
+
 function updateInfo(y,m,d){
   const ym=yearMonthValue(y,m);
   const dv=dayValue(d);
@@ -244,6 +395,50 @@ function updateInfo(y,m,d){
   info.className="info "+(badVals.includes(combinedRoot)?"bad":"good");
 }
 
+function updateTaskPanel() {
+  if (!tasksLoaded) return;
+
+  const y = selectedDate.getFullYear();
+  const m = selectedDate.getMonth() + 1;
+  const d = selectedDate.getDate();
+  const dow = selectedDate.getDay(); // 0=Sun
+  const key = DAY_KEYS[dow];
+  const label = DAY_LABELS[dow];
+  const state = getDayState(y, m, d);
+
+  const header = document.getElementById("task-header");
+  header.textContent = label;
+
+  const list = document.getElementById("task-list");
+  list.innerHTML = "";
+
+  if (tasksError) {
+    const el = document.createElement("span");
+    el.className = "task-error";
+    el.textContent = `ncal.txt not found.\nServe this file from a local server.`;
+    el.style.whiteSpace = "pre-line";
+    list.appendChild(el);
+    return;
+  }
+
+  const dayTasks = tasks[key] || [];
+
+  if (dayTasks.length === 0) {
+    const el = document.createElement("span");
+    el.className = "task-empty";
+    el.textContent = "No tasks";
+    list.appendChild(el);
+    return;
+  }
+
+  dayTasks.forEach(t => {
+    const el = document.createElement("div");
+    el.className = `task-item ${state}`;
+    el.textContent = t;
+    list.appendChild(el);
+  });
+}
+
 function select(el,y,m,d){
   if(selectedEl) selectedEl.classList.remove("selected");
   selectedEl=el;
@@ -251,6 +446,7 @@ function select(el,y,m,d){
 
   selectedDate=new Date(y,m-1,d);
   updateInfo(y,m,d);
+  updateTaskPanel();
 }
 
 function render(){
