@@ -1,7 +1,7 @@
-M: Deep work block | Check emails | Team standup
-T: Client calls | Review pull requests | Weekly planning
-W: Deep work block | 1:1 meetings | Inbox zero
-Th: Research | Code review | Update docs
-F: Wrap up tasks | Weekly review | Plan next week
-Sa: Personal admin | Exercise
-Su: Rest | Meal prep | Journal
+M: NRL D | BST ST | CMU
+T: NRL D | BST | 
+W: NRL D | BST BT | CMU
+Th: NRL D | Code review | CMU
+F: NRL D | Weekly review | PDD
+Sa: SSRM | LGM
+Su: REST
