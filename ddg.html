@@ -216,8 +216,9 @@
     textarea {
       display: block;
       width: 100%;
-      min-height: 120px;
-      resize: vertical;
+      min-height: 96px;
+      max-height: 96px;
+      resize: none;
       font-family: var(--mono);
       font-size: 13px;
       line-height: 1.7;
@@ -226,6 +227,7 @@
       border: none;
       outline: none;
       padding: 12px 20px 18px;
+      overflow-y: auto;
     }
 
     textarea::placeholder { color: var(--text-muted); }
@@ -679,7 +681,7 @@
 </main>
 
 <footer class="site-footer">
-  <p>Tools Directory</p>
+  <p>Tool Directory</p>
 </footer>
 
 <script>
