@@ -19,29 +19,21 @@
     --accent: #c0512d;
     --accent-light: rgba(192, 81, 45, 0.08);
     --accent-glow: rgba(192, 81, 45, 0.12);
-
-    /* Good/bad using SDM success/error — muted & earthy */
     --good: #4a8c3f;
     --good-bg: rgba(74, 140, 63, 0.10);
     --good-bg-solid: #e4eddf;
     --good-border: rgba(74, 140, 63, 0.25);
-
     --bad: #b5392e;
     --bad-bg: rgba(181, 57, 46, 0.08);
     --bad-bg-solid: #eedbd8;
     --bad-border: rgba(181, 57, 46, 0.22);
-
     --serif: 'Source Serif 4', Georgia, serif;
     --mono: 'DM Mono', 'Courier New', monospace;
     --radius: 8px;
     --radius-lg: 12px;
   }
 
-  *, *::before, *::after {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     font-family: var(--serif);
@@ -51,7 +43,6 @@
     overflow-x: hidden;
   }
 
-  /* ── Header (matches SDM) ── */
   .site-header {
     padding: 28px 40px;
     border-bottom: 2px solid var(--border);
@@ -65,20 +56,11 @@
     text-transform: uppercase;
   }
 
-  .site-header h1 span {
-    color: var(--accent);
-  }
+  .site-header h1 span { color: var(--accent); }
 
-  .site-header h1 a {
-    color: inherit;
-    text-decoration: none;
-  }
+  .site-header h1 a { color: inherit; text-decoration: none; }
+  .site-header h1 a:hover { color: var(--accent); }
 
-  .site-header h1 a:hover {
-    color: var(--accent);
-  }
-
-  /* ── Container (matches SDM 780px) ── */
   .container {
     position: relative;
     z-index: 1;
@@ -87,38 +69,6 @@
     padding: 48px 24px 80px;
   }
 
-  /* ── Page header ── */
-  .page-header {
-    margin-bottom: 40px;
-    animation: fadeInDown 0.5s ease;
-  }
-
-  .page-header-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 10px;
-    opacity: 0.8;
-  }
-
-  .page-header h2 {
-    font-family: var(--serif);
-    font-size: 32px;
-    font-weight: 600;
-    letter-spacing: -0.3px;
-    color: var(--text-primary);
-  }
-
-  .page-header p {
-    margin-top: 8px;
-    color: var(--text-secondary);
-    font-size: 15px;
-    line-height: 1.6;
-  }
-
-  /* ── Top bar (month nav) ── */
   .topbar {
     display: flex;
     gap: 12px;
@@ -129,9 +79,11 @@
   }
 
   .topbar button {
-    font-family: var(--serif);
-    font-size: 14px;
-    font-weight: 600;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 10px 18px;
@@ -150,9 +102,7 @@
     box-shadow: 0 4px 16px var(--accent-glow);
   }
 
-  .topbar button:active {
-    transform: translateY(0);
-  }
+  .topbar button:active { transform: translateY(0); }
 
   .month-label {
     font-family: var(--mono);
@@ -167,17 +117,9 @@
     transition: background 0.2s ease, color 0.2s ease;
   }
 
-  .month-label.good {
-    background: var(--good-bg);
-    color: var(--good);
-  }
+  .month-label.good { background: var(--good-bg); color: var(--good); }
+  .month-label.bad { background: var(--bad-bg); color: var(--bad); }
 
-  .month-label.bad {
-    background: var(--bad-bg);
-    color: var(--bad);
-  }
-
-  /* ── Main row: calendar + tasks ── */
   .main-row {
     display: flex;
     align-items: stretch;
@@ -186,7 +128,6 @@
     animation: fadeInUp 0.5s ease 0.15s both;
   }
 
-  /* ── Calendar grid ── */
   .calendar {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -227,27 +168,11 @@
     font-family: var(--serif);
   }
 
-  .good {
-    background: var(--good-bg-solid);
-    color: var(--good);
-  }
-
-  .good:hover {
-    border-color: var(--good-border);
-  }
-
-  .bad {
-    background: var(--bad-bg-solid);
-    color: var(--bad);
-  }
-
-  .bad:hover {
-    border-color: var(--bad-border);
-  }
-
-  .empty {
-    visibility: hidden;
-  }
+  .good { background: var(--good-bg-solid); color: var(--good); }
+  .good:hover { border-color: var(--good-border); }
+  .bad { background: var(--bad-bg-solid); color: var(--bad); }
+  .bad:hover { border-color: var(--bad-border); }
+  .empty { visibility: hidden; }
 
   .selected::after {
     content: "";
@@ -258,7 +183,6 @@
     pointer-events: none;
   }
 
-  /* ── Info badge ── */
   .info-row {
     display: flex;
     justify-content: center;
@@ -282,19 +206,9 @@
     transition: all 0.2s ease;
   }
 
-  .info.good {
-    background: var(--good-bg);
-    color: var(--good);
-    border-color: var(--good-border);
-  }
+  .info.good { background: var(--good-bg); color: var(--good); border-color: var(--good-border); }
+  .info.bad { background: var(--bad-bg); color: var(--bad); border-color: var(--bad-border); }
 
-  .info.bad {
-    background: var(--bad-bg);
-    color: var(--bad);
-    border-color: var(--bad-border);
-  }
-
-  /* ── Task panel ── */
   .task-panel {
     width: 210px;
     flex-shrink: 0;
@@ -319,12 +233,7 @@
     border-bottom: 1px solid var(--border);
   }
 
-  .task-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-  }
+  .task-list { display: flex; flex-direction: column; gap: 6px; flex: 1; }
 
   .task-item {
     padding: 10px 12px;
@@ -337,36 +246,13 @@
     transition: all 0.2s ease;
   }
 
-  .task-item.good {
-    background: var(--good-bg-solid);
-    color: var(--good);
-  }
+  .task-item.good { background: var(--good-bg-solid); color: var(--good); }
+  .task-item.good:hover { border-color: var(--good-border); }
+  .task-item.bad { background: var(--bad-bg-solid); color: var(--bad); }
+  .task-item.bad:hover { border-color: var(--bad-border); }
+  .task-item.neutral { background: var(--surface-raised); color: var(--text-muted); }
 
-  .task-item.good:hover {
-    border-color: var(--good-border);
-  }
-
-  .task-item.bad {
-    background: var(--bad-bg-solid);
-    color: var(--bad);
-  }
-
-  .task-item.bad:hover {
-    border-color: var(--bad-border);
-  }
-
-  .task-item.neutral {
-    background: var(--surface-raised);
-    color: var(--text-muted);
-  }
-
-  .task-empty {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--text-muted);
-    letter-spacing: 1px;
-    padding: 8px 0;
-  }
+  .task-empty { font-family: var(--mono); font-size: 12px; color: var(--text-muted); letter-spacing: 1px; padding: 8px 0; }
 
   .task-error {
     font-family: var(--mono);
@@ -377,7 +263,6 @@
     line-height: 1.5;
   }
 
-  /* ── Animations ── */
   @keyframes fadeInDown {
     from { opacity: 0; transform: translateY(-12px); }
     to { opacity: 1; transform: translateY(0); }
@@ -388,11 +273,9 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* ── Responsive ── */
   @media (max-width: 600px) {
     .site-header { padding: 20px 16px; }
     .container { padding: 32px 16px 60px; }
-    .page-header h2 { font-size: 24px; }
     .main-row { flex-direction: column; }
     .task-panel { width: 100%; }
     .calendar { padding: 16px; gap: 4px; }
@@ -403,13 +286,10 @@
 <body>
 
 <header class="site-header">
-  <h1><a href="index.html"><span>DEV.</span>NIALFERNANDES.COM</a></h1>
+  <h1><a href="index.html"><span>DAILY</span> CALENDAR</a></h1>
 </header>
 
 <div class="container">
-  <div class="page-header">
-    <h2>Daily Calendar</h2>
-  </div>
 
   <div class="topbar">
     <button id="prev">← Prev</button>
@@ -435,141 +315,102 @@
 
 <script>
 const badVals=[2,4,8];
-
-const DAY_KEYS = ["Su","M","T","W","Th","F","Sa"];
-const DAY_LABELS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const DAY_KEYS=["Su","M","T","W","Th","F","Sa"];
+const DAY_LABELS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
 let current=new Date();
 current.setDate(1);
-
 const today=new Date();
 let selectedEl=null;
 let selectedDate=new Date(today);
-
-let tasks = {};
-let tasksLoaded = false;
-let tasksError = null;
+let tasks={};
+let tasksLoaded=false;
+let tasksError=null;
 
 fetch("ncal.txt")
-  .then(r => {
-    if (!r.ok) throw new Error(`Could not load ncal.txt (${r.status})`);
-    return r.text();
-  })
-  .then(text => {
-    tasks = parseTasks(text);
-    tasksLoaded = true;
-    updateTaskPanel();
-  })
-  .catch(err => {
-    tasksError = err.message;
-    tasksLoaded = true;
-    updateTaskPanel();
-  });
+  .then(r=>{if(!r.ok)throw new Error(`Could not load ncal.txt (${r.status})`);return r.text();})
+  .then(text=>{tasks=parseTasks(text);tasksLoaded=true;updateTaskPanel();})
+  .catch(err=>{tasksError=err.message;tasksLoaded=true;updateTaskPanel();});
 
-function parseTasks(text) {
-  const result = {};
-  const lines = text.split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const colonIdx = trimmed.indexOf(":");
-    if (colonIdx === -1) continue;
-    const key = trimmed.slice(0, colonIdx).trim();
-    const rest = trimmed.slice(colonIdx + 1).trim();
-    const items = rest.split("|").map(s => s.trim()).filter(Boolean);
-    if (items.length) result[key] = items;
+function parseTasks(text){
+  const result={};
+  const lines=text.split(/\r?\n/);
+  for(const line of lines){
+    const trimmed=line.trim();
+    if(!trimmed)continue;
+    const colonIdx=trimmed.indexOf(":");
+    if(colonIdx===-1)continue;
+    const key=trimmed.slice(0,colonIdx).trim();
+    const rest=trimmed.slice(colonIdx+1).trim();
+    const items=rest.split("|").map(s=>s.trim()).filter(Boolean);
+    if(items.length)result[key]=items;
   }
   return result;
 }
 
-function digitSum(n){
-  return n.toString().split('').reduce((a,b)=>a+ +b,0);
-}
+function digitSum(n){return n.toString().split('').reduce((a,b)=>a+ +b,0);}
+function digitalRoot(n){while(n>9)n=digitSum(n);return n;}
+function goodOrBad(n){return badVals.includes(digitalRoot(n))?"bad":"good";}
+function yearMonthValue(y,m){return digitalRoot(digitSum(y)+digitSum(m));}
+function dayValue(d){return digitalRoot(digitSum(d));}
 
-function digitalRoot(n){
-  while(n>9) n=digitSum(n);
-  return n;
-}
-
-function goodOrBad(n){
-  return badVals.includes(digitalRoot(n))?"bad":"good";
-}
-
-function yearMonthValue(y,m){
-  return digitalRoot(digitSum(y)+digitSum(m));
-}
-
-function dayValue(d){
-  return digitalRoot(digitSum(d));
-}
-
-function getDayState(y, m, d) {
-  const ym = yearMonthValue(y, m);
-  const dv = dayValue(d);
-  const combinedRoot = digitalRoot(ym + dv);
-  return badVals.includes(combinedRoot) ? "bad" : "good";
+function getDayState(y,m,d){
+  const ym=yearMonthValue(y,m);
+  const dv=dayValue(d);
+  const combinedRoot=digitalRoot(ym+dv);
+  return badVals.includes(combinedRoot)?"bad":"good";
 }
 
 function updateInfo(y,m,d){
   const ym=yearMonthValue(y,m);
   const dv=dayValue(d);
-
   const info=document.getElementById("info");
   info.textContent=`${ym}, ${dv}`;
-
   const combinedRoot=digitalRoot(ym+dv);
   info.className="info "+(badVals.includes(combinedRoot)?"bad":"good");
 }
 
-function updateTaskPanel() {
-  if (!tasksLoaded) return;
-
-  const y = selectedDate.getFullYear();
-  const m = selectedDate.getMonth() + 1;
-  const d = selectedDate.getDate();
-  const dow = selectedDate.getDay();
-  const key = DAY_KEYS[dow];
-  const label = DAY_LABELS[dow];
-  const state = getDayState(y, m, d);
-
-  const header = document.getElementById("task-header");
-  header.textContent = label;
-
-  const list = document.getElementById("task-list");
-  list.innerHTML = "";
-
-  if (tasksError) {
-    const el = document.createElement("span");
-    el.className = "task-error";
-    el.textContent = `ncal.txt not found.\nServe this file from a local server.`;
-    el.style.whiteSpace = "pre-line";
+function updateTaskPanel(){
+  if(!tasksLoaded)return;
+  const y=selectedDate.getFullYear();
+  const m=selectedDate.getMonth()+1;
+  const d=selectedDate.getDate();
+  const dow=selectedDate.getDay();
+  const key=DAY_KEYS[dow];
+  const label=DAY_LABELS[dow];
+  const state=getDayState(y,m,d);
+  const header=document.getElementById("task-header");
+  header.textContent=label;
+  const list=document.getElementById("task-list");
+  list.innerHTML="";
+  if(tasksError){
+    const el=document.createElement("span");
+    el.className="task-error";
+    el.textContent=`ncal.txt not found.\nServe this file from a local server.`;
+    el.style.whiteSpace="pre-line";
     list.appendChild(el);
     return;
   }
-
-  const dayTasks = tasks[key] || [];
-
-  if (dayTasks.length === 0) {
-    const el = document.createElement("span");
-    el.className = "task-empty";
-    el.textContent = "No tasks";
+  const dayTasks=tasks[key]||[];
+  if(dayTasks.length===0){
+    const el=document.createElement("span");
+    el.className="task-empty";
+    el.textContent="No tasks";
     list.appendChild(el);
     return;
   }
-
-  dayTasks.forEach(t => {
-    const el = document.createElement("div");
-    el.className = `task-item ${state}`;
-    el.textContent = t;
+  dayTasks.forEach(t=>{
+    const el=document.createElement("div");
+    el.className=`task-item ${state}`;
+    el.textContent=t;
     list.appendChild(el);
   });
 }
 
 function select(el,y,m,d){
-  if(selectedEl) selectedEl.classList.remove("selected");
+  if(selectedEl)selectedEl.classList.remove("selected");
   selectedEl=el;
   el.classList.add("selected");
-
   selectedDate=new Date(y,m-1,d);
   updateInfo(y,m,d);
   updateTaskPanel();
@@ -579,14 +420,11 @@ function render(){
   const cal=document.getElementById("calendar");
   cal.innerHTML="";
   selectedEl=null;
-
   const y=current.getFullYear();
   const m=current.getMonth()+1;
-
   const label=document.getElementById("label");
   label.textContent=`${y}-${String(m).padStart(2,'0')}`;
   label.className="month-label "+goodOrBad(digitSum(y)+digitSum(m));
-
   const names=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   names.forEach(d=>{
     const e=document.createElement("div");
@@ -594,35 +432,25 @@ function render(){
     e.className="day-name";
     cal.appendChild(e);
   });
-
   const firstDay=new Date(y,m-1,1).getDay();
   const daysInMonth=new Date(y,m,0).getDate();
-
   for(let i=0;i<firstDay;i++){
     const e=document.createElement("div");
     e.className="date empty";
     cal.appendChild(e);
   }
-
-  for(let d=1; d<=daysInMonth; d++){
+  for(let d=1;d<=daysInMonth;d++){
     const el=document.createElement("div");
     el.className="date "+goodOrBad(digitSum(d));
     el.textContent=d;
-
     el.onclick=()=>{
       const combined=digitSum(y)+digitSum(m)+digitSum(d);
       el.classList.remove("good","bad");
       el.classList.add(goodOrBad(combined));
       select(el,y,m,d);
     };
-
     cal.appendChild(el);
-
-    if(
-      d===selectedDate.getDate() &&
-      m-1===selectedDate.getMonth() &&
-      y===selectedDate.getFullYear()
-    ){
+    if(d===selectedDate.getDate()&&m-1===selectedDate.getMonth()&&y===selectedDate.getFullYear()){
       select(el,y,m,d);
     }
   }
@@ -635,21 +463,14 @@ function moveSelection(days){
 }
 
 document.addEventListener("keydown",e=>{
-  if(e.key==="ArrowLeft") moveSelection(-1);
-  if(e.key==="ArrowRight") moveSelection(1);
-  if(e.key==="ArrowUp") moveSelection(-7);
-  if(e.key==="ArrowDown") moveSelection(7);
+  if(e.key==="ArrowLeft")moveSelection(-1);
+  if(e.key==="ArrowRight")moveSelection(1);
+  if(e.key==="ArrowUp")moveSelection(-7);
+  if(e.key==="ArrowDown")moveSelection(7);
 });
 
-document.getElementById("prev").onclick=()=>{
-  current.setMonth(current.getMonth()-1);
-  render();
-};
-
-document.getElementById("next").onclick=()=>{
-  current.setMonth(current.getMonth()+1);
-  render();
-};
+document.getElementById("prev").onclick=()=>{current.setMonth(current.getMonth()-1);render();};
+document.getElementById("next").onclick=()=>{current.setMonth(current.getMonth()+1);render();};
 
 render();
 </script>
