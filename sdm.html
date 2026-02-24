@@ -3,27 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
 <title>Sequential Download Manager</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0e1117;
-    --surface: #161b22;
-    --surface-raised: #1c2129;
-    --border: #2a3140;
-    --border-active: #3d4f6a;
-    --text-primary: #e6edf3;
-    --text-secondary: #8b949e;
-    --text-muted: #545d68;
-    --accent: #58a6ff;
-    --accent-glow: rgba(88, 166, 255, 0.15);
-    --success: #3fb950;
-    --success-glow: rgba(63, 185, 80, 0.12);
-    --warning: #d29922;
-    --error: #f85149;
-    --error-glow: rgba(248, 81, 73, 0.12);
-    --downloading: #bc8cff;
-    --downloading-glow: rgba(188, 140, 255, 0.15);
+    --bg: #f4f1ec;
+    --surface: #fff;
+    --surface-raised: #faf8f5;
+    --border: #d9d4cb;
+    --border-active: #b8b0a3;
+    --text-primary: #2c2a26;
+    --text-secondary: #7a756b;
+    --text-muted: #a09889;
+    --accent: #c0512d;
+    --accent-light: rgba(192, 81, 45, 0.08);
+    --accent-glow: rgba(192, 81, 45, 0.12);
+    --success: #4a8c3f;
+    --success-glow: rgba(74, 140, 63, 0.10);
+    --warning: #a07828;
+    --warning-glow: rgba(160, 120, 40, 0.10);
+    --error: #b5392e;
+    --error-glow: rgba(181, 57, 46, 0.10);
+    --downloading: #8b6abf;
+    --downloading-glow: rgba(139, 106, 191, 0.12);
+    --serif: 'Source Serif 4', Georgia, serif;
+    --mono: 'DM Mono', 'Courier New', monospace;
     --radius: 8px;
     --radius-lg: 12px;
   }
@@ -31,24 +36,38 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--serif);
     background: var(--bg);
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
   }
 
-  /* Subtle grid background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(88, 166, 255, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(88, 166, 255, 0.03) 1px, transparent 1px);
-    background-size: 48px 48px;
-    pointer-events: none;
-    z-index: 0;
+  /* ── Header (matches index.html) ── */
+  .site-header {
+    padding: 28px 40px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .site-header h1 {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .site-header h1 span {
+    color: var(--accent);
+  }
+
+  .site-header h1 a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .site-header h1 a:hover {
+    color: var(--accent);
   }
 
   .container {
@@ -59,14 +78,14 @@
     padding: 48px 24px 80px;
   }
 
-  /* Header */
+  /* Page header */
   .header {
     margin-bottom: 40px;
     animation: fadeInDown 0.5s ease;
   }
 
   .header-label {
-    font-family: 'DM Mono', monospace;
+    font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 3px;
     text-transform: uppercase;
@@ -75,22 +94,19 @@
     opacity: 0.8;
   }
 
-  .header h1 {
+  .header h2 {
+    font-family: var(--serif);
     font-size: 32px;
-    font-weight: 700;
-    letter-spacing: -0.5px;
-    background: linear-gradient(135deg, var(--text-primary), var(--accent));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--text-primary);
   }
 
   .header p {
     margin-top: 8px;
     color: var(--text-secondary);
     font-size: 15px;
-    font-weight: 300;
-    line-height: 1.5;
+    line-height: 1.6;
   }
 
   /* Input area */
@@ -105,10 +121,10 @@
 
   .input-area label {
     display: block;
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
     color: var(--text-secondary);
-    letter-spacing: 1px;
+    letter-spacing: 2px;
     text-transform: uppercase;
     margin-bottom: 10px;
   }
@@ -125,7 +141,7 @@
     border-radius: var(--radius);
     padding: 12px 16px;
     color: var(--text-primary);
-    font-family: 'DM Mono', monospace;
+    font-family: var(--mono);
     font-size: 13px;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
@@ -141,9 +157,9 @@
   }
 
   .btn {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--serif);
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     border: none;
     border-radius: var(--radius);
     padding: 12px 20px;
@@ -154,11 +170,11 @@
 
   .btn-add {
     background: var(--accent);
-    color: #000;
+    color: #fff;
   }
 
   .btn-add:hover {
-    background: #79bbff;
+    background: #d4623e;
     transform: translateY(-1px);
     box-shadow: 0 4px 16px var(--accent-glow);
   }
@@ -172,14 +188,14 @@
     border-radius: var(--radius);
     padding: 12px 12px;
     color: var(--text-primary);
-    font-family: 'DM Mono', monospace;
+    font-family: var(--mono);
     font-size: 13px;
     outline: none;
     cursor: pointer;
     transition: border-color 0.2s, box-shadow 0.2s;
     appearance: none;
     -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238b949e' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a756b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
     padding-right: 32px;
@@ -206,11 +222,11 @@
 
   .btn-start {
     background: var(--success);
-    color: #000;
+    color: #fff;
   }
 
   .btn-start:hover {
-    background: #56d364;
+    background: #5a9e4f;
     box-shadow: 0 4px 16px var(--success-glow);
   }
 
@@ -251,7 +267,7 @@
   }
 
   .stat {
-    font-family: 'DM Mono', monospace;
+    font-family: var(--mono);
     font-size: 12px;
     padding: 6px 12px;
     border-radius: 20px;
@@ -276,9 +292,9 @@
 
   /* Download list */
   .list-header {
-    font-family: 'DM Mono', monospace;
+    font-family: var(--mono);
     font-size: 11px;
-    letter-spacing: 2px;
+    letter-spacing: 2.5px;
     text-transform: uppercase;
     color: var(--text-muted);
     margin-bottom: 12px;
@@ -326,21 +342,21 @@
   .download-item.downloading::before { background: var(--downloading); box-shadow: 0 0 8px var(--downloading-glow); }
 
   .download-item.waiting {
-    border-color: rgba(210, 153, 34, 0.3);
+    border-color: rgba(160, 120, 40, 0.35);
     background: var(--surface-raised);
   }
 
-  .download-item.waiting::before { background: var(--warning); box-shadow: 0 0 8px rgba(210, 153, 34, 0.15); }
+  .download-item.waiting::before { background: var(--warning); box-shadow: 0 0 8px var(--warning-glow); }
 
   .download-item.complete::before { background: var(--success); }
   .download-item.error::before { background: var(--error); }
 
   .item-index {
-    font-family: 'DM Mono', monospace;
+    font-family: var(--mono);
     font-size: 12px;
     color: var(--text-muted);
     min-width: 28px;
-    text-align: centre;
+    text-align: center;
   }
 
   .item-icon {
@@ -354,8 +370,8 @@
     transition: all 0.3s;
   }
 
-  .queued .item-icon { background: rgba(84, 93, 104, 0.2); color: var(--text-muted); }
-  .waiting .item-icon { background: rgba(210, 153, 34, 0.15); color: var(--warning); }
+  .queued .item-icon { background: rgba(160, 152, 137, 0.15); color: var(--text-muted); }
+  .waiting .item-icon { background: var(--warning-glow); color: var(--warning); }
   .downloading .item-icon { background: var(--downloading-glow); color: var(--downloading); }
   .complete .item-icon { background: var(--success-glow); color: var(--success); }
   .error .item-icon { background: var(--error-glow); color: var(--error); }
@@ -367,7 +383,8 @@
 
   .item-filename {
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
+    font-family: var(--serif);
     color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
@@ -375,7 +392,7 @@
   }
 
   .item-url {
-    font-family: 'DM Mono', monospace;
+    font-family: var(--mono);
     font-size: 11px;
     color: var(--text-muted);
     white-space: nowrap;
@@ -385,7 +402,7 @@
   }
 
   .item-status {
-    font-family: 'DM Mono', monospace;
+    font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -415,19 +432,19 @@
 
   /* Delay badge */
   .item-delay-badge {
-    font-family: 'DM Mono', monospace;
+    font-family: var(--mono);
     font-size: 10px;
     letter-spacing: 0.5px;
     padding: 3px 8px;
     border-radius: 10px;
-    background: rgba(210, 153, 34, 0.12);
+    background: var(--warning-glow);
     color: var(--warning);
-    border: 1px solid rgba(210, 153, 34, 0.25);
+    border: 1px solid rgba(160, 120, 40, 0.25);
     white-space: nowrap;
   }
 
   .item-countdown {
-    font-family: 'DM Mono', monospace;
+    font-family: var(--mono);
     font-size: 12px;
     color: var(--warning);
     white-space: nowrap;
@@ -436,7 +453,7 @@
     text-align: right;
   }
 
-  /* Progress bar for downloading item */
+  /* Progress bar */
   .progress-track {
     height: 3px;
     background: var(--border);
@@ -473,14 +490,14 @@
   .empty-state svg { margin-bottom: 16px; opacity: 0.3; }
 
   .empty-state p {
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.6;
   }
 
   /* All done banner */
   .done-banner {
     background: var(--success-glow);
-    border: 1px solid rgba(63, 185, 80, 0.3);
+    border: 1px solid rgba(74, 140, 63, 0.3);
     border-radius: var(--radius);
     padding: 16px 20px;
     margin-top: 16px;
@@ -493,6 +510,21 @@
   }
 
   .done-banner.visible { display: flex; }
+
+  /* ── Footer (matches index.html) ── */
+  .site-footer {
+    max-width: 860px;
+    margin: 0 auto 40px;
+    padding: 0 40px;
+    text-align: center;
+  }
+
+  .site-footer p {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+  }
 
   /* Animations */
   @keyframes fadeInDown {
@@ -526,8 +558,9 @@
 
   /* Responsive */
   @media (max-width: 600px) {
+    .site-header { padding: 20px 16px; }
     .container { padding: 32px 16px 60px; }
-    .header h1 { font-size: 24px; }
+    .header h2 { font-size: 24px; }
     .input-row { flex-direction: column; }
     .item-url { display: none; }
   }
@@ -535,10 +568,14 @@
 </head>
 <body>
 
+<header class="site-header">
+  <h1><a href="index.html"><span>Tool</span> Directory</a></h1>
+</header>
+
 <div class="container">
   <div class="header">
     <div class="header-label">Utility</div>
-    <h1>Sequential Download Manager</h1>
+    <h2>Sequential Download Manager</h2>
     <p>Add your download links below. Files are downloaded one at a time, in order, so you can track progress and avoid overwhelming your connection.</p>
   </div>
 
@@ -592,6 +629,10 @@
   </div>
 </div>
 
+<footer class="site-footer">
+  <p>Tools Directory</p>
+</footer>
+
 <script>
   const downloads = [];
   let isRunning = false;
@@ -640,7 +681,7 @@
       id: Date.now() + Math.random(),
       url: finalUrl,
       filename: extractFilename(finalUrl),
-      status: 'queued', // queued | waiting | downloading | complete | error
+      status: 'queued',
       delayMinutes: delayMinutes,
       delayRemainingSec: 0
     };
@@ -689,20 +730,17 @@
     startBtn.disabled = isRunning || queued === 0;
     clearBtn.disabled = isRunning;
 
-    // Stats
     document.getElementById('statTotal').textContent = downloads.length;
     document.getElementById('statWaiting').textContent = downloads.filter(d => d.status === 'waiting').length;
     document.getElementById('statActive').textContent = downloads.filter(d => d.status === 'downloading').length;
     document.getElementById('statDone').textContent = downloads.filter(d => d.status === 'complete').length;
     document.getElementById('statFailed').textContent = downloads.filter(d => d.status === 'error').length;
 
-    // Render list
     downloadList.innerHTML = '';
     downloads.forEach((item, i) => {
       const el = document.createElement('div');
       el.className = `download-item ${item.status}`;
 
-      // Build the right-side content based on status
       let rightContent = '';
       if (item.status === 'waiting') {
         rightContent = `<span class="item-countdown" id="countdown-${item.id}">${formatCountdown(item.delayRemainingSec)}</span>`;
@@ -710,7 +748,6 @@
         rightContent = `<span class="item-status">${statusLabel(item.status)}</span>`;
       }
 
-      // Delay badge for queued items with a delay set
       let delayBadge = '';
       if (item.status === 'queued' && item.delayMinutes > 0) {
         delayBadge = `<span class="item-delay-badge">${delayLabel(item.delayMinutes)}</span>`;
@@ -760,10 +797,6 @@
     return d.innerHTML;
   }
 
-  /**
-   * Returns a promise that resolves after the given delay (in minutes),
-   * updating the item's countdown every second for the live display.
-   */
   function waitForDelay(item) {
     return new Promise(resolve => {
       if (item.delayMinutes <= 0) { resolve(); return; }
@@ -775,7 +808,6 @@
       countdownInterval = setInterval(() => {
         item.delayRemainingSec--;
 
-        // Update just the countdown element to avoid full re-render flicker
         const countdownEl = document.getElementById(`countdown-${item.id}`);
         if (countdownEl) {
           countdownEl.textContent = formatCountdown(item.delayRemainingSec);
@@ -802,7 +834,6 @@
 
       currentIndex = i;
 
-      // Handle delay if set
       if (downloads[i].delayMinutes > 0) {
         await waitForDelay(downloads[i]);
       }
@@ -820,7 +851,6 @@
 
       render();
 
-      // Small delay between downloads to let the browser process
       await new Promise(r => setTimeout(r, 600));
     }
 
@@ -840,9 +870,6 @@
     doneBanner.classList.add('visible');
   }
 
-  /**
-   * Triggers a browser download by creating a hidden anchor element.
-   */
   function triggerDownload(url, filename) {
     return new Promise((resolve, reject) => {
       try {
@@ -864,7 +891,6 @@
     });
   }
 
-  // Initial render
   render();
 </script>
 
