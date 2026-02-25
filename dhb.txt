@@ -31,6 +31,10 @@ One paragraph, structured as:
 
 In today's episode, **{host full name}** {sits down with / is joined by} **{guest name and relevance}** to discuss {questions explored, NOT answers}.
 
+MARKDOWN FORMATTING:
+- Use **text** for emphasis on **Deep Dive:** section header
+- Use **name** for all host and guest names
+
 DESCRIPTION RULES:
 - Bold section headers and all names (**text**).
 - Frame around questions, not answers.
