@@ -203,10 +203,51 @@
     }
     .stems-add-btn.disabled { opacity: 0.3; pointer-events: none; }
 
-    .waveform-area { display: none; flex-direction: column; gap: 0; }
+    .waveform-area { display: none; flex-direction: column; gap: 0; position: relative; }
     .waveform-area.visible { display: flex; }
     .waveform-container { padding: 16px 20px 8px; cursor: crosshair; }
     #waveform { width: 100%; min-height: 100px; }
+
+    /* ═══ WAVEFORM LOADING OVERLAY ═══ */
+    .waveform-loading {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      background: rgba(255, 255, 255, 0.92);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      border-radius: var(--radius);
+    }
+    .waveform-loading.visible { display: flex; }
+    .waveform-loading-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .waveform-loading-track {
+      width: 200px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .waveform-loading-bar {
+      height: 100%;
+      width: 100%;
+      background: var(--accent);
+      animation: indeterminate 1.8s ease-in-out infinite;
+    }
+    .waveform-loading-detail {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
 
     .transport {
       display: flex; align-items: center; gap: 10px; padding: 8px 20px 16px;
@@ -320,7 +361,6 @@
       background: rgba(192, 81, 45, 0.15); color: var(--accent);
     }
 
-    /* ═══ TWO-COLUMN LAYOUT ═══ */
     .columns-wrap {
       width: 100%;
       display: grid;
@@ -337,7 +377,6 @@
       .columns-wrap { grid-template-columns: 1fr; }
     }
 
-    /* ═══ SEGMENT CARDS ═══ */
     .segment-card {
       width: 100%;
       background: var(--surface);
@@ -591,6 +630,15 @@
     </div>
 
     <div class="waveform-area" id="waveformArea">
+      <!-- Loading overlay -->
+      <div class="waveform-loading" id="waveformLoading">
+        <span class="waveform-loading-label">Processing audio…</span>
+        <div class="waveform-loading-track">
+          <div class="waveform-loading-bar"></div>
+        </div>
+        <span class="waveform-loading-detail" id="waveformLoadingDetail">Decoding stems</span>
+      </div>
+
       <div class="waveform-container"><div id="waveform"></div></div>
       <div class="transport">
         <button class="transport-btn" id="btnSkipBack" title="Skip back 5s">
@@ -671,6 +719,63 @@
   var mixedBuffer = null;
 
   // ═══════════════════════════════════════════════════════════════
+  // TRANSCRIPTION WEB WORKER (runs Whisper off the main thread)
+  // ═══════════════════════════════════════════════════════════════
+  var workerScript = function () {
+    self.onmessage = async function (e) {
+      try {
+        self.postMessage({ type: 'status', text: 'Loading transcription library…' });
+
+        var transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
+
+        self.postMessage({ type: 'status', text: 'Loading Transcription model (first time may require a download, cached after)…' });
+
+        // ── WHISPER MODEL SELECTION ──────────────────────────────
+        // Switch model by changing the string below. Options:
+        //
+        //   'onnx-community/whisper-tiny'    ~40 MB  · Fastest, least accurate
+        //   'onnx-community/whisper-base'    ~75 MB  · Good balance of speed and accuracy
+        //   'onnx-community/whisper-small'   ~250 MB · Slower, noticeably more accurate
+        //   'onnx-community/whisper-medium'  ~770 MB · Much slower, best accuracy
+        //
+        // Larger models improve accuracy with accents, names and
+        // background noise but take longer to download (first use)
+        // and process. All models are cached in the browser after
+        // first download.
+        // ─────────────────────────────────────────────────────────
+        var transcriber = await transformers.pipeline(
+          'automatic-speech-recognition',
+          'onnx-community/whisper-base',
+          { dtype: 'q8', device: 'wasm' }
+        );
+
+        self.postMessage({ type: 'status', text: 'Transcribing… this may take a few minutes for long recordings' });
+        self.postMessage({ type: 'progress', value: 10 });
+
+        var result = await transcriber(e.data.audio, {
+          return_timestamps: true,
+          chunk_length_s: 30,
+          stride_length_s: 5,
+          language: 'en',
+          task: 'transcribe'
+        });
+
+        self.postMessage({ type: 'progress', value: 100 });
+        self.postMessage({ type: 'result', data: result });
+
+      } catch (err) {
+        self.postMessage({ type: 'error', text: err.message || String(err) });
+      }
+    };
+  };
+
+  var workerBlob = new Blob(
+    ['(' + workerScript.toString() + ')()'],
+    { type: 'application/javascript' }
+  );
+  var workerUrl = URL.createObjectURL(workerBlob);
+
+  // ═══════════════════════════════════════════════════════════════
   // CATEGORY DEFINITIONS
   // ═══════════════════════════════════════════════════════════════
   var CATEGORIES = {
@@ -737,6 +842,24 @@
     var div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // WAVEFORM LOADING OVERLAY
+  // ═══════════════════════════════════════════════════════════════
+  function showWaveformLoading(detail) {
+    var el = document.getElementById('waveformLoading');
+    var detailEl = document.getElementById('waveformLoadingDetail');
+    detailEl.textContent = detail || '';
+    el.classList.add('visible');
+  }
+
+  function updateWaveformLoading(detail) {
+    document.getElementById('waveformLoadingDetail').textContent = detail || '';
+  }
+
+  function hideWaveformLoading() {
+    document.getElementById('waveformLoading').classList.remove('visible');
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -865,7 +988,6 @@
           + '</div></div>';
       });
     } else {
-      // Start + Quote In
       rows += '<div class="segment-row">'
         + '<span class="row-label">Start</span>'
         + '<div class="tc-wrap">'
@@ -875,7 +997,6 @@
         + '<span class="quote-label">Quote in</span>'
         + '<input type="text" class="quote-input" data-quote-id="' + seg.id + '-quote-in" placeholder="First words…" required />'
         + '</div>';
-      // End + Quote Out
       rows += '<div class="segment-row">'
         + '<span class="row-label">End</span>'
         + '<div class="tc-wrap">'
@@ -1038,13 +1159,22 @@
     document.getElementById('waveformArea').classList.add('visible');
     document.getElementById('transcribeRow').classList.add('visible');
 
+    // Show loading overlay
+    showWaveformLoading('Decoding ' + stemFiles.length + ' stem' + (stemFiles.length > 1 ? 's' : '') + '…');
+
     try {
       var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       var buffers = [];
       for (var i = 0; i < stemFiles.length; i++) {
+        updateWaveformLoading('Decoding stem ' + (i + 1) + ' of ' + stemFiles.length + '…');
         var ab = await stemFiles[i].arrayBuffer();
         buffers.push(await audioCtx.decodeAudioData(ab));
       }
+
+      updateWaveformLoading('Mixing stems…');
+
+      // Allow a repaint so the status text updates
+      await new Promise(function (r) { setTimeout(r, 50); });
 
       var sampleRate = buffers[0].sampleRate;
       var maxLength = 0;
@@ -1088,6 +1218,8 @@
       mixedBlob = audioBufferToWav(mixedBuffer);
       audioCtx.close();
 
+      updateWaveformLoading('Rendering waveform…');
+
       // Load wavesurfer
       if (wavesurfer) wavesurfer.destroy();
       wavesurfer = WaveSurfer.create({
@@ -1106,6 +1238,7 @@
         audioLoaded = true;
         updateStampButtons();
         document.getElementById('transportDuration').textContent = '/ ' + secondsToTimecode(wavesurfer.getDuration());
+        hideWaveformLoading();
       });
       wavesurfer.on('audioprocess', updateTransportTime);
       wavesurfer.on('seeking', updateTransportTime);
@@ -1124,6 +1257,7 @@
     } catch (err) {
       console.error('Mix error:', err);
       showError('Error processing audio: ' + (err.message || err));
+      hideWaveformLoading();
     }
   }
 
@@ -1167,6 +1301,7 @@
     document.getElementById('transcribeBtn').textContent = 'Transcribe';
     document.getElementById('transcribeBtn').classList.remove('done');
     document.getElementById('transcribeStatus').textContent = '';
+    hideWaveformLoading();
     updateStampButtons();
   }
 
@@ -1191,13 +1326,11 @@
     var isInput = (tag === 'input' || tag === 'textarea' || tag === 'select');
     var isTcInput = e.target.classList && e.target.classList.contains('tc-input');
 
-    // Space = play/pause when not in any input
     if (e.code === 'Space' && !isInput) {
       e.preventDefault();
       if (wavesurfer && audioLoaded) wavesurfer.playPause();
     }
 
-    // Arrow keys — skip when not in input, or Shift+arrow from tc inputs
     if (!isInput || isTcInput) {
       if (e.key === 'ArrowLeft' && wavesurfer && audioLoaded && (!isInput || e.shiftKey)) {
         e.preventDefault(); wavesurfer.skip(e.shiftKey ? -1 : -5);
@@ -1209,7 +1342,7 @@
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // WHISPER TRANSCRIPTION (whisper-base)
+  // WHISPER TRANSCRIPTION (via Web Worker)
   // ═══════════════════════════════════════════════════════════════
   document.getElementById('transcribeBtn').addEventListener('click', async function () {
     if (isTranscribing || !mixedBuffer) return;
@@ -1220,64 +1353,71 @@
 
     isTranscribing = true;
     btn.disabled = true;
-    status.textContent = 'Loading transcription library…';
+    status.textContent = 'Starting transcription worker…';
     prog.classList.add('visible');
     progBar.classList.add('indeterminate');
 
     try {
-      var transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
-      status.textContent = 'Loading Transcription model (first time: ~75 MB download, cached after)…';
-
-// ── WHISPER MODEL SELECTION ──────────────────────────────
-      // Switch model by changing the string below. Options:
-      //
-      //   'onnx-community/whisper-tiny'    ~40 MB  · Fastest, least accurate
-      //   'onnx-community/whisper-base'    ~75 MB  · Good balance of speed and accuracy
-      //   'onnx-community/whisper-small'   ~250 MB · Slower, noticeably more accurate
-      //   'onnx-community/whisper-medium'  ~770 MB · Much slower, best accuracy
-      //
-      // Larger models improve accuracy with accents, names and
-      // background noise but take longer to download (first use)
-      // and process. All models are cached in the browser after
-      // first download.
-      // ─────────────────────────────────────────────────────────
-      var transcriber = await transformers.pipeline(
-        'automatic-speech-recognition',
-        'onnx-community/whisper-tiny',
-        { dtype: 'q8', device: 'wasm' }
-      );
-
-      status.textContent = 'Preparing audio…';
       var audioData = await getMixedAudio16k();
 
-      status.textContent = 'Transcribing… this may take a few minutes for long recordings';
-      progBar.classList.remove('indeterminate');
-      progBar.style.width = '10%';
+      var worker = new Worker(workerUrl, { type: 'module' });
 
-      var result = await transcriber(audioData, {
-        return_timestamps: true, chunk_length_s: 30, stride_length_s: 5,
-        language: 'en', task: 'transcribe'
-      });
+      worker.onmessage = function (e) {
+        var msg = e.data;
 
-      progBar.style.width = '100%';
+        if (msg.type === 'status') {
+          status.textContent = msg.text;
+        }
 
-      if (result && result.chunks && result.chunks.length) {
-        transcriptChunks = result.chunks.map(function (c) {
-          return { start: c.timestamp[0] || 0, end: c.timestamp[1] || c.timestamp[0] + 1, text: c.text };
-        });
-      } else if (result && result.text) {
-        transcriptChunks = [{ start: 0, end: mixedBuffer.duration, text: result.text }];
-      }
+        if (msg.type === 'progress') {
+          progBar.classList.remove('indeterminate');
+          progBar.style.width = msg.value + '%';
+        }
 
-      displayTranscript();
-      status.textContent = 'Transcription complete — quotes will auto-populate when you stamp timecodes';
-      btn.textContent = 'Transcribed';
-      btn.classList.add('done');
+        if (msg.type === 'result') {
+          var result = msg.data;
+
+          if (result && result.chunks && result.chunks.length) {
+            transcriptChunks = result.chunks.map(function (c) {
+              return { start: c.timestamp[0] || 0, end: c.timestamp[1] || c.timestamp[0] + 1, text: c.text };
+            });
+          } else if (result && result.text) {
+            transcriptChunks = [{ start: 0, end: mixedBuffer.duration, text: result.text }];
+          }
+
+          displayTranscript();
+          status.textContent = 'Transcription complete — quotes will auto-populate when you stamp timecodes';
+          btn.textContent = 'Transcribed';
+          btn.classList.add('done');
+          isTranscribing = false;
+          setTimeout(function () { prog.classList.remove('visible'); }, 1000);
+          worker.terminate();
+        }
+
+        if (msg.type === 'error') {
+          console.error('Worker transcription error:', msg.text);
+          status.textContent = 'Transcription failed: ' + msg.text;
+          btn.disabled = false;
+          isTranscribing = false;
+          setTimeout(function () { prog.classList.remove('visible'); }, 1000);
+          worker.terminate();
+        }
+      };
+
+      worker.onerror = function (err) {
+        console.error('Worker error:', err);
+        status.textContent = 'Transcription worker failed. Check browser console.';
+        btn.disabled = false;
+        isTranscribing = false;
+        setTimeout(function () { prog.classList.remove('visible'); }, 1000);
+      };
+
+      worker.postMessage({ audio: audioData }, [audioData.buffer]);
+
     } catch (err) {
-      console.error('Transcription error:', err);
-      status.textContent = 'Transcription failed: ' + (err.message || err);
+      console.error('Transcription setup error:', err);
+      status.textContent = 'Failed to start transcription: ' + (err.message || err);
       btn.disabled = false;
-    } finally {
       isTranscribing = false;
       setTimeout(function () { prog.classList.remove('visible'); }, 1000);
     }
