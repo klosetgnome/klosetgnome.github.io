@@ -292,47 +292,6 @@
     font-weight: 500;
   }
 
-  /* Letter mapping grid */
-  .mapping-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .mapping-card::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: var(--success);
-  }
-
-  .mapping-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-
-  .map-pair {
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-  }
-
-  .map-pair span {
-    color: var(--accent);
-    font-weight: 500;
-  }
-
   /* History */
   .history-list {
     display: flex;
@@ -467,7 +426,6 @@
     .site-header { padding: 20px 16px; }
     .container { padding: 32px 16px 60px; }
     .input-row { flex-direction: column; }
-    .mapping-card { display: none; }
   }
 </style>
 </head>
@@ -527,14 +485,6 @@
     <p>Type something above and hit Vibe Check<br>to discover its vibe.</p>
   </div>
 
-  <!-- Letter mapping reference -->
-  <div style="margin-top: 32px;">
-    <div class="list-header">Letter Map</div>
-    <div class="mapping-card">
-      <div class="mapping-grid" id="mappingGrid"></div>
-    </div>
-  </div>
-
 </div>
 
 <script>
@@ -553,17 +503,6 @@
   vibeInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') vibeCheck();
   });
-
-  // Render mapping grid
-  (function renderMap() {
-    const grid = document.getElementById('mappingGrid');
-    Object.entries(LETTER_MAP).forEach(([letter, num]) => {
-      const el = document.createElement('span');
-      el.className = 'map-pair';
-      el.innerHTML = `${letter}:<span>${num}</span>`;
-      grid.appendChild(el);
-    });
-  })();
 
   function convertToDigits(input) {
     const upper = input.toUpperCase();
@@ -620,7 +559,7 @@
 
     document.getElementById('resultDigit').textContent = result;
     document.getElementById('resultEcho').textContent = `"${raw}"`;
-    document.getElementById('resultLabel').textContent = `Vibe Number: ${result}`;
+    document.getElementById('resultLabel').textContent = `Vibe: ${result}`;
     document.getElementById('resultSub').textContent = `from ${digits.length} mapped digit${digits.length !== 1 ? 's' : ''}: ${digits.join(', ')}`;
 
     // Show steps
