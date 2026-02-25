@@ -940,7 +940,7 @@
       if (d < minDist) { minDist = d; closestChunk = c; }
     }
 
-    if (closestChunk && minDist < 5 && !quoteInput.value) {
+    if (closestChunk && minDist < 5) {
       var snippet = closestChunk.text.trim();
       if (snippet.length > 80) {
         var sp = snippet.indexOf(' ', 60);
@@ -1462,9 +1462,21 @@
   }
 
   function highlightTranscriptAtTime(time) {
+    var container = document.getElementById('transcriptDisplay');
     document.querySelectorAll('.ts-word').forEach(function (el) {
       var s = parseFloat(el.dataset.start), e = parseFloat(el.dataset.end);
-      el.classList.toggle('highlight', time >= s && time <= e);
+      var isActive = time >= s && time <= e;
+      el.classList.toggle('highlight', isActive);
+      if (isActive && container.classList.contains('visible')) {
+        // Scroll the highlighted chunk into view within the transcript box
+        var elTop = el.offsetTop - container.offsetTop;
+        var elBottom = elTop + el.offsetHeight;
+        var scrollTop = container.scrollTop;
+        var viewHeight = container.clientHeight;
+        if (elTop < scrollTop || elBottom > scrollTop + viewHeight) {
+          container.scrollTop = elTop - viewHeight / 2;
+        }
+      }
     });
   }
 
