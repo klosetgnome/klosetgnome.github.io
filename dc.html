@@ -327,8 +327,8 @@ let tasks={};
 let tasksLoaded=false;
 let tasksError=null;
 
-fetch("ncal.txt")
-  .then(r=>{if(!r.ok)throw new Error(`Could not load ncal.txt (${r.status})`);return r.text();})
+fetch("dc.txt")
+  .then(r=>{if(!r.ok)throw new Error(`Could not load dc.txt (${r.status})`);return r.text();})
   .then(text=>{tasks=parseTasks(text);tasksLoaded=true;updateTaskPanel();})
   .catch(err=>{tasksError=err.message;tasksLoaded=true;updateTaskPanel();});
 
@@ -386,7 +386,7 @@ function updateTaskPanel(){
   if(tasksError){
     const el=document.createElement("span");
     el.className="task-error";
-    el.textContent=`ncal.txt not found.\nServe this file from a local server.`;
+    el.textContent=`dc.txt not found.\nServe this file from a local server.`;
     el.style.whiteSpace="pre-line";
     list.appendChild(el);
     return;
