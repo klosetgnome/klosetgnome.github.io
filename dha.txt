@@ -7,7 +7,7 @@ You will receive:
 TASK:
 1. Generate exactly three headline hooks.
 2. Write a single-paragraph episode description (approximately 60 words).
-3. Exclude: percentages, dollar amounts, specific statistics, conclusions or advice.
+3. Exclude: percentages, dollar amounts or specific statistics.
 
 HEADLINE RULES:
 - Each hook must be under 37 characters. This is a hard limit.
