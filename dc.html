@@ -21,31 +21,29 @@
 <style>
   /* ── Page-specific tokens ── */
   :root {
-    /* Good = accent-derived */
-    --good: #c0512d;
-    --good-bg: rgba(192, 81, 45, 0.10);
-    --good-bg-solid: #f0ddd6;
-    --good-border: rgba(192, 81, 45, 0.25);
-    /* Bad = warm amber/ochre */
-    --bad: #a07828;
-    --bad-bg: rgba(160, 120, 40, 0.08);
-    --bad-bg-solid: #ede5d3;
-    --bad-border: rgba(160, 120, 40, 0.22);
+    /* Good = neutral / plain surface */
+    --good-color: var(--text-primary);
+    --good-bg: var(--surface);
+    --good-border: var(--border);
+    /* Bad = accent red */
+    --bad-color: #c0512d;
+    --bad-bg: #f0ddd6;
+    --bad-border: rgba(192, 81, 45, 0.25);
+    --bad-bg-subtle: rgba(192, 81, 45, 0.08);
   }
 
   [data-theme="dark"] {
     --surface-raised: #332e2b;
     --border-active: #524c45;
-    /* Good = accent-derived (dark) */
-    --good: #d4774a;
-    --good-bg: rgba(212, 119, 74, 0.10);
-    --good-bg-solid: #362a22;
-    --good-border: rgba(212, 119, 74, 0.25);
-    /* Bad = warm amber/ochre (dark) */
-    --bad: #c49a3a;
-    --bad-bg: rgba(196, 154, 58, 0.10);
-    --bad-bg-solid: #332e1f;
-    --bad-border: rgba(196, 154, 58, 0.25);
+    /* Good = neutral / plain surface */
+    --good-color: var(--text-primary);
+    --good-bg: var(--surface);
+    --good-border: var(--border);
+    /* Bad = accent red (dark) */
+    --bad-color: #d4774a;
+    --bad-bg: #362a22;
+    --bad-border: rgba(212, 119, 74, 0.25);
+    --bad-bg-subtle: rgba(212, 119, 74, 0.10);
   }
 
   /* ── Main ── */
@@ -105,13 +103,13 @@
     transition: background 0.2s ease, color 0.2s ease;
   }
 
-  .month-label.good { background: var(--good-bg); color: var(--good); }
-  .month-label.bad { background: var(--bad-bg); color: var(--bad); }
+  .month-label.good { background: transparent; color: var(--text-primary); }
+  .month-label.bad { background: var(--bad-bg-subtle); color: var(--bad-color); }
 
   .main-row {
     display: flex;
     align-items: stretch;
-    gap: 12px;
+    gap: 16px;
     margin-bottom: 24px;
     animation: fadeInUp 0.5s ease 0.15s both;
   }
@@ -119,9 +117,8 @@
   .calendar {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
-    justify-content: center;
-    padding: 24px;
+    gap: clamp(6px, 1vw, 12px);
+    padding: clamp(20px, 3vw, 40px);
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
@@ -133,12 +130,12 @@
 
   .day-name {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: clamp(10px, 1.2vw, 13px);
     font-weight: 400;
     letter-spacing: 1.5px;
     color: var(--text-muted);
     text-transform: uppercase;
-    padding-bottom: 6px;
+    padding-bottom: 8px;
     text-align: center;
   }
 
@@ -147,9 +144,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
+    border-radius: 8px;
     font-weight: 600;
-    font-size: 15px;
+    font-size: clamp(15px, 2.2vw, 26px);
     cursor: pointer;
     position: relative;
     transition: all 0.2s ease;
@@ -157,9 +154,9 @@
     font-family: var(--serif);
   }
 
-  .good { background: var(--good-bg-solid); color: var(--good); }
+  .good { background: var(--good-bg); color: var(--good-color); }
   .good:hover { border-color: var(--good-border); }
-  .bad { background: var(--bad-bg-solid); color: var(--bad); }
+  .bad { background: var(--bad-bg); color: var(--bad-color); }
   .bad:hover { border-color: var(--bad-border); }
   .empty { visibility: hidden; }
 
@@ -168,7 +165,7 @@
     position: absolute;
     inset: -3px;
     border: 2px solid var(--accent);
-    border-radius: 8px;
+    border-radius: 10px;
     pointer-events: none;
   }
 
@@ -195,11 +192,11 @@
     transition: all 0.2s ease;
   }
 
-  .info.good { background: var(--good-bg); color: var(--good); border-color: var(--good-border); }
-  .info.bad { background: var(--bad-bg); color: var(--bad); border-color: var(--bad-border); }
+  .info.good { background: transparent; color: var(--text-secondary); border-color: var(--border); }
+  .info.bad { background: var(--bad-bg-subtle); color: var(--bad-color); border-color: var(--bad-border); }
 
   .task-panel {
-    width: 210px;
+    width: 220px;
     flex-shrink: 0;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -236,9 +233,9 @@
     transition: all 0.2s ease;
   }
 
-  .task-item.good { background: var(--good-bg-solid); color: var(--good); }
-  .task-item.good:hover { border-color: var(--good-border); }
-  .task-item.bad { background: var(--bad-bg-solid); color: var(--bad); }
+  .task-item.good { background: var(--surface-raised); color: var(--text-primary); }
+  .task-item.good:hover { border-color: var(--border); }
+  .task-item.bad { background: var(--bad-bg); color: var(--bad-color); }
   .task-item.bad:hover { border-color: var(--bad-border); }
   .task-item.neutral { background: var(--surface-raised); color: var(--text-muted); }
 
@@ -247,7 +244,7 @@
   .task-error {
     font-family: var(--mono);
     font-size: 11px;
-    color: var(--bad);
+    color: var(--bad-color);
     letter-spacing: 0.5px;
     padding: 8px 0;
     line-height: 1.5;
@@ -257,8 +254,8 @@
     .container { padding: 32px 16px 60px; }
     .main-row { flex-direction: column; }
     .task-panel { width: 100%; }
-    .calendar { padding: 16px; gap: 4px; }
-    .date { font-size: 13px; }
+    .calendar { padding: 16px; gap: 6px; }
+    .date { font-size: 14px; }
   }
 </style>
 </head>
