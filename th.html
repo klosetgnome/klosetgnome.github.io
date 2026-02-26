@@ -208,7 +208,6 @@
     .waveform-container { padding: 16px 20px 8px; cursor: crosshair; }
     #waveform { width: 100%; min-height: 100px; }
 
-    /* ═══ WAVEFORM LOADING OVERLAY ═══ */
     .waveform-loading {
       position: absolute;
       inset: 0;
@@ -268,12 +267,41 @@
     .transport-btn svg { width: 16px; height: 16px; }
     .transport-time {
       font-family: var(--mono); font-size: 14px; font-weight: 500;
-      color: var(--text-primary); letter-spacing: 1px; min-width: 80px;
+      color: var(--text-primary); letter-spacing: 1px; min-width: 105px;
     }
     .transport-duration {
       font-family: var(--mono); font-size: 12px; color: var(--text-muted);
     }
     .transport-spacer { flex: 1; }
+
+    /* ═══ SPEED BADGE ═══ */
+    .speed-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .speed-badge:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+    .speed-badge.modified {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+
     .transport-hint {
       font-family: var(--mono); font-size: 10px;
       color: var(--text-muted); letter-spacing: 0.5px;
@@ -443,10 +471,10 @@
     }
     .tc-input {
       font-family: var(--mono); font-size: 14px; font-weight: 500;
-      width: 86px; padding: 8px 8px; border: 1px solid var(--border);
+      width: 108px; padding: 8px 6px; border: 1px solid var(--border);
       border-radius: var(--radius); background: var(--bg);
       color: var(--text-primary); text-align: center;
-      letter-spacing: 1.5px; outline: none;
+      letter-spacing: 1.2px; outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
     .tc-input::placeholder { color: var(--text-muted); font-weight: 400; }
@@ -580,7 +608,7 @@
       .field-group select { min-width: 0; max-width: 100%; width: 100%; }
       .segment-row { padding: 10px 12px; gap: 6px; }
       .quote-input { min-width: 60px; }
-      .tc-input { width: 78px; font-size: 13px; }
+      .tc-input { width: 98px; font-size: 13px; }
       .transport-hint { display: none; }
       .bottom-bar { flex-direction: column; align-items: stretch; }
     }
@@ -601,7 +629,6 @@
     </select>
   </div>
 
-  <!-- Audio card -->
   <div class="card" id="audioCard">
     <span class="card-label">Audio</span>
     <span class="card-hint">Drop up to 5 audio stems — they'll be mixed into a single waveform for navigation and transcription</span>
@@ -630,15 +657,11 @@
     </div>
 
     <div class="waveform-area" id="waveformArea">
-      <!-- Loading overlay -->
       <div class="waveform-loading" id="waveformLoading">
         <span class="waveform-loading-label">Processing audio…</span>
-        <div class="waveform-loading-track">
-          <div class="waveform-loading-bar"></div>
-        </div>
+        <div class="waveform-loading-track"><div class="waveform-loading-bar"></div></div>
         <span class="waveform-loading-detail" id="waveformLoadingDetail">Decoding stems</span>
       </div>
-
       <div class="waveform-container"><div id="waveform"></div></div>
       <div class="transport">
         <button class="transport-btn" id="btnSkipBack" title="Skip back 5s">
@@ -651,8 +674,9 @@
         <button class="transport-btn" id="btnSkipFwd" title="Skip forward 5s">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
         </button>
-        <span class="transport-time" id="transportTime">00.00.00</span>
-        <span class="transport-duration" id="transportDuration">/ 00.00.00</span>
+        <span class="transport-time" id="transportTime">00.00.00.00</span>
+        <span class="transport-duration" id="transportDuration">/ 00.00.00.00</span>
+        <span class="speed-badge" id="speedBadge" title="Click to cycle speed (D faster, S slower, R reset)">1&times;</span>
         <span class="transport-spacer"></span>
         <span class="transport-hint">Focus a timecode field, press <kbd>T</kbd> to stamp</span>
       </div>
@@ -675,7 +699,6 @@
     </div>
   </div>
 
-  <!-- Two-column segments -->
   <div class="columns-wrap">
     <div class="col-left" id="colLeft"></div>
     <div class="col-right" id="colRight">
@@ -692,7 +715,8 @@
       <kbd>Space</kbd> Play / Pause &nbsp;&middot;&nbsp;
       <kbd>T</kbd> Stamp timecode &nbsp;&middot;&nbsp;
       <kbd>&larr;</kbd> <kbd>&rarr;</kbd> &plusmn;5s &nbsp;&middot;&nbsp;
-      <kbd>Shift</kbd>+<kbd>&larr;</kbd> <kbd>&rarr;</kbd> &plusmn;1s
+      <kbd>Shift</kbd>+<kbd>&larr;</kbd> <kbd>&rarr;</kbd> &plusmn;1s &nbsp;&middot;&nbsp;
+      <kbd>D</kbd> Faster &nbsp;<kbd>S</kbd> Slower &nbsp;<kbd>R</kbd> Reset speed
     </div>
     <div class="btn-group">
       <button class="export-btn secondary" id="clearAllBtn">Clear All</button>
@@ -709,6 +733,16 @@
 (function () {
   'use strict';
 
+  // ═══════════════════════════════════════════════════════════════
+  // CONSTANTS
+  // ═══════════════════════════════════════════════════════════════
+  var FPS = 25; // 25fps broadcast
+  var SPEED_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  var speedIndex = 2; // default 1×
+
+  // ═══════════════════════════════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════════════════════════════
   var wavesurfer = null;
   var audioLoaded = false;
   var transcriptChunks = null;
@@ -743,7 +777,6 @@
         // ─────────────────────────────────────────────────────────
         var modelId = 'onnx-community/whisper-base';
 
-        // Detect best available device: WebGPU is 5-10× faster than WASM
         var device = 'wasm';
         if (typeof navigator !== 'undefined' && navigator.gpu) {
           try {
@@ -762,13 +795,9 @@
         var transcriber = await transformers.pipeline(
           'automatic-speech-recognition',
           modelId,
-          {
-            dtype: device === 'webgpu' ? 'fp32' : 'q8',
-            device: device
-          }
+          { dtype: device === 'webgpu' ? 'fp32' : 'q8', device: device }
         );
 
-        // Estimate chunk count for progress
         var audioLengthSec = e.data.audioDuration || 0;
         var chunkSec = 30;
         var totalChunks = Math.max(1, Math.ceil(audioLengthSec / chunkSec));
@@ -783,8 +812,7 @@
           stride_length_s: 5,
           language: 'en',
           task: 'transcribe',
-          callback_function: function (output) {
-            // Called after each chunk
+          callback_function: function () {
             chunksProcessed++;
             var pct = Math.min(95, Math.round((chunksProcessed / totalChunks) * 95));
             self.postMessage({ type: 'progress', value: pct });
@@ -803,6 +831,12 @@
       }
     };
   };
+
+  var workerBlob = new Blob(
+    ['(' + workerScript.toString() + ')()'],
+    { type: 'application/javascript' }
+  );
+  var workerUrl = URL.createObjectURL(workerBlob);
 
   // ═══════════════════════════════════════════════════════════════
   // CATEGORY DEFINITIONS
@@ -836,21 +870,34 @@
     return (b / 1048576).toFixed(1) + ' MB';
   }
 
+  // Timecode: HH.MM.SS.FF at 25fps
   function secondsToTimecode(s) {
-    var h = Math.floor(s / 3600);
-    var m = Math.floor((s % 3600) / 60);
-    var sec = Math.floor(s % 60);
-    return String(h).padStart(2, '0') + '.' + String(m).padStart(2, '0') + '.' + String(sec).padStart(2, '0');
+    var totalFrames = Math.round(s * FPS);
+    var ff = totalFrames % FPS;
+    var totalSec = Math.floor(totalFrames / FPS);
+    var hh = Math.floor(totalSec / 3600);
+    var mm = Math.floor((totalSec % 3600) / 60);
+    var ss = totalSec % 60;
+    return String(hh).padStart(2, '0') + '.'
+      + String(mm).padStart(2, '0') + '.'
+      + String(ss).padStart(2, '0') + '.'
+      + String(ff).padStart(2, '0');
   }
 
   function timecodeToSeconds(tc) {
     var parts = tc.split('.');
-    if (parts.length !== 3) return NaN;
-    return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+    if (parts.length !== 4) return NaN;
+    var hh = parseInt(parts[0], 10);
+    var mm = parseInt(parts[1], 10);
+    var ss = parseInt(parts[2], 10);
+    var ff = parseInt(parts[3], 10);
+    if (isNaN(hh) || isNaN(mm) || isNaN(ss) || isNaN(ff)) return NaN;
+    if (ff < 0 || ff > 24 || mm < 0 || mm > 59 || ss < 0 || ss > 59) return NaN;
+    return hh * 3600 + mm * 60 + ss + ff / FPS;
   }
 
   function isValidTimecode(tc) {
-    return /^\d{1,2}\.\d{1,2}\.\d{1,2}$/.test(tc) && !isNaN(timecodeToSeconds(tc));
+    return /^\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,2}$/.test(tc) && !isNaN(timecodeToSeconds(tc));
   }
 
   function showToast(msg) {
@@ -877,30 +924,47 @@
   // WAVEFORM LOADING OVERLAY
   // ═══════════════════════════════════════════════════════════════
   function showWaveformLoading(detail) {
-    var el = document.getElementById('waveformLoading');
-    var detailEl = document.getElementById('waveformLoadingDetail');
-    detailEl.textContent = detail || '';
-    el.classList.add('visible');
+    document.getElementById('waveformLoadingDetail').textContent = detail || '';
+    document.getElementById('waveformLoading').classList.add('visible');
   }
-
   function updateWaveformLoading(detail) {
     document.getElementById('waveformLoadingDetail').textContent = detail || '';
   }
-
   function hideWaveformLoading() {
     document.getElementById('waveformLoading').classList.remove('visible');
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // PLAYBACK SPEED
+  // ═══════════════════════════════════════════════════════════════
+  function setSpeed(idx) {
+    speedIndex = Math.max(0, Math.min(SPEED_STEPS.length - 1, idx));
+    var rate = SPEED_STEPS[speedIndex];
+    var badge = document.getElementById('speedBadge');
+    badge.textContent = rate + '×';
+    badge.classList.toggle('modified', rate !== 1);
+    if (wavesurfer) wavesurfer.setPlaybackRate(rate);
+  }
+
+  function speedUp() { setSpeed(speedIndex + 1); }
+  function speedDown() { setSpeed(speedIndex - 1); }
+  function speedReset() { setSpeed(SPEED_STEPS.indexOf(1)); }
+
+  document.getElementById('speedBadge').addEventListener('click', function () {
+    setSpeed((speedIndex + 1) % SPEED_STEPS.length);
+  });
+
+  // ═══════════════════════════════════════════════════════════════
   // TIMECODE INPUT
   // ═══════════════════════════════════════════════════════════════
   function setupTimecodeInput(input) {
+    // Auto-format: 8 digits → HH.MM.SS.FF
     input.addEventListener('input', function () {
       var digits = this.value.replace(/[^\d]/g, '');
-      if (digits.length > 6) digits = digits.substring(0, 6);
+      if (digits.length > 8) digits = digits.substring(0, 8);
       var formatted = '';
       for (var i = 0; i < digits.length; i++) {
-        if (i === 2 || i === 4) formatted += '.';
+        if (i === 2 || i === 4 || i === 6) formatted += '.';
         formatted += digits[i];
       }
       this.value = formatted;
@@ -914,7 +978,6 @@
 
     input.addEventListener('focus', function () { this.classList.remove('invalid'); });
 
-    // T key stamps current playback position
     input.addEventListener('keydown', function (e) {
       if ((e.key === 't' || e.key === 'T') && wavesurfer && audioLoaded) {
         e.preventDefault();
@@ -1003,7 +1066,7 @@
         rows += '<div class="segment-row">'
           + '<span class="row-label-wide">' + cr.label + '</span>'
           + '<div class="tc-wrap">'
-          + '<input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + cr.tcId + '" placeholder="00.00.00" maxlength="8" required />'
+          + '<input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + cr.tcId + '" placeholder="00.00.00.00" maxlength="11" required />'
           + '<button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button>'
           + '</div></div>';
       }
@@ -1012,7 +1075,7 @@
         rows += '<div class="segment-row">'
           + '<span class="row-label">' + lbl + '</span>'
           + '<div class="tc-wrap">'
-          + '<input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + lbl.toLowerCase() + '" placeholder="00.00.00" maxlength="8" required />'
+          + '<input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + lbl.toLowerCase() + '" placeholder="00.00.00.00" maxlength="11" required />'
           + '<button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button>'
           + '</div></div>';
       });
@@ -1020,7 +1083,7 @@
       rows += '<div class="segment-row">'
         + '<span class="row-label">Start</span>'
         + '<div class="tc-wrap">'
-        + '<input type="text" class="tc-input" data-tc-id="' + seg.id + '-start" placeholder="00.00.00" maxlength="8" required />'
+        + '<input type="text" class="tc-input" data-tc-id="' + seg.id + '-start" placeholder="00.00.00.00" maxlength="11" required />'
         + '<button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button>'
         + '</div>'
         + '<span class="quote-label">Quote in</span>'
@@ -1029,7 +1092,7 @@
       rows += '<div class="segment-row">'
         + '<span class="row-label">End</span>'
         + '<div class="tc-wrap">'
-        + '<input type="text" class="tc-input" data-tc-id="' + seg.id + '-end" placeholder="00.00.00" maxlength="8" required />'
+        + '<input type="text" class="tc-input" data-tc-id="' + seg.id + '-end" placeholder="00.00.00.00" maxlength="11" required />'
         + '<button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button>'
         + '</div>'
         + '<span class="quote-label">Quote out</span>'
@@ -1065,10 +1128,8 @@
     rightFixed.innerHTML = '';
     document.getElementById('pickupsContainer').innerHTML = '';
     pickupCount = 0;
-
     var cat = CATEGORIES[catId];
     if (!cat) return;
-
     (cat.left || []).forEach(function (seg) { colLeft.appendChild(buildSegmentCard(seg)); });
     (cat.right || []).forEach(function (seg) { rightFixed.appendChild(buildSegmentCard(seg)); });
     updateStampButtons();
@@ -1187,8 +1248,6 @@
     if (!stemFiles.length) return;
     document.getElementById('waveformArea').classList.add('visible');
     document.getElementById('transcribeRow').classList.add('visible');
-
-    // Show loading overlay
     showWaveformLoading('Decoding ' + stemFiles.length + ' stem' + (stemFiles.length > 1 ? 's' : '') + '…');
 
     try {
@@ -1201,8 +1260,6 @@
       }
 
       updateWaveformLoading('Mixing stems…');
-
-      // Allow a repaint so the status text updates
       await new Promise(function (r) { setTimeout(r, 50); });
 
       var sampleRate = buffers[0].sampleRate;
@@ -1233,7 +1290,6 @@
         }
       }
 
-      // Normalise
       var peak = 0;
       for (var p = 0; p < mixed.length; p++) { var a = Math.abs(mixed[p]); if (a > peak) peak = a; }
       if (peak > 0 && peak !== 1) {
@@ -1249,7 +1305,6 @@
 
       updateWaveformLoading('Rendering waveform…');
 
-      // Load wavesurfer
       if (wavesurfer) wavesurfer.destroy();
       wavesurfer = WaveSurfer.create({
         container: '#waveform',
@@ -1267,6 +1322,8 @@
         audioLoaded = true;
         updateStampButtons();
         document.getElementById('transportDuration').textContent = '/ ' + secondsToTimecode(wavesurfer.getDuration());
+        // Apply current speed to new wavesurfer instance
+        wavesurfer.setPlaybackRate(SPEED_STEPS[speedIndex]);
         hideWaveformLoading();
       });
       wavesurfer.on('audioprocess', updateTransportTime);
@@ -1324,13 +1381,14 @@
     document.getElementById('transcribeRow').classList.remove('visible');
     document.getElementById('transcriptDisplay').classList.remove('visible');
     document.getElementById('transcriptDisplay').innerHTML = '';
-    document.getElementById('transportTime').textContent = '00.00.00';
-    document.getElementById('transportDuration').textContent = '/ 00.00.00';
+    document.getElementById('transportTime').textContent = '00.00.00.00';
+    document.getElementById('transportDuration').textContent = '/ 00.00.00.00';
     document.getElementById('transcribeBtn').disabled = false;
     document.getElementById('transcribeBtn').textContent = 'Transcribe';
     document.getElementById('transcribeBtn').classList.remove('done');
     document.getElementById('transcribeStatus').textContent = '';
     hideWaveformLoading();
+    speedReset();
     updateStampButtons();
   }
 
@@ -1368,6 +1426,13 @@
         e.preventDefault(); wavesurfer.skip(e.shiftKey ? 1 : 5);
       }
     }
+
+    // Speed shortcuts — D faster, S slower, R reset (not when typing in quote inputs)
+    if (!isInput || isTcInput) {
+      if (e.key === 'd' || e.key === 'D') { e.preventDefault(); speedUp(); }
+      if (e.key === 's' || e.key === 'S') { e.preventDefault(); speedDown(); }
+      if (e.key === 'r' || e.key === 'R') { e.preventDefault(); speedReset(); }
+    }
   });
 
   // ═══════════════════════════════════════════════════════════════
@@ -1388,24 +1453,17 @@
 
     try {
       var audioData = await getMixedAudio16k();
-
       var worker = new Worker(workerUrl, { type: 'module' });
 
       worker.onmessage = function (e) {
         var msg = e.data;
-
-        if (msg.type === 'status') {
-          status.textContent = msg.text;
-        }
-
+        if (msg.type === 'status') status.textContent = msg.text;
         if (msg.type === 'progress') {
           progBar.classList.remove('indeterminate');
           progBar.style.width = msg.value + '%';
         }
-
         if (msg.type === 'result') {
           var result = msg.data;
-
           if (result && result.chunks && result.chunks.length) {
             transcriptChunks = result.chunks.map(function (c) {
               return { start: c.timestamp[0] || 0, end: c.timestamp[1] || c.timestamp[0] + 1, text: c.text };
@@ -1413,7 +1471,6 @@
           } else if (result && result.text) {
             transcriptChunks = [{ start: 0, end: mixedBuffer.duration, text: result.text }];
           }
-
           displayTranscript();
           status.textContent = 'Transcription complete — quotes will auto-populate when you stamp timecodes';
           btn.textContent = 'Transcribed';
@@ -1422,7 +1479,6 @@
           setTimeout(function () { prog.classList.remove('visible'); }, 1000);
           worker.terminate();
         }
-
         if (msg.type === 'error') {
           console.error('Worker transcription error:', msg.text);
           status.textContent = 'Transcription failed: ' + msg.text;
@@ -1457,8 +1513,7 @@
 
   async function getMixedAudio16k() {
     if (!mixedBuffer) throw new Error('No mixed audio');
-    var dur = mixedBuffer.duration;
-    var targetLen = Math.ceil(dur * 16000);
+    var targetLen = Math.ceil(mixedBuffer.duration * 16000);
     var offline = new OfflineAudioContext(1, targetLen, 16000);
     var src = offline.createBufferSource();
     src.buffer = mixedBuffer;
@@ -1500,7 +1555,6 @@
       var isActive = time >= s && time <= e;
       el.classList.toggle('highlight', isActive);
       if (isActive && container.classList.contains('visible')) {
-        // Scroll the highlighted chunk into view within the transcript box
         var elTop = el.offsetTop - container.offsetTop;
         var elBottom = elTop + el.offsetHeight;
         var scrollTop = container.scrollTop;
@@ -1526,7 +1580,7 @@
     var lines = [], valid = true;
     document.querySelectorAll('.segment-card').forEach(function (card) {
       var hdr = card.querySelector('.segment-header .header-left span');
-      lines.push('--- ' + (hdr ? hdr.textContent : '') + ' ---');
+      lines.push((hdr ? hdr.textContent : ''));
       card.querySelectorAll('.segment-row').forEach(function (row) {
         var rl = row.querySelector('.row-label') || row.querySelector('.row-label-wide');
         var tc = row.querySelector('.tc-input');
@@ -1535,7 +1589,7 @@
         if (rl) line += rl.textContent.trim() + ': ';
         if (tc) {
           if (!tc.value || !isValidTimecode(tc.value)) { tc.classList.add('invalid'); valid = false; }
-          line += tc.value || '??:??:??';
+          line += tc.value || '??:??:??:??';
         }
         if (qi) {
           if (!qi.value.trim()) {
