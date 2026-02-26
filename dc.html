@@ -192,7 +192,7 @@
     transition: all 0.2s ease;
   }
 
-  .info.good { background: transparent; color: var(--text-secondary); border-color: var(--border); }
+  .info.good { background: transparent; color: var(--text-primary); border-color: var(--border); }
   .info.bad { background: var(--bad-bg-subtle); color: var(--bad-color); border-color: var(--bad-border); }
 
   .task-panel {
@@ -218,7 +218,10 @@
     margin-bottom: 14px;
     padding-bottom: 12px;
     border-bottom: 1px solid var(--border);
+    transition: color 0.2s ease;
   }
+
+  .task-panel-header.bad { color: var(--bad-color); }
 
   .task-list { display: flex; flex-direction: column; gap: 6px; flex: 1; }
 
@@ -360,10 +363,17 @@ function getDayState(y,m,d){
 function updateInfo(y,m,d){
   const ym=yearMonthValue(y,m);
   const dv=dayValue(d);
-  const info=document.getElementById("info");
-  info.textContent=`${ym}, ${dv}`;
   const combinedRoot=digitalRoot(ym+dv);
-  info.className="info "+(badVals.includes(combinedRoot)?"bad":"good");
+  const state=badVals.includes(combinedRoot)?"bad":"good";
+  // Day name goes below the calendar
+  const info=document.getElementById("info");
+  const dow=new Date(y,m-1,d).getDay();
+  info.textContent=DAY_LABELS[dow];
+  info.className="info "+state;
+  // Numbers go into the task panel header
+  const header=document.getElementById("task-header");
+  header.textContent=`${ym} | ${dv}`;
+  header.className="task-panel-header "+state;
 }
 
 function updateTaskPanel(){
@@ -373,10 +383,7 @@ function updateTaskPanel(){
   const d=selectedDate.getDate();
   const dow=selectedDate.getDay();
   const key=DAY_KEYS[dow];
-  const label=DAY_LABELS[dow];
   const state=getDayState(y,m,d);
-  const header=document.getElementById("task-header");
-  header.textContent=label;
   const list=document.getElementById("task-list");
   list.innerHTML="";
   if(tasksError){
