@@ -18,6 +18,10 @@
   </script>
   <link rel="stylesheet" href="styles.css">
   <style>
+    /* ── Header overrides for 3-column layout ── */
+    .site-header h1 { flex-shrink: 0; }
+    .theme-toggle { flex-shrink: 0; }
+
     /* ── Main content ── */
     main {
       flex: 1;
@@ -55,7 +59,7 @@
       font-size: 11px;
     }
 
-    /* Field groups (category select, model select) */
+    /* Model field group */
     .field-group {
       display: flex;
       flex-direction: column;
@@ -460,6 +464,7 @@
 
     /* Responsive */
     @media (max-width: 600px) {
+      .site-header { padding: 20px 16px; gap: 8px; }
       main { padding: 32px 16px 60px; }
       .field-group select { min-width: 0; width: 100%; }
       .submit-row { flex-direction: column; align-items: stretch; }
@@ -472,6 +477,12 @@
 
 <header class="site-header">
   <h1><span>DESCRIPTION</span> HELPER</h1>
+  <div class="header-center">
+    <select id="categorySelect">
+      <option value="finance" data-prompt="pmtdha.txt">Finance</option>
+      <option value="news" data-prompt="pmtdhb.txt">News</option>
+    </select>
+  </div>
   <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
     <!-- Moon: shown in light mode -->
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -489,14 +500,6 @@
 </header>
 
 <main>
-
-  <div class="field-group">
-    <label>Select Category</label>
-    <select id="categorySelect">
-      <option value="finance" data-prompt="pmtdha.txt">Finance</option>
-      <option value="news" data-prompt="pmtdhb.txt">News</option>
-    </select>
-  </div>
 
   <div class="results" id="results">
     <div class="results-header">Episode Copy</div>
