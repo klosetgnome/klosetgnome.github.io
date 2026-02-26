@@ -98,32 +98,45 @@ body {
 }
 
 .header-center select {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 8px 36px 8px 14px;
-  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 4px 20px 4px 0;
+  color: var(--accent);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 3px;
+  text-transform: uppercase;
   outline: none;
   cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: opacity 0.2s;
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a756b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23c0512d' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 14px center;
-  min-width: 200px;
+  background-position: right 2px center;
+  min-width: 0;
+}
+
+[data-theme="dark"] .header-center select {
+  background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23d4774a' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.header-center select:hover {
+  opacity: 0.75;
 }
 
 .header-center select:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  border: none;
+  box-shadow: none;
 }
 
 .header-center select option {
   background: var(--surface);
   color: var(--text-primary);
+  font-size: 12px;
+  letter-spacing: 1px;
 }
 
 /* ── Theme Toggle ── */
@@ -204,7 +217,7 @@ footer a:hover {
 /* ── Responsive ── */
 @media (max-width: 700px) {
   .site-header { padding: 20px 16px; gap: 8px; }
-  .header-center select { min-width: 140px; font-size: 11px; padding: 6px 30px 6px 10px; }
+  .header-center select { min-width: 0; font-size: 11px; letter-spacing: 2px; padding: 4px 18px 4px 0; }
 }
 
 @media (max-width: 600px) {
