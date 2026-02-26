@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow">
+  <title>Timecode Helper</title>
+  <!-- Prevent flash of wrong theme -->
+  <script>
+    (function() {
+      var saved = localStorage.getItem('theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://unpkg.com/wavesurfer.js@7"></script>
+  <style>
+    /* ── Page-specific tokens ── */
+    :root {
+      --success-light: rgba(74, 140, 63, 0.08);
+      --success-border: rgba(74, 140, 63, 0.35);
+      --waveform-wave: #d9d4cb;
+      --waveform-progress: #c0512d;
+      --waveform-cursor: #2c2a26;
+      --loading-overlay: rgba(255, 255, 255, 0.92);
+    }
+
+    [data-theme="dark"] {
+      --success-light: rgba(94, 168, 82, 0.08);
+      --success-border: rgba(94, 168, 82, 0.35);
+      --waveform-wave: #564f47;
+      --waveform-progress: #d4774a;
+      --waveform-cursor: #e7e0d8;
+      --loading-overlay: rgba(28, 25, 23, 0.92);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+      gap: 20px;
+      width: 100%;
+    }
+
+    .card {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      animation: fadeInUp 0.5s ease 0.15s both;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+    .card-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding: 16px 20px 0;
+      display: block;
+    }
+    .card-hint {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      padding: 3px 20px 0;
+      display: block;
+    }
+
+    .audio-drop-zone { position: relative; width: 100%; }
+    .audio-drop-overlay {
+      display: none; position: absolute; inset: 0; z-index: 10;
+      background: var(--accent-light); border: 2px dashed var(--accent);
+      border-radius: var(--radius); align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .audio-drop-overlay.active { display: flex; }
+    .audio-drop-overlay span {
+      font-family: var(--mono); font-size: 12px; font-weight: 500;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--accent);
+    }
+    .audio-prompt {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 12px; padding: 36px 20px;
+      min-height: 140px; text-align: center;
+    }
+    .audio-prompt.hidden { display: none; }
+    .audio-prompt-icon { color: var(--text-muted); opacity: 0.5; }
+    .audio-prompt-icon svg { width: 36px; height: 36px; }
+    .audio-prompt-text {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--text-secondary); line-height: 1.9;
+    }
+    .audio-prompt-text .browse {
+      color: var(--accent); cursor: pointer; transition: opacity 0.2s;
+    }
+    .audio-prompt-text .browse:hover { text-decoration: underline; }
+
+    .stems-bar {
+      display: none;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 10px 20px;
+      border-top: 1px solid var(--border);
+      align-items: center;
+    }
+    .stems-bar.visible { display: flex; }
+    .stems-bar-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-muted); margin-right: 4px;
+    }
+    .stem-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 4px 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--text-primary);
+    }
+    .stem-chip .stem-remove {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 14px; line-height: 1;
+      transition: color 0.2s; padding: 0;
+    }
+    .stem-chip .stem-remove:hover { color: var(--error); }
+    .stems-add-btn {
+      background: none; border: 1px dashed var(--border);
+      border-radius: var(--radius); padding: 4px 12px;
+      font-family: var(--mono); font-size: 11px; color: var(--text-muted);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .stems-add-btn:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light); border-style: solid;
+    }
+    .stems-add-btn.disabled { opacity: 0.3; pointer-events: none; }
+
+    .waveform-area { display: none; flex-direction: column; gap: 0; position: relative; }
+    .waveform-area.visible { display: flex; }
+    .waveform-container { padding: 16px 20px 8px; cursor: crosshair; }
+    #waveform { width: 100%; min-height: 100px; }
+
+    .waveform-loading {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      background: var(--loading-overlay);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      border-radius: var(--radius);
+      transition: background 0.3s ease;
+    }
+    .waveform-loading.visible { display: flex; }
+    .waveform-loading-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .waveform-loading-track {
+      width: 200px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .waveform-loading-bar {
+      height: 100%;
+      width: 100%;
+      background: var(--accent);
+      animation: indeterminate 1.8s ease-in-out infinite;
+    }
+    .waveform-loading-detail {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .transport {
+      display: flex; align-items: center; gap: 10px; padding: 8px 20px 16px;
+    }
+    .transport-btn {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-primary); transition: all 0.2s;
+    }
+    .transport-btn:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light);
+    }
+    .transport-btn.active {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+    .transport-btn svg { width: 16px; height: 16px; }
+    .transport-time {
+      font-family: var(--mono); font-size: 14px; font-weight: 500;
+      color: var(--text-primary); letter-spacing: 1px; min-width: 105px;
+    }
+    .transport-duration {
+      font-family: var(--mono); font-size: 12px; color: var(--text-muted);
+    }
+    .transport-spacer { flex: 1; }
+
+    .speed-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .speed-badge:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+    .speed-badge.modified {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    .transport-hint {
+      font-family: var(--mono); font-size: 10px;
+      color: var(--text-muted); letter-spacing: 0.5px;
+    }
+    .transport-hint kbd {
+      display: inline-block; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 4px;
+      padding: 1px 6px; font-family: var(--mono); font-size: 10px;
+    }
+
+    .audio-file-bar {
+      display: none; align-items: center; gap: 12px; padding: 12px 20px;
+      border-top: 1px solid var(--border); font-family: var(--mono);
+      font-size: 12px; color: var(--text-secondary);
+    }
+    .audio-file-bar.visible { display: flex; }
+    .audio-file-bar .file-name {
+      flex: 1; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; color: var(--text-primary); font-weight: 500;
+    }
+    .audio-file-bar .file-size { color: var(--text-muted); flex-shrink: 0; }
+    .audio-file-bar .file-remove {
+      flex-shrink: 0; background: none; border: 1px solid var(--border);
+      border-radius: var(--radius); font-family: var(--mono); font-size: 11px;
+      letter-spacing: 1px; text-transform: uppercase; color: var(--text-secondary);
+      padding: 5px 12px; cursor: pointer; transition: all 0.2s;
+    }
+    .audio-file-bar .file-remove:hover {
+      border-color: var(--error); color: var(--error);
+      background: var(--error-glow);
+    }
+
+    .transcribe-row {
+      display: none; align-items: center; gap: 12px; padding: 0 20px 16px;
+    }
+    .transcribe-row.visible { display: flex; }
+    .transcribe-btn {
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      letter-spacing: 1px; text-transform: uppercase;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 8px 16px; cursor: pointer; background: var(--surface);
+      color: var(--text-primary); transition: all 0.2s;
+    }
+    .transcribe-btn:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light);
+    }
+    .transcribe-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .transcribe-btn.done {
+      border-color: var(--success); color: var(--success);
+      background: var(--success-light);
+    }
+    .transcribe-status {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--text-muted); letter-spacing: 0.5px;
+    }
+    .transcribe-progress {
+      flex: 1; height: 3px; background: var(--border);
+      border-radius: 3px; overflow: hidden; display: none;
+    }
+    .transcribe-progress.visible { display: block; }
+    .transcribe-progress-bar {
+      height: 100%; width: 0%; background: var(--accent);
+      transition: width 0.3s ease;
+    }
+    .transcribe-progress-bar.indeterminate {
+      width: 100%; animation: indeterminate 1.8s ease-in-out infinite;
+    }
+
+    .transcript-display {
+      display: none; max-height: 160px; overflow-y: auto;
+      padding: 12px 20px 16px; border-top: 1px solid var(--border);
+      font-family: var(--mono); font-size: 11px; line-height: 1.8;
+      color: var(--text-secondary);
+    }
+    .transcript-display.visible { display: block; }
+    .transcript-display .ts-word {
+      cursor: pointer; padding: 1px 0; border-radius: 2px;
+      transition: background 0.15s;
+    }
+    .transcript-display .ts-word:hover {
+      background: var(--accent-light); color: var(--accent);
+    }
+    .transcript-display .ts-word.highlight {
+      background: rgba(192, 81, 45, 0.15); color: var(--accent);
+    }
+
+    .columns-wrap {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    .col-left, .col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #rightFixedSegments,
+    #pickupsContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    @media (max-width: 860px) {
+      .columns-wrap { grid-template-columns: 1fr; }
+    }
+
+    .segment-card {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      animation: fadeInUp 0.4s ease both;
+      transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+    }
+    .segment-card.complete {
+      border-color: var(--success-border);
+      box-shadow: 0 0 0 1px var(--success-border);
+      background: linear-gradient(to bottom, rgba(74, 140, 63, 0.04), var(--surface) 40%);
+    }
+    .segment-card.complete .segment-header { color: var(--success); }
+    .segment-card.complete .complete-tick { display: inline-block; }
+
+    .segment-header {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--text-muted);
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      transition: color 0.4s ease;
+    }
+    .segment-header .header-left {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .complete-tick {
+      display: none; color: var(--success);
+    }
+    .complete-tick svg { width: 14px; height: 14px; }
+    .segment-header .remove-pickup {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+      text-transform: uppercase; background: none;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 4px 10px; cursor: pointer; color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .segment-header .remove-pickup:hover {
+      border-color: var(--error); color: var(--error);
+      background: var(--error-glow);
+    }
+
+    .segment-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .segment-row:last-child { border-bottom: none; }
+
+    .row-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-muted);
+      width: 44px; flex-shrink: 0;
+    }
+    .row-label-wide {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-muted);
+      width: auto; flex-shrink: 0; white-space: nowrap;
+    }
+
+    .tc-wrap {
+      display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+    }
+    .tc-input {
+      font-family: var(--mono); font-size: 14px; font-weight: 500;
+      width: 108px; padding: 8px 6px; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--bg);
+      color: var(--text-primary); text-align: center;
+      letter-spacing: 1.2px; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .tc-input::placeholder { color: var(--text-muted); font-weight: 400; }
+    .tc-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .tc-input.invalid {
+      border-color: var(--error);
+      box-shadow: 0 0 0 3px var(--error-glow);
+    }
+    .stamp-btn {
+      background: none; border: 1px solid var(--border);
+      border-radius: var(--radius); width: 30px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .stamp-btn:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light);
+    }
+    .stamp-btn.disabled { opacity: 0.3; pointer-events: none; }
+    .stamp-btn svg { width: 14px; height: 14px; }
+
+    .quote-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--text-muted);
+      flex-shrink: 0; margin-left: 4px;
+    }
+    .quote-input {
+      flex: 1; min-width: 80px; font-family: var(--mono); font-size: 12px;
+      line-height: 1.6; padding: 8px 10px; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--bg);
+      color: var(--text-primary); outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .quote-input::placeholder { color: var(--text-muted); }
+    .quote-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .add-pickup-row { width: 100%; }
+    .add-pickup-btn {
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      background: var(--surface); border: 1px dashed var(--border);
+      border-radius: var(--radius); padding: 12px 24px; cursor: pointer;
+      color: var(--text-secondary); transition: all 0.2s; width: 100%;
+    }
+    .add-pickup-btn:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light); border-style: solid;
+    }
+
+    .bottom-bar {
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 16px;
+      animation: fadeInUp 0.5s ease 0.2s both;
+      flex-wrap: wrap;
+    }
+    .shortcuts-legend {
+      font-family: var(--mono); font-size: 10px;
+      color: var(--text-muted); letter-spacing: 0.5px; line-height: 2;
+      margin-right: auto;
+    }
+    .shortcuts-legend kbd {
+      display: inline-block; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 4px;
+      padding: 1px 6px; font-family: var(--mono); font-size: 10px;
+      font-weight: 500; color: var(--text-secondary);
+      min-width: 20px; text-align: center;
+    }
+    .btn-group { display: flex; gap: 12px; flex-shrink: 0; }
+    .export-btn {
+      font-family: var(--serif); font-size: 14px; font-weight: 600;
+      border: none; border-radius: var(--radius); padding: 12px 24px;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+      background: var(--accent); color: #fff;
+    }
+    .export-btn:hover {
+      background: #d4623e; transform: translateY(-1px);
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+    .export-btn:active { transform: translateY(0); }
+    .export-btn.secondary {
+      background: var(--surface); color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    .export-btn.secondary:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light); box-shadow: none;
+    }
+
+    .error-box {
+      width: 100%; background: var(--error-glow);
+      border: 1px solid rgba(181, 57, 46, 0.3); border-radius: var(--radius);
+      padding: 14px 18px; font-family: var(--mono); font-size: 12px;
+      color: var(--error); display: none; white-space: pre-wrap;
+      line-height: 1.7; animation: fadeInUp 0.3s ease;
+    }
+    .error-box.visible { display: block; }
+
+    .toast {
+      position: fixed; bottom: 32px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      font-family: var(--mono); font-size: 12px; letter-spacing: 1px;
+      background: var(--text-primary); color: var(--bg);
+      padding: 12px 24px; border-radius: var(--radius);
+      opacity: 0; transition: all 0.3s ease; z-index: 100;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @keyframes indeterminate {
+      0%   { transform: translateX(-100%) scaleX(0.4); }
+      50%  { transform: translateX(60%)   scaleX(0.6); }
+      100% { transform: translateX(200%)  scaleX(0.4); }
+    }
+
+    @media (max-width: 700px) {
+      main { padding: 32px 16px 60px; }
+      .segment-row { padding: 10px 12px; gap: 6px; }
+      .quote-input { min-width: 60px; }
+      .tc-input { width: 98px; font-size: 13px; }
+      .transport-hint { display: none; }
+      .bottom-bar { flex-direction: column; align-items: stretch; }
+      .btn-group { justify-content: flex-end; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1><span>TIMECODE</span> HELPER</h1>
+  <div class="header-center">
+    <select id="categorySelect">
+      <option value="sport" selected>Sport</option>
+    </select>
+  </div>
+  <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+    </svg>
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2"/><path d="M12 20v2"/>
+      <path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+      <path d="M2 12h2"/><path d="M20 12h2"/>
+      <path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+    </svg>
+  </button>
+</header>
+
+<main>
+
+  <div class="card" id="audioCard">
+    <span class="card-label">Audio</span>
+    <span class="card-hint">Drop up to 5 audio stems — they'll be mixed into a single waveform for navigation and transcription</span>
+
+    <div class="audio-drop-zone" id="audioDropZone">
+      <div class="audio-drop-overlay" id="audioDropOverlay">
+        <span>Drop audio file(s) here</span>
+      </div>
+      <div class="audio-prompt" id="audioPrompt">
+        <div class="audio-prompt-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <div class="audio-prompt-text">
+          Drag &amp; drop .wav or audio files here (up to 5 stems)<br>
+          or <span class="browse" id="audioBrowse">browse to select</span>
+        </div>
+      </div>
+      <input type="file" id="audioFileInput" accept=".wav,.mp3,.m4a,.ogg,.flac,audio/*" multiple style="display:none;" />
+    </div>
+
+    <div class="stems-bar" id="stemsBar">
+      <span class="stems-bar-label">Stems:</span>
+      <div id="stemsChips"></div>
+      <button class="stems-add-btn" id="stemsAddBtn" title="Add another stem">+ Add</button>
+      <input type="file" id="stemsAddInput" accept=".wav,.mp3,.m4a,.ogg,.flac,audio/*" multiple style="display:none;" />
+    </div>
+
+    <div class="waveform-area" id="waveformArea">
+      <div class="waveform-loading" id="waveformLoading">
+        <span class="waveform-loading-label">Processing audio…</span>
+        <div class="waveform-loading-track"><div class="waveform-loading-bar"></div></div>
+        <span class="waveform-loading-detail" id="waveformLoadingDetail">Decoding stems</span>
+      </div>
+      <div class="waveform-container"><div id="waveform"></div></div>
+      <div class="transport">
+        <button class="transport-btn" id="btnSkipBack" title="Skip back 5s">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+        </button>
+        <button class="transport-btn" id="btnPlayPause" title="Play / Pause (Space)">
+          <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6,4 20,12 6,20"/></svg>
+          <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none"><rect x="5" y="4" width="4" height="16"/><rect x="15" y="4" width="4" height="16"/></svg>
+        </button>
+        <button class="transport-btn" id="btnSkipFwd" title="Skip forward 5s">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+        </button>
+        <span class="transport-time" id="transportTime">00.00.00.00</span>
+        <span class="transport-duration" id="transportDuration">/ 00.00.00.00</span>
+        <span class="speed-badge" id="speedBadge" title="Click to cycle speed (D faster, S slower, R reset)">1&times;</span>
+        <span class="transport-spacer"></span>
+        <span class="transport-hint">Focus a timecode field, press <kbd>T</kbd> to stamp</span>
+      </div>
+    </div>
+
+    <div class="transcribe-row" id="transcribeRow">
+      <button class="transcribe-btn" id="transcribeBtn">Transcribe</button>
+      <span class="transcribe-status" id="transcribeStatus"></span>
+      <div class="transcribe-progress" id="transcribeProgress">
+        <div class="transcribe-progress-bar" id="transcribeProgressBar"></div>
+      </div>
+    </div>
+
+    <div class="transcript-display" id="transcriptDisplay"></div>
+
+    <div class="audio-file-bar" id="audioFileBar">
+      <span class="file-name" id="audioFileName"></span>
+      <span class="file-size" id="audioFileSize"></span>
+      <button class="file-remove" id="audioFileRemove">Clear All Audio</button>
+    </div>
+  </div>
+
+  <div class="columns-wrap">
+    <div class="col-left" id="colLeft"></div>
+    <div class="col-right" id="colRight">
+      <div id="rightFixedSegments"></div>
+      <div id="pickupsContainer"></div>
+      <div class="add-pickup-row">
+        <button class="add-pickup-btn" id="addPickupBtn">+ Add Pickup Point</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="shortcuts-legend">
+      <kbd>Space</kbd> Play / Pause &nbsp;&middot;&nbsp;
+      <kbd>T</kbd> Stamp timecode &nbsp;&middot;&nbsp;
+      <kbd>&larr;</kbd> <kbd>&rarr;</kbd> &plusmn;5s &nbsp;&middot;&nbsp;
+      <kbd>Shift</kbd>+<kbd>&larr;</kbd> <kbd>&rarr;</kbd> &plusmn;1s &nbsp;&middot;&nbsp;
+      <kbd>D</kbd> Faster &nbsp;<kbd>S</kbd> Slower &nbsp;<kbd>R</kbd> Reset speed
+    </div>
+    <div class="btn-group">
+      <button class="export-btn secondary" id="clearAllBtn">Clear All</button>
+      <button class="export-btn" id="copyAllBtn">Copy All</button>
+    </div>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+</main>
+
+<footer><a href="index.html"><span style="color: var(--accent);">dev.</span>nialfernandes.com</a></footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Theme toggle ────────────────────────────────────────────────────
+  var themeToggle = document.querySelector('.theme-toggle');
+  themeToggle.addEventListener('click', function () {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    // Update wavesurfer colours if loaded
+    if (wavesurfer && audioLoaded) {
+      var style = getComputedStyle(document.documentElement);
+      wavesurfer.setOptions({
+        waveColor: style.getPropertyValue('--waveform-wave').trim(),
+        progressColor: style.getPropertyValue('--waveform-progress').trim(),
+        cursorColor: style.getPropertyValue('--waveform-cursor').trim()
+      });
+    }
+  });
+
+  // Helper to get current theme waveform colours
+  function getWaveformColors() {
+    var style = getComputedStyle(document.documentElement);
+    return {
+      wave: style.getPropertyValue('--waveform-wave').trim(),
+      progress: style.getPropertyValue('--waveform-progress').trim(),
+      cursor: style.getPropertyValue('--waveform-cursor').trim()
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // CONSTANTS
+  // ═══════════════════════════════════════════════════════════════
+  var FPS = 25;
+  var SPEED_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  var speedIndex = 2;
+
+  // ═══════════════════════════════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════════════════════════════
+  var wavesurfer = null;
+  var audioLoaded = false;
+  var transcriptChunks = null;
+  var pickupCount = 0;
+  var isTranscribing = false;
+  var stemFiles = [];
+  var mixedBlob = null;
+  var mixedBuffer = null;
+
+  // ═══════════════════════════════════════════════════════════════
+  // TRANSCRIPTION WEB WORKER
+  // ═══════════════════════════════════════════════════════════════
+  var workerScript = function () {
+    self.onmessage = async function (e) {
+      try {
+        self.postMessage({ type: 'status', text: 'Loading transcription library…' });
+        var transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
+        var modelId = 'onnx-community/whisper-base';
+        var device = 'wasm';
+        if (typeof navigator !== 'undefined' && navigator.gpu) {
+          try {
+            var adapter = await navigator.gpu.requestAdapter();
+            if (adapter) {
+              device = 'webgpu';
+              self.postMessage({ type: 'status', text: 'WebGPU detected — loading model with GPU acceleration…' });
+            }
+          } catch (ignored) {}
+        }
+        if (device === 'wasm') {
+          self.postMessage({ type: 'status', text: 'Loading model (WASM mode — no GPU detected)…' });
+        }
+        var transcriber = await transformers.pipeline(
+          'automatic-speech-recognition', modelId,
+          { dtype: device === 'webgpu' ? 'fp32' : 'q8', device: device }
+        );
+        var audioLengthSec = e.data.audioDuration || 0;
+        var chunkSec = 30;
+        var totalChunks = Math.max(1, Math.ceil(audioLengthSec / chunkSec));
+        var chunksProcessed = 0;
+        self.postMessage({ type: 'status', text: 'Transcribing' + (device === 'webgpu' ? ' (GPU accelerated)' : '') + '…' });
+        self.postMessage({ type: 'progress', value: 5 });
+        var result = await transcriber(e.data.audio, {
+          return_timestamps: true, chunk_length_s: chunkSec, stride_length_s: 5,
+          language: 'en', task: 'transcribe',
+          callback_function: function () {
+            chunksProcessed++;
+            var pct = Math.min(95, Math.round((chunksProcessed / totalChunks) * 95));
+            self.postMessage({ type: 'progress', value: pct });
+            self.postMessage({ type: 'status', text: 'Transcribing' + (device === 'webgpu' ? ' (GPU)' : '') + '… chunk ' + chunksProcessed + '/' + totalChunks });
+          }
+        });
+        self.postMessage({ type: 'progress', value: 100 });
+        self.postMessage({ type: 'result', data: result });
+      } catch (err) {
+        self.postMessage({ type: 'error', text: err.message || String(err) });
+      }
+    };
+  };
+
+  var workerBlob = new Blob(['(' + workerScript.toString() + ')()'], { type: 'application/javascript' });
+  var workerUrl = URL.createObjectURL(workerBlob);
+
+  // ═══════════════════════════════════════════════════════════════
+  // CATEGORY DEFINITIONS
+  // ═══════════════════════════════════════════════════════════════
+  var CATEGORIES = {
+    sport: {
+      left: [
+        { id: 'seg1', label: 'Segment 1', hasQuotes: true },
+        { id: 'seg2', label: 'Segment 2', hasQuotes: true },
+        { id: 'seg3', label: 'Segment 3', hasQuotes: true },
+        { id: 'seg4', label: 'Segment 4', hasQuotes: true },
+        { id: 'seg5', label: 'Segment 5', hasQuotes: true }
+      ],
+      right: [
+        { id: 'midroll', label: 'Midroll', hasQuotes: false, customRows: [
+          { label: 'Into Break', tcId: 'into-break' },
+          { label: 'Out of Break', tcId: 'out-of-break' }
+        ]},
+        { id: 'radio-outro', label: 'Radio Outro', hasQuotes: false, startEnd: true },
+        { id: 'radio-promo', label: 'Radio Promo', hasQuotes: false, startEnd: true }
+      ]
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // HELPERS
+  // ═══════════════════════════════════════════════════════════════
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+
+  function secondsToTimecode(s) {
+    var totalFrames = Math.round(s * FPS);
+    var ff = totalFrames % FPS;
+    var totalSec = Math.floor(totalFrames / FPS);
+    var hh = Math.floor(totalSec / 3600);
+    var mm = Math.floor((totalSec % 3600) / 60);
+    var ss = totalSec % 60;
+    return String(hh).padStart(2, '0') + '.' + String(mm).padStart(2, '0') + '.' + String(ss).padStart(2, '0') + '.' + String(ff).padStart(2, '0');
+  }
+
+  function timecodeToSeconds(tc) {
+    var parts = tc.split('.');
+    if (parts.length !== 4) return NaN;
+    var hh = parseInt(parts[0], 10), mm = parseInt(parts[1], 10), ss = parseInt(parts[2], 10), ff = parseInt(parts[3], 10);
+    if (isNaN(hh) || isNaN(mm) || isNaN(ss) || isNaN(ff)) return NaN;
+    if (ff < 0 || ff > 24 || mm < 0 || mm > 59 || ss < 0 || ss > 59) return NaN;
+    return hh * 3600 + mm * 60 + ss + ff / FPS;
+  }
+
+  function isValidTimecode(tc) {
+    return /^\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,2}$/.test(tc) && !isNaN(timecodeToSeconds(tc));
+  }
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function () { t.classList.remove('show'); }, 2200);
+  }
+
+  function showError(msg) {
+    var box = document.getElementById('errorBox');
+    box.textContent = msg; box.classList.add('visible');
+    setTimeout(function () { box.classList.remove('visible'); }, 8000);
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement('div'); div.textContent = str; return div.innerHTML;
+  }
+
+  function showWaveformLoading(detail) {
+    document.getElementById('waveformLoadingDetail').textContent = detail || '';
+    document.getElementById('waveformLoading').classList.add('visible');
+  }
+  function updateWaveformLoading(detail) {
+    document.getElementById('waveformLoadingDetail').textContent = detail || '';
+  }
+  function hideWaveformLoading() {
+    document.getElementById('waveformLoading').classList.remove('visible');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PLAYBACK SPEED
+  // ═══════════════════════════════════════════════════════════════
+  function setSpeed(idx) {
+    speedIndex = Math.max(0, Math.min(SPEED_STEPS.length - 1, idx));
+    var rate = SPEED_STEPS[speedIndex];
+    var badge = document.getElementById('speedBadge');
+    badge.textContent = rate + '×';
+    badge.classList.toggle('modified', rate !== 1);
+    if (wavesurfer) wavesurfer.setPlaybackRate(rate);
+  }
+
+  function speedUp() { setSpeed(speedIndex + 1); }
+  function speedDown() { setSpeed(speedIndex - 1); }
+  function speedReset() { setSpeed(SPEED_STEPS.indexOf(1)); }
+
+  document.getElementById('speedBadge').addEventListener('click', function () {
+    setSpeed((speedIndex + 1) % SPEED_STEPS.length);
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // TIMECODE INPUT
+  // ═══════════════════════════════════════════════════════════════
+  function setupTimecodeInput(input) {
+    input.addEventListener('input', function () {
+      var digits = this.value.replace(/[^\d]/g, '');
+      if (digits.length > 8) digits = digits.substring(0, 8);
+      var formatted = '';
+      for (var i = 0; i < digits.length; i++) {
+        if (i === 2 || i === 4 || i === 6) formatted += '.';
+        formatted += digits[i];
+      }
+      this.value = formatted;
+    });
+    input.addEventListener('blur', function () {
+      if (this.value && !isValidTimecode(this.value)) this.classList.add('invalid');
+      else this.classList.remove('invalid');
+      checkCardCompletion(this);
+    });
+    input.addEventListener('focus', function () { this.classList.remove('invalid'); });
+    input.addEventListener('keydown', function (e) {
+      if ((e.key === 't' || e.key === 'T') && wavesurfer && audioLoaded) {
+        e.preventDefault();
+        this.value = secondsToTimecode(wavesurfer.getCurrentTime());
+        this.classList.remove('invalid');
+        autoPopulateQuote(this);
+        checkCardCompletion(this);
+        showToast('Timecode stamped: ' + this.value);
+      }
+    });
+  }
+
+  function setupQuoteInput(input) {
+    input.addEventListener('blur', function () { checkCardCompletion(this); });
+    input.addEventListener('input', function () { checkCardCompletion(this); });
+  }
+
+  function checkCardCompletion(el) {
+    var card = el.closest('.segment-card');
+    if (!card) return;
+    var complete = true;
+    card.querySelectorAll('.tc-input').forEach(function (tc) {
+      if (!tc.value || !isValidTimecode(tc.value)) complete = false;
+    });
+    card.querySelectorAll('.quote-input').forEach(function (q) {
+      if (!q.value.trim()) complete = false;
+    });
+    if (complete) card.classList.add('complete');
+    else card.classList.remove('complete');
+  }
+
+  function autoPopulateQuote(tcInput) {
+    if (!transcriptChunks || !transcriptChunks.length) return;
+    var row = tcInput.closest('.segment-row');
+    if (!row) return;
+    var quoteInput = row.querySelector('.quote-input');
+    if (!quoteInput) return;
+    if (!isValidTimecode(tcInput.value)) return;
+    var seconds = timecodeToSeconds(tcInput.value);
+    var closestChunk = null, minDist = Infinity;
+    for (var i = 0; i < transcriptChunks.length; i++) {
+      var c = transcriptChunks[i];
+      if (seconds >= c.start && seconds <= c.end) { closestChunk = c; minDist = 0; break; }
+      var d = Math.min(Math.abs(seconds - c.start), Math.abs(seconds - c.end));
+      if (d < minDist) { minDist = d; closestChunk = c; }
+    }
+    if (closestChunk && minDist < 5) {
+      var snippet = closestChunk.text.trim();
+      if (snippet.length > 80) {
+        var sp = snippet.indexOf(' ', 60);
+        if (sp !== -1) snippet = snippet.substring(0, sp) + '…';
+      }
+      quoteInput.value = snippet;
+      checkCardCompletion(quoteInput);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // BUILD SEGMENT CARD
+  // ═══════════════════════════════════════════════════════════════
+  var CLOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+  var TICK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+  function buildSegmentCard(seg) {
+    var card = document.createElement('div');
+    card.className = 'segment-card';
+    card.id = 'card-' + seg.id;
+    var header = '<div class="segment-header"><div class="header-left"><span>' + seg.label + '</span><span class="complete-tick">' + TICK_SVG + '</span></div></div>';
+    var rows = '';
+
+    if (seg.customRows) {
+      for (var c = 0; c < seg.customRows.length; c++) {
+        var cr = seg.customRows[c];
+        rows += '<div class="segment-row"><span class="row-label-wide">' + cr.label + '</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + cr.tcId + '" placeholder="00.00.00.00" maxlength="11" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div></div>';
+      }
+    } else if (seg.startEnd && !seg.hasQuotes) {
+      ['Start', 'End'].forEach(function (lbl) {
+        rows += '<div class="segment-row"><span class="row-label">' + lbl + '</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + lbl.toLowerCase() + '" placeholder="00.00.00.00" maxlength="11" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div></div>';
+      });
+    } else {
+      rows += '<div class="segment-row"><span class="row-label">Start</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-start" placeholder="00.00.00.00" maxlength="11" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div><span class="quote-label">Quote in</span><input type="text" class="quote-input" data-quote-id="' + seg.id + '-quote-in" placeholder="First words…" required /></div>';
+      rows += '<div class="segment-row"><span class="row-label">End</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-end" placeholder="00.00.00.00" maxlength="11" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div><span class="quote-label">Quote out</span><input type="text" class="quote-input" data-quote-id="' + seg.id + '-quote-out" placeholder="Last words…" required /></div>';
+    }
+
+    card.innerHTML = header + rows;
+    card.querySelectorAll('.tc-input').forEach(setupTimecodeInput);
+    card.querySelectorAll('.quote-input').forEach(setupQuoteInput);
+    card.querySelectorAll('.stamp-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (!wavesurfer || !audioLoaded) return;
+        var tcInput = btn.closest('.tc-wrap').querySelector('.tc-input');
+        tcInput.value = secondsToTimecode(wavesurfer.getCurrentTime());
+        tcInput.classList.remove('invalid');
+        autoPopulateQuote(tcInput);
+        checkCardCompletion(tcInput);
+        showToast('Timecode stamped: ' + tcInput.value);
+      });
+    });
+    return card;
+  }
+
+  function loadCategory(catId) {
+    var colLeft = document.getElementById('colLeft');
+    var rightFixed = document.getElementById('rightFixedSegments');
+    colLeft.innerHTML = ''; rightFixed.innerHTML = '';
+    document.getElementById('pickupsContainer').innerHTML = '';
+    pickupCount = 0;
+    var cat = CATEGORIES[catId];
+    if (!cat) return;
+    (cat.left || []).forEach(function (seg) { colLeft.appendChild(buildSegmentCard(seg)); });
+    (cat.right || []).forEach(function (seg) { rightFixed.appendChild(buildSegmentCard(seg)); });
+    updateStampButtons();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PICKUPS
+  // ═══════════════════════════════════════════════════════════════
+  document.getElementById('addPickupBtn').addEventListener('click', function () {
+    pickupCount++;
+    var card = buildSegmentCard({ id: 'pickup-' + pickupCount, label: 'Pickup ' + pickupCount, hasQuotes: true });
+    var header = card.querySelector('.segment-header');
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-pickup'; removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', function () { card.remove(); });
+    header.appendChild(removeBtn);
+    document.getElementById('pickupsContainer').appendChild(card);
+    updateStampButtons();
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  function updateStampButtons() {
+    document.querySelectorAll('.stamp-btn').forEach(function (btn) {
+      if (audioLoaded) btn.classList.remove('disabled');
+      else btn.classList.add('disabled');
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // MULTI-STEM AUDIO
+  // ═══════════════════════════════════════════════════════════════
+  var audioDropZone = document.getElementById('audioDropZone');
+  var audioDropOverlay = document.getElementById('audioDropOverlay');
+  var audioPrompt = document.getElementById('audioPrompt');
+  var audioFileInput = document.getElementById('audioFileInput');
+  var stemsBar = document.getElementById('stemsBar');
+  var stemsChips = document.getElementById('stemsChips');
+  var stemsAddBtn = document.getElementById('stemsAddBtn');
+  var stemsAddInput = document.getElementById('stemsAddInput');
+  var dragCounter = 0;
+
+  audioDropZone.addEventListener('dragenter', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter++; audioDropOverlay.classList.add('active');
+  });
+  audioDropZone.addEventListener('dragover', function (e) { e.preventDefault(); e.stopPropagation(); });
+  audioDropZone.addEventListener('dragleave', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    if (--dragCounter <= 0) { dragCounter = 0; audioDropOverlay.classList.remove('active'); }
+  });
+  audioDropZone.addEventListener('drop', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter = 0; audioDropOverlay.classList.remove('active');
+    if (e.dataTransfer && e.dataTransfer.files.length) addStemFiles(Array.from(e.dataTransfer.files));
+  });
+
+  document.getElementById('audioBrowse').addEventListener('click', function () { audioFileInput.click(); });
+  audioFileInput.addEventListener('change', function () {
+    if (this.files.length) addStemFiles(Array.from(this.files)); this.value = '';
+  });
+  stemsAddBtn.addEventListener('click', function () { stemsAddInput.click(); });
+  stemsAddInput.addEventListener('change', function () {
+    if (this.files.length) addStemFiles(Array.from(this.files)); this.value = '';
+  });
+  document.getElementById('audioFileRemove').addEventListener('click', clearAudio);
+
+  function isAudioFile(f) {
+    return f.type.startsWith('audio/') || /\.(wav|mp3|m4a|ogg|flac)$/i.test(f.name);
+  }
+
+  function addStemFiles(files) {
+    var valid = files.filter(isAudioFile);
+    if (!valid.length) { showError('Please drop audio files (.wav, .mp3, .m4a, .ogg, .flac).'); return; }
+    var remaining = 5 - stemFiles.length;
+    if (remaining <= 0) { showError('Maximum 5 stems. Remove one first.'); return; }
+    stemFiles = stemFiles.concat(valid.slice(0, remaining));
+    if (stemFiles.length > 5) stemFiles = stemFiles.slice(0, 5);
+    renderStems(); mixAndLoadStems();
+  }
+
+  function removeStem(idx) {
+    stemFiles.splice(idx, 1);
+    if (!stemFiles.length) clearAudio();
+    else { renderStems(); mixAndLoadStems(); }
+  }
+
+  function renderStems() {
+    audioPrompt.classList.add('hidden');
+    stemsBar.classList.add('visible');
+    stemsChips.innerHTML = '';
+    stemFiles.forEach(function (f, i) {
+      var chip = document.createElement('span');
+      chip.className = 'stem-chip';
+      chip.innerHTML = '<span>' + escapeHtml(f.name) + '</span><button class="stem-remove" data-idx="' + i + '" title="Remove">&times;</button>';
+      stemsChips.appendChild(chip);
+    });
+    stemsChips.querySelectorAll('.stem-remove').forEach(function (btn) {
+      btn.addEventListener('click', function () { removeStem(parseInt(btn.dataset.idx, 10)); });
+    });
+    stemsAddBtn.classList.toggle('disabled', stemFiles.length >= 5);
+    var total = stemFiles.reduce(function (s, f) { return s + f.size; }, 0);
+    document.getElementById('audioFileName').textContent = stemFiles.length + ' stem' + (stemFiles.length > 1 ? 's' : '') + ' loaded';
+    document.getElementById('audioFileSize').textContent = formatBytes(total);
+    document.getElementById('audioFileBar').classList.add('visible');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // MIX STEMS
+  // ═══════════════════════════════════════════════════════════════
+  async function mixAndLoadStems() {
+    if (!stemFiles.length) return;
+    document.getElementById('waveformArea').classList.add('visible');
+    document.getElementById('transcribeRow').classList.add('visible');
+    showWaveformLoading('Decoding ' + stemFiles.length + ' stem' + (stemFiles.length > 1 ? 's' : '') + '…');
+
+    try {
+      var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var buffers = [];
+      for (var i = 0; i < stemFiles.length; i++) {
+        updateWaveformLoading('Decoding stem ' + (i + 1) + ' of ' + stemFiles.length + '…');
+        var ab = await stemFiles[i].arrayBuffer();
+        buffers.push(await audioCtx.decodeAudioData(ab));
+      }
+      updateWaveformLoading('Mixing stems…');
+      await new Promise(function (r) { setTimeout(r, 50); });
+
+      var sampleRate = buffers[0].sampleRate;
+      var maxLength = 0;
+      buffers.forEach(function (b) {
+        var len = Math.ceil(b.duration * sampleRate);
+        if (len > maxLength) maxLength = len;
+      });
+
+      var mixed = new Float32Array(maxLength);
+      var n = buffers.length;
+
+      for (var bi = 0; bi < buffers.length; bi++) {
+        var buf = buffers[bi];
+        var mono;
+        if (buf.numberOfChannels === 1) {
+          mono = buf.getChannelData(0);
+        } else {
+          var c0 = buf.getChannelData(0), c1 = buf.getChannelData(1);
+          mono = new Float32Array(c0.length);
+          for (var s = 0; s < c0.length; s++) mono[s] = (c0[s] + c1[s]) / 2;
+        }
+        var ratio = buf.sampleRate / sampleRate;
+        var outLen = Math.ceil(mono.length / ratio);
+        for (var j = 0; j < outLen && j < maxLength; j++) {
+          var srcIdx = Math.floor(j * ratio);
+          if (srcIdx < mono.length) mixed[j] += mono[srcIdx] / n;
+        }
+      }
+
+      var peak = 0;
+      for (var p = 0; p < mixed.length; p++) { var a = Math.abs(mixed[p]); if (a > peak) peak = a; }
+      if (peak > 0 && peak !== 1) {
+        var sc = 0.95 / peak;
+        for (var p2 = 0; p2 < mixed.length; p2++) mixed[p2] *= sc;
+      }
+
+      var offCtx = new OfflineAudioContext(1, mixed.length, sampleRate);
+      mixedBuffer = offCtx.createBuffer(1, mixed.length, sampleRate);
+      mixedBuffer.copyToChannel(mixed, 0);
+      mixedBlob = audioBufferToWav(mixedBuffer);
+      audioCtx.close();
+
+      updateWaveformLoading('Rendering waveform…');
+
+      if (wavesurfer) wavesurfer.destroy();
+      var colors = getWaveformColors();
+      wavesurfer = WaveSurfer.create({
+        container: '#waveform',
+        waveColor: colors.wave,
+        progressColor: colors.progress,
+        cursorColor: colors.cursor,
+        cursorWidth: 1,
+        barWidth: 2, barGap: 1, barRadius: 2,
+        height: 100, normalize: true
+      });
+
+      wavesurfer.load(URL.createObjectURL(mixedBlob));
+
+      wavesurfer.on('ready', function () {
+        audioLoaded = true;
+        updateStampButtons();
+        document.getElementById('transportDuration').textContent = '/ ' + secondsToTimecode(wavesurfer.getDuration());
+        wavesurfer.setPlaybackRate(SPEED_STEPS[speedIndex]);
+        hideWaveformLoading();
+      });
+      wavesurfer.on('audioprocess', updateTransportTime);
+      wavesurfer.on('seeking', updateTransportTime);
+      wavesurfer.on('interaction', updateTransportTime);
+      wavesurfer.on('play', function () {
+        document.getElementById('iconPlay').style.display = 'none';
+        document.getElementById('iconPause').style.display = '';
+        document.getElementById('btnPlayPause').classList.add('active');
+      });
+      wavesurfer.on('pause', function () {
+        document.getElementById('iconPlay').style.display = '';
+        document.getElementById('iconPause').style.display = 'none';
+        document.getElementById('btnPlayPause').classList.remove('active');
+      });
+
+    } catch (err) {
+      console.error('Mix error:', err);
+      showError('Error processing audio: ' + (err.message || err));
+      hideWaveformLoading();
+    }
+  }
+
+  function audioBufferToWav(buffer) {
+    var sr = buffer.sampleRate, len = buffer.length, data = buffer.getChannelData(0);
+    var wb = new ArrayBuffer(44 + len * 2), v = new DataView(wb);
+    function ws(o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+    ws(0, 'RIFF'); v.setUint32(4, 36 + len * 2, true); ws(8, 'WAVE');
+    ws(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+    v.setUint16(22, 1, true); v.setUint32(24, sr, true);
+    v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    ws(36, 'data'); v.setUint32(40, len * 2, true);
+    for (var i = 0, o = 44; i < len; i++, o += 2) {
+      var s = Math.max(-1, Math.min(1, data[i]));
+      v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    return new Blob([wb], { type: 'audio/wav' });
+  }
+
+  function updateTransportTime() {
+    if (!wavesurfer) return;
+    document.getElementById('transportTime').textContent = secondsToTimecode(wavesurfer.getCurrentTime());
+    highlightTranscriptAtTime(wavesurfer.getCurrentTime());
+  }
+
+  function clearAudio() {
+    if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
+    audioLoaded = false; transcriptChunks = null; stemFiles = [];
+    mixedBlob = null; mixedBuffer = null;
+    audioFileInput.value = '';
+    stemsBar.classList.remove('visible'); stemsChips.innerHTML = '';
+    document.getElementById('audioFileBar').classList.remove('visible');
+    audioPrompt.classList.remove('hidden');
+    document.getElementById('waveformArea').classList.remove('visible');
+    document.getElementById('transcribeRow').classList.remove('visible');
+    document.getElementById('transcriptDisplay').classList.remove('visible');
+    document.getElementById('transcriptDisplay').innerHTML = '';
+    document.getElementById('transportTime').textContent = '00.00.00.00';
+    document.getElementById('transportDuration').textContent = '/ 00.00.00.00';
+    document.getElementById('transcribeBtn').disabled = false;
+    document.getElementById('transcribeBtn').textContent = 'Transcribe';
+    document.getElementById('transcribeBtn').classList.remove('done');
+    document.getElementById('transcribeStatus').textContent = '';
+    hideWaveformLoading();
+    speedReset();
+    updateStampButtons();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // TRANSPORT
+  // ═══════════════════════════════════════════════════════════════
+  document.getElementById('btnPlayPause').addEventListener('click', function () {
+    if (wavesurfer && audioLoaded) wavesurfer.playPause();
+  });
+  document.getElementById('btnSkipBack').addEventListener('click', function () {
+    if (wavesurfer && audioLoaded) wavesurfer.skip(-5);
+  });
+  document.getElementById('btnSkipFwd').addEventListener('click', function () {
+    if (wavesurfer && audioLoaded) wavesurfer.skip(5);
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // KEYBOARD SHORTCUTS
+  // ═══════════════════════════════════════════════════════════════
+  document.addEventListener('keydown', function (e) {
+    var tag = e.target.tagName.toLowerCase();
+    var isInput = (tag === 'input' || tag === 'textarea' || tag === 'select');
+    var isTcInput = e.target.classList && e.target.classList.contains('tc-input');
+
+    if (e.code === 'Space' && !isInput) {
+      e.preventDefault();
+      if (wavesurfer && audioLoaded) wavesurfer.playPause();
+    }
+    if (!isInput || isTcInput) {
+      if (e.key === 'ArrowLeft' && wavesurfer && audioLoaded && (!isInput || e.shiftKey)) {
+        e.preventDefault(); wavesurfer.skip(e.shiftKey ? -1 : -5);
+      }
+      if (e.key === 'ArrowRight' && wavesurfer && audioLoaded && (!isInput || e.shiftKey)) {
+        e.preventDefault(); wavesurfer.skip(e.shiftKey ? 1 : 5);
+      }
+    }
+    if (!isInput || isTcInput) {
+      if (e.key === 'd' || e.key === 'D') { e.preventDefault(); speedUp(); }
+      if (e.key === 's' || e.key === 'S') { e.preventDefault(); speedDown(); }
+      if (e.key === 'r' || e.key === 'R') { e.preventDefault(); speedReset(); }
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // WHISPER TRANSCRIPTION
+  // ═══════════════════════════════════════════════════════════════
+  document.getElementById('transcribeBtn').addEventListener('click', async function () {
+    if (isTranscribing || !mixedBuffer) return;
+    var btn = this;
+    var status = document.getElementById('transcribeStatus');
+    var prog = document.getElementById('transcribeProgress');
+    var progBar = document.getElementById('transcribeProgressBar');
+
+    isTranscribing = true; btn.disabled = true;
+    status.textContent = 'Starting transcription worker…';
+    prog.classList.add('visible');
+    progBar.classList.add('indeterminate');
+
+    try {
+      var audioData = await getMixedAudio16k();
+      var worker = new Worker(workerUrl, { type: 'module' });
+
+      worker.onmessage = function (e) {
+        var msg = e.data;
+        if (msg.type === 'status') status.textContent = msg.text;
+        if (msg.type === 'progress') {
+          progBar.classList.remove('indeterminate');
+          progBar.style.width = msg.value + '%';
+        }
+        if (msg.type === 'result') {
+          var result = msg.data;
+          if (result && result.chunks && result.chunks.length) {
+            transcriptChunks = result.chunks.map(function (c) {
+              return { start: c.timestamp[0] || 0, end: c.timestamp[1] || c.timestamp[0] + 1, text: c.text };
+            });
+          } else if (result && result.text) {
+            transcriptChunks = [{ start: 0, end: mixedBuffer.duration, text: result.text }];
+          }
+          displayTranscript();
+          status.textContent = 'Transcription complete — quotes will auto-populate when you stamp timecodes';
+          btn.textContent = 'Transcribed'; btn.classList.add('done');
+          isTranscribing = false;
+          setTimeout(function () { prog.classList.remove('visible'); }, 1000);
+          worker.terminate();
+        }
+        if (msg.type === 'error') {
+          console.error('Worker transcription error:', msg.text);
+          status.textContent = 'Transcription failed: ' + msg.text;
+          btn.disabled = false; isTranscribing = false;
+          setTimeout(function () { prog.classList.remove('visible'); }, 1000);
+          worker.terminate();
+        }
+      };
+
+      worker.onerror = function (err) {
+        console.error('Worker error:', err);
+        status.textContent = 'Transcription worker failed. Check browser console.';
+        btn.disabled = false; isTranscribing = false;
+        setTimeout(function () { prog.classList.remove('visible'); }, 1000);
+      };
+
+      worker.postMessage({ audio: audioData, audioDuration: mixedBuffer.duration }, [audioData.buffer]);
+
+    } catch (err) {
+      console.error('Transcription setup error:', err);
+      status.textContent = 'Failed to start transcription: ' + (err.message || err);
+      btn.disabled = false; isTranscribing = false;
+      setTimeout(function () { prog.classList.remove('visible'); }, 1000);
+    }
+  });
+
+  async function getMixedAudio16k() {
+    if (!mixedBuffer) throw new Error('No mixed audio');
+    var targetLen = Math.ceil(mixedBuffer.duration * 16000);
+    var offline = new OfflineAudioContext(1, targetLen, 16000);
+    var src = offline.createBufferSource();
+    src.buffer = mixedBuffer; src.connect(offline.destination); src.start();
+    var rendered = await offline.startRendering();
+    return rendered.getChannelData(0);
+  }
+
+  function displayTranscript() {
+    var container = document.getElementById('transcriptDisplay');
+    if (!transcriptChunks || !transcriptChunks.length) return;
+    var html = '';
+    for (var i = 0; i < transcriptChunks.length; i++) {
+      var c = transcriptChunks[i];
+      html += '<span class="ts-word" data-start="' + c.start + '" data-end="' + c.end + '"><strong style="color:var(--accent);font-size:10px;">[' + secondsToTimecode(c.start) + ']</strong> ' + escapeHtml(c.text.trim()) + ' </span>';
+    }
+    container.innerHTML = html;
+    container.classList.add('visible');
+    container.querySelectorAll('.ts-word').forEach(function (el) {
+      el.addEventListener('click', function () {
+        if (wavesurfer && audioLoaded) {
+          var d = wavesurfer.getDuration();
+          if (d > 0) wavesurfer.seekTo(parseFloat(el.dataset.start) / d);
+        }
+      });
+    });
+  }
+
+  function highlightTranscriptAtTime(time) {
+    var container = document.getElementById('transcriptDisplay');
+    document.querySelectorAll('.ts-word').forEach(function (el) {
+      var s = parseFloat(el.dataset.start), e = parseFloat(el.dataset.end);
+      var isActive = time >= s && time <= e;
+      el.classList.toggle('highlight', isActive);
+      if (isActive && container.classList.contains('visible')) {
+        var elTop = el.offsetTop - container.offsetTop;
+        var elBottom = elTop + el.offsetHeight;
+        var scrollTop = container.scrollTop;
+        var viewHeight = container.clientHeight;
+        if (elTop < scrollTop || elBottom > scrollTop + viewHeight) {
+          container.scrollTop = elTop - viewHeight / 2;
+        }
+      }
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // CATEGORY CHANGE
+  // ═══════════════════════════════════════════════════════════════
+  document.getElementById('categorySelect').addEventListener('change', function () {
+    loadCategory(this.value);
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // COPY ALL / CLEAR ALL (Rich text with bold titles)
+  // ═══════════════════════════════════════════════════════════════
+  document.getElementById('copyAllBtn').addEventListener('click', function () {
+    var plainLines = [], htmlLines = [], valid = true;
+    document.querySelectorAll('.segment-card').forEach(function (card) {
+      var hdr = card.querySelector('.segment-header .header-left span');
+      var title = hdr ? hdr.textContent : '';
+      plainLines.push(title);
+      htmlLines.push('<b>' + escapeHtml(title) + '</b>');
+      card.querySelectorAll('.segment-row').forEach(function (row) {
+        var rl = row.querySelector('.row-label') || row.querySelector('.row-label-wide');
+        var tc = row.querySelector('.tc-input');
+        var qi = row.querySelector('.quote-input');
+        var plainLine = '';
+        var htmlLine = '';
+        if (rl) {
+          plainLine += rl.textContent.trim() + ': ';
+          htmlLine += escapeHtml(rl.textContent.trim()) + ': ';
+        }
+        if (tc) {
+          if (!tc.value || !isValidTimecode(tc.value)) { tc.classList.add('invalid'); valid = false; }
+          plainLine += tc.value || '??:??:??:??';
+          htmlLine += escapeHtml(tc.value || '??:??:??:??');
+        }
+        if (qi) {
+          if (!qi.value.trim()) {
+            qi.style.borderColor = 'var(--error)'; qi.style.boxShadow = '0 0 0 3px var(--error-glow)';
+            setTimeout(function () { qi.style.borderColor = ''; qi.style.boxShadow = ''; }, 3000);
+            valid = false;
+          }
+          var ql = rl && rl.textContent.includes('Start') ? 'Quote in' : 'Quote out';
+          plainLine += '  |  ' + ql + ': ' + (qi.value || '—');
+          htmlLine += '&nbsp;&nbsp;|&nbsp;&nbsp;' + escapeHtml(ql) + ': ' + escapeHtml(qi.value || '—');
+        }
+        plainLines.push(plainLine);
+        htmlLines.push(htmlLine);
+      });
+      plainLines.push('');
+      htmlLines.push('<br>');
+    });
+
+    if (!valid) { showError('Some required fields are missing or invalid. Please check highlighted fields.'); return; }
+    var plainText = plainLines.join('\n').trim();
+    var htmlText = htmlLines.join('<br>').replace(/<br>(<br>)+/g, '<br><br>').trim();
+
+    // Use ClipboardItem API for rich text copy (bold titles)
+    if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+      var htmlBlob = new Blob(['<html><body>' + htmlText + '</body></html>'], { type: 'text/html' });
+      var textBlob = new Blob([plainText], { type: 'text/plain' });
+      navigator.clipboard.write([
+        new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
+      ]).then(function () {
+        showToast('All timecodes copied to clipboard');
+      }).catch(function () {
+        // Fallback to plain text
+        navigator.clipboard.writeText(plainText).then(function () {
+          showToast('All timecodes copied to clipboard (plain text)');
+        });
+      });
+    } else {
+      // Fallback for older browsers
+      navigator.clipboard.writeText(plainText).then(function () {
+        showToast('All timecodes copied to clipboard');
+      }).catch(function () {
+        var ta = document.createElement('textarea');
+        ta.value = plainText; ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+        showToast('All timecodes copied to clipboard');
+      });
+    }
+  });
+
+  document.getElementById('clearAllBtn').addEventListener('click', function () {
+    if (!confirm('Clear all timecodes, quotes and pickup points?')) return;
+    document.querySelectorAll('.tc-input').forEach(function (el) { el.value = ''; el.classList.remove('invalid'); });
+    document.querySelectorAll('.quote-input').forEach(function (el) { el.value = ''; });
+    document.querySelectorAll('.segment-card').forEach(function (c) { c.classList.remove('complete'); });
+    document.getElementById('pickupsContainer').innerHTML = '';
+    pickupCount = 0;
+    showToast('All fields cleared');
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // INIT
+  // ═══════════════════════════════════════════════════════════════
+  loadCategory('sport');
+}());
+</script>
+</body>
+</html>
