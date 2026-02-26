@@ -493,8 +493,8 @@
   <div class="field-group">
     <label>Select Category</label>
     <select id="categorySelect">
-      <option value="finance" data-prompt="_prompt-dha.txt">Finance</option>
-      <option value="news" data-prompt="_prompt-dhb.txt">News</option>
+      <option value="finance" data-prompt="pmtdha.txt">Finance</option>
+      <option value="news" data-prompt="pmtdhb.txt">News</option>
     </select>
   </div>
 
@@ -769,7 +769,7 @@
   }
 
   // Load initial prompt (Finance by default)
-  loadPrompt('./_prompt-dha.txt');
+  loadPrompt('pmtdha.txt');
 
   // ── Category change handler ─────────────────────────────────────────
   categorySelect.addEventListener('change', function () {
