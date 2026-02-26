@@ -397,10 +397,18 @@
       align-items: start;
     }
     .col-left, .col-right {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
     }
+    
+    #rightFixedSegments,
+    #pickupsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    }
+
     @media (max-width: 860px) {
       .columns-wrap { grid-template-columns: 1fr; }
     }
