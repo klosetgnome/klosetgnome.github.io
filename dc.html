@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Daily Calendar</title>
+<!-- Prevent flash of wrong theme -->
+<script>
+    (function() {
+        var saved = localStorage.getItem('theme');
+        if (saved) {
+            document.documentElement.setAttribute('data-theme', saved);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    })();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -33,6 +44,28 @@
     --radius-lg: 12px;
   }
 
+  [data-theme="dark"] {
+    --bg: #1c1917;
+    --surface: #292524;
+    --surface-raised: #332e2b;
+    --border: #3d3833;
+    --border-active: #524c45;
+    --text-primary: #e7e0d8;
+    --text-secondary: #9c928a;
+    --text-muted: #706860;
+    --accent: #d4774a;
+    --accent-light: rgba(212, 119, 74, 0.10);
+    --accent-glow: rgba(212, 119, 74, 0.15);
+    --good: #6db85e;
+    --good-bg: rgba(109, 184, 94, 0.10);
+    --good-bg-solid: #2a3527;
+    --good-border: rgba(109, 184, 94, 0.25);
+    --bad: #e0655a;
+    --bad-bg: rgba(224, 101, 90, 0.10);
+    --bad-bg-solid: #3a2422;
+    --bad-border: rgba(224, 101, 90, 0.25);
+  }
+
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
@@ -41,11 +74,19 @@
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: background 0.3s ease, color 0.3s ease;
   }
 
+  /* ── Header ── */
   .site-header {
     padding: 28px 40px;
     border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: border-color 0.3s ease;
   }
 
   .site-header h1 {
@@ -61,12 +102,55 @@
   .site-header h1 a { color: inherit; text-decoration: none; }
   .site-header h1 a:hover { color: var(--accent); }
 
+  /* ── Theme Toggle ── */
+  .theme-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    width: 38px;
+    height: 38px;
+  }
+
+  .theme-toggle:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .theme-toggle svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.5;
+    transition: transform 0.3s ease;
+  }
+
+  .theme-toggle:hover svg {
+    transform: rotate(15deg);
+  }
+
+  .theme-toggle .icon-sun,
+  .theme-toggle .icon-moon { display: none; }
+
+  .theme-toggle .icon-moon { display: block; }
+  .theme-toggle .icon-sun { display: none; }
+
+  [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+  [data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+
+  /* ── Main ── */
   .container {
     position: relative;
     z-index: 1;
     max-width: 780px;
     margin: 0 auto;
     padding: 48px 24px 80px;
+    flex: 1;
   }
 
   .topbar {
@@ -140,6 +224,7 @@
     align-content: start;
     flex: 1;
     min-width: 0;
+    transition: background 0.3s ease, border-color 0.3s ease;
   }
 
   .day-name {
@@ -220,6 +305,7 @@
     flex-direction: column;
     gap: 0;
     text-align: left;
+    transition: background 0.3s ease, border-color 0.3s ease;
   }
 
   .task-panel-header {
@@ -263,6 +349,18 @@
     line-height: 1.5;
   }
 
+  /* ── Footer ── */
+  footer {
+    padding: 28px 40px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--text-secondary);
+    transition: border-color 0.3s ease, color 0.3s ease;
+  }
+
   @keyframes fadeInDown {
     from { opacity: 0; transform: translateY(-12px); }
     to { opacity: 1; transform: translateY(0); }
@@ -280,21 +378,36 @@
     .task-panel { width: 100%; }
     .calendar { padding: 16px; gap: 4px; }
     .date { font-size: 12px; }
+    footer { padding: 24px 20px; }
   }
 </style>
 </head>
 <body>
 
 <header class="site-header">
-  <h1><a href="index.html"><span>DAILY</span> CALENDAR</a></h1>
+  <h1><span>DAILY</span> CALENDAR</h1>
+  <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+    <!-- Moon: shown in light mode -->
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+    </svg>
+    <!-- Sun: shown in dark mode -->
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2"/><path d="M12 20v2"/>
+      <path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+      <path d="M2 12h2"/><path d="M20 12h2"/>
+      <path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+    </svg>
+  </button>
 </header>
 
 <div class="container">
 
   <div class="topbar">
-    <button id="prev">← Prev</button>
+    <button id="prev">&#8592; Prev</button>
     <div id="label" class="month-label"></div>
-    <button id="next">Next →</button>
+    <button id="next">Next &#8594;</button>
   </div>
 
   <div class="main-row">
@@ -312,6 +425,8 @@
     <div id="info" class="info">—</div>
   </div>
 </div>
+
+<footer><a href="index.html" style="color: inherit; text-decoration: none;"><span style="color: var(--accent);">dev.</span>nialfernandes.com</a></footer>
 
 <script>
 const badVals=[2,4,8];
@@ -471,6 +586,15 @@ document.addEventListener("keydown",e=>{
 
 document.getElementById("prev").onclick=()=>{current.setMonth(current.getMonth()-1);render();};
 document.getElementById("next").onclick=()=>{current.setMonth(current.getMonth()+1);render();};
+
+// Theme toggle
+const toggle = document.querySelector('.theme-toggle');
+toggle.addEventListener('click', function() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const next = isDark ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+});
 
 render();
 </script>
