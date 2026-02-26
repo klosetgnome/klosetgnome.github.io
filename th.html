@@ -42,40 +42,6 @@
     .site-header h1 { flex-shrink: 0; }
     .theme-toggle { flex-shrink: 0; }
 
-    /* ── Header Category Select ── */
-    .header-center {
-      flex: 1;
-      display: flex;
-      justify-content: center;
-      padding: 0 16px;
-    }
-    .header-center select {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 8px 36px 8px 14px;
-      color: var(--text-primary);
-      font-family: var(--mono);
-      font-size: 12px;
-      outline: none;
-      cursor: pointer;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      appearance: none;
-      -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a756b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 14px center;
-      min-width: 200px;
-    }
-    .header-center select:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-glow);
-    }
-    .header-center select option {
-      background: var(--surface);
-      color: var(--text-primary);
-    }
-
     main {
       flex: 1;
       display: flex;
@@ -587,7 +553,6 @@
 
     @media (max-width: 700px) {
       .site-header { padding: 20px 16px; gap: 8px; }
-      .header-center select { min-width: 140px; font-size: 11px; padding: 6px 30px 6px 10px; }
       main { padding: 32px 16px 60px; }
       .segment-row { padding: 10px 12px; gap: 6px; }
       .quote-input { min-width: 60px; }
