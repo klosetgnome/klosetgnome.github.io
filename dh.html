@@ -763,13 +763,13 @@
       })
       .catch(function (e) {
         console.error('Could not load prompt file:', e.message);
-        showError('Failed to load prompt file "' + promptFile + '". Make sure it exists in the _prompts/ directory.');
+        showError('Failed to load prompt file "' + promptFile + '". Make sure it exists.');
         promptLoaded = false;
       });
   }
 
   // Load initial prompt (Finance by default)
-  loadPrompt('./_prompts/dha.txt');
+  loadPrompt('./_prompt_dha.txt');
 
   // ── Category change handler ─────────────────────────────────────────
   categorySelect.addEventListener('change', function () {
