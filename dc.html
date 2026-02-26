@@ -21,36 +21,39 @@
 <style>
   /* ── Page-specific tokens ── */
   :root {
-    --good: #4a8c3f;
-    --good-bg: rgba(74, 140, 63, 0.10);
-    --good-bg-solid: #e4eddf;
-    --good-border: rgba(74, 140, 63, 0.25);
-    --bad: #b5392e;
-    --bad-bg: rgba(181, 57, 46, 0.08);
-    --bad-bg-solid: #eedbd8;
-    --bad-border: rgba(181, 57, 46, 0.22);
+    /* Good = accent-derived */
+    --good: #c0512d;
+    --good-bg: rgba(192, 81, 45, 0.10);
+    --good-bg-solid: #f0ddd6;
+    --good-border: rgba(192, 81, 45, 0.25);
+    /* Bad = warm amber/ochre */
+    --bad: #a07828;
+    --bad-bg: rgba(160, 120, 40, 0.08);
+    --bad-bg-solid: #ede5d3;
+    --bad-border: rgba(160, 120, 40, 0.22);
   }
 
   [data-theme="dark"] {
     --surface-raised: #332e2b;
     --border-active: #524c45;
-    --good: #6db85e;
-    --good-bg: rgba(109, 184, 94, 0.10);
-    --good-bg-solid: #2a3527;
-    --good-border: rgba(109, 184, 94, 0.25);
-    --bad: #e0655a;
-    --bad-bg: rgba(224, 101, 90, 0.10);
-    --bad-bg-solid: #3a2422;
-    --bad-border: rgba(224, 101, 90, 0.25);
+    /* Good = accent-derived (dark) */
+    --good: #d4774a;
+    --good-bg: rgba(212, 119, 74, 0.10);
+    --good-bg-solid: #362a22;
+    --good-border: rgba(212, 119, 74, 0.25);
+    /* Bad = warm amber/ochre (dark) */
+    --bad: #c49a3a;
+    --bad-bg: rgba(196, 154, 58, 0.10);
+    --bad-bg-solid: #332e1f;
+    --bad-border: rgba(196, 154, 58, 0.25);
   }
 
   /* ── Main ── */
   .container {
     position: relative;
     z-index: 1;
-    max-width: 780px;
     margin: 0 auto;
-    padding: 48px 24px 80px;
+    padding: 48px 40px 80px;
     flex: 1;
   }
 
@@ -146,7 +149,7 @@
     justify-content: center;
     border-radius: 6px;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 15px;
     cursor: pointer;
     position: relative;
     transition: all 0.2s ease;
@@ -255,7 +258,7 @@
     .main-row { flex-direction: column; }
     .task-panel { width: 100%; }
     .calendar { padding: 16px; gap: 4px; }
-    .date { font-size: 12px; }
+    .date { font-size: 13px; }
   }
 </style>
 </head>
