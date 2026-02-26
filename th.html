@@ -483,6 +483,37 @@
       background: var(--accent-light); border-style: solid;
     }
 
+    /* ── Editor Notes ── */
+    .editor-notes-card {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      animation: fadeInUp 0.5s ease 0.18s both;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+    .editor-notes-card .card-label {
+      padding: 14px 20px 0;
+    }
+    .editor-notes-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px 20px 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--text-primary);
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    .editor-notes-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
     .bottom-bar {
       width: 100%;
       display: flex;
@@ -570,6 +601,7 @@
   <div class="header-center">
     <select id="categorySelect">
       <option value="sport" selected>Sport</option>
+      <option value="news">News</option>
     </select>
   </div>
   <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
@@ -669,6 +701,11 @@
     </div>
   </div>
 
+  <div class="editor-notes-card" id="editorNotesCard">
+    <span class="card-label">Editor Notes</span>
+    <textarea class="editor-notes-textarea" id="editorNotes" placeholder="Additional notes for the editor…"></textarea>
+  </div>
+
   <div class="bottom-bar">
     <div class="shortcuts-legend">
       <kbd>Space</kbd> Play / Pause &nbsp;&middot;&nbsp;
@@ -740,6 +777,7 @@
   var stemFiles = [];
   var mixedBlob = null;
   var mixedBuffer = null;
+  var activeCategory = 'sport';
 
   // ═══════════════════════════════════════════════════════════════
   // TRANSCRIPTION WEB WORKER
@@ -799,6 +837,8 @@
   // ═══════════════════════════════════════════════════════════════
   var CATEGORIES = {
     sport: {
+      addLabel: '+ Add Pickup Point',
+      addPrefix: 'Pickup',
       left: [
         { id: 'seg1', label: 'Segment 1', hasQuotes: true },
         { id: 'seg2', label: 'Segment 2', hasQuotes: true },
@@ -814,6 +854,15 @@
         { id: 'radio-outro', label: 'Radio Outro', hasQuotes: false, startEnd: true },
         { id: 'radio-promo', label: 'Radio Promo', hasQuotes: false, startEnd: true }
       ]
+    },
+    news: {
+      addLabel: '+ Add Edit Point',
+      addPrefix: 'Edit Point',
+      left: [
+        { id: 'grab1', label: 'Grab 1', hasQuotes: true },
+        { id: 'grab2', label: 'Grab 2', hasQuotes: true }
+      ],
+      right: []
     }
   };
 
@@ -1018,6 +1067,7 @@
   }
 
   function loadCategory(catId) {
+    activeCategory = catId;
     var colLeft = document.getElementById('colLeft');
     var rightFixed = document.getElementById('rightFixedSegments');
     colLeft.innerHTML = ''; rightFixed.innerHTML = '';
@@ -1027,15 +1077,21 @@
     if (!cat) return;
     (cat.left || []).forEach(function (seg) { colLeft.appendChild(buildSegmentCard(seg)); });
     (cat.right || []).forEach(function (seg) { rightFixed.appendChild(buildSegmentCard(seg)); });
+
+    // Update the add button label
+    document.getElementById('addPickupBtn').textContent = cat.addLabel || '+ Add Pickup Point';
+
     updateStampButtons();
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // PICKUPS
+  // PICKUPS / EDIT POINTS
   // ═══════════════════════════════════════════════════════════════
   document.getElementById('addPickupBtn').addEventListener('click', function () {
+    var cat = CATEGORIES[activeCategory];
+    var prefix = (cat && cat.addPrefix) ? cat.addPrefix : 'Pickup';
     pickupCount++;
-    var card = buildSegmentCard({ id: 'pickup-' + pickupCount, label: 'Pickup ' + pickupCount, hasQuotes: true });
+    var card = buildSegmentCard({ id: 'pickup-' + pickupCount, label: prefix + ' ' + pickupCount, hasQuotes: true });
     var header = card.querySelector('.segment-header');
     var removeBtn = document.createElement('button');
     removeBtn.className = 'remove-pickup'; removeBtn.textContent = 'Remove';
@@ -1486,6 +1542,17 @@
       htmlLines.push('<br>');
     });
 
+    // Append editor notes if present
+    var editorNotes = document.getElementById('editorNotes').value.trim();
+    if (editorNotes) {
+      plainLines.push('Editor Notes');
+      plainLines.push(editorNotes);
+      plainLines.push('');
+      htmlLines.push('<b>Editor Notes</b>');
+      htmlLines.push(escapeHtml(editorNotes).replace(/\n/g, '<br>'));
+      htmlLines.push('<br>');
+    }
+
     if (!valid) { showError('Some required fields are missing or invalid. Please check highlighted fields.'); return; }
     var plainText = plainLines.join('\n').trim();
     var htmlText = htmlLines.join('<br>').replace(/<br>(<br>)+/g, '<br><br>').trim();
@@ -1519,11 +1586,12 @@
   });
 
   document.getElementById('clearAllBtn').addEventListener('click', function () {
-    if (!confirm('Clear all timecodes, quotes and pickup points?')) return;
+    if (!confirm('Clear all timecodes, quotes, notes and extra points?')) return;
     document.querySelectorAll('.tc-input').forEach(function (el) { el.value = ''; el.classList.remove('invalid'); });
     document.querySelectorAll('.quote-input').forEach(function (el) { el.value = ''; });
     document.querySelectorAll('.segment-card').forEach(function (c) { c.classList.remove('complete'); });
     document.getElementById('pickupsContainer').innerHTML = '';
+    document.getElementById('editorNotes').value = '';
     pickupCount = 0;
     showToast('All fields cleared');
   });
