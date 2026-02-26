@@ -728,8 +728,6 @@
 
         var transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
 
-        self.postMessage({ type: 'status', text: 'Loading Transcription model (first time may require a download, cached after)…' });
-
         // ── WHISPER MODEL SELECTION ──────────────────────────────
         // Switch model by changing the string below. Options:
         //
@@ -743,21 +741,58 @@
         // and process. All models are cached in the browser after
         // first download.
         // ─────────────────────────────────────────────────────────
+        var modelId = 'onnx-community/whisper-base';
+
+        // Detect best available device: WebGPU is 5-10× faster than WASM
+        var device = 'wasm';
+        if (typeof navigator !== 'undefined' && navigator.gpu) {
+          try {
+            var adapter = await navigator.gpu.requestAdapter();
+            if (adapter) {
+              device = 'webgpu';
+              self.postMessage({ type: 'status', text: 'WebGPU detected — loading model with GPU acceleration…' });
+            }
+          } catch (ignored) {}
+        }
+
+        if (device === 'wasm') {
+          self.postMessage({ type: 'status', text: 'Loading model (WASM mode — no GPU detected)…' });
+        }
+
         var transcriber = await transformers.pipeline(
           'automatic-speech-recognition',
-          'onnx-community/whisper-base',
-          { dtype: 'q8', device: 'wasm' }
+          modelId,
+          {
+            dtype: device === 'webgpu' ? 'fp32' : 'q8',
+            device: device
+          }
         );
 
-        self.postMessage({ type: 'status', text: 'Transcribing… this may take a few minutes for long recordings' });
-        self.postMessage({ type: 'progress', value: 10 });
+        // Estimate chunk count for progress
+        var audioLengthSec = e.data.audioDuration || 0;
+        var chunkSec = 30;
+        var totalChunks = Math.max(1, Math.ceil(audioLengthSec / chunkSec));
+        var chunksProcessed = 0;
+
+        self.postMessage({ type: 'status', text: 'Transcribing' + (device === 'webgpu' ? ' (GPU accelerated)' : '') + '…' });
+        self.postMessage({ type: 'progress', value: 5 });
 
         var result = await transcriber(e.data.audio, {
           return_timestamps: true,
-          chunk_length_s: 30,
+          chunk_length_s: chunkSec,
           stride_length_s: 5,
           language: 'en',
-          task: 'transcribe'
+          task: 'transcribe',
+          callback_function: function (output) {
+            // Called after each chunk
+            chunksProcessed++;
+            var pct = Math.min(95, Math.round((chunksProcessed / totalChunks) * 95));
+            self.postMessage({ type: 'progress', value: pct });
+            self.postMessage({
+              type: 'status',
+              text: 'Transcribing' + (device === 'webgpu' ? ' (GPU)' : '') + '… chunk ' + chunksProcessed + '/' + totalChunks
+            });
+          }
         });
 
         self.postMessage({ type: 'progress', value: 100 });
@@ -768,12 +803,6 @@
       }
     };
   };
-
-  var workerBlob = new Blob(
-    ['(' + workerScript.toString() + ')()'],
-    { type: 'application/javascript' }
-  );
-  var workerUrl = URL.createObjectURL(workerBlob);
 
   // ═══════════════════════════════════════════════════════════════
   // CATEGORY DEFINITIONS
@@ -1412,7 +1441,10 @@
         setTimeout(function () { prog.classList.remove('visible'); }, 1000);
       };
 
-      worker.postMessage({ audio: audioData }, [audioData.buffer]);
+      worker.postMessage(
+        { audio: audioData, audioDuration: mixedBuffer.duration },
+        [audioData.buffer]
+      );
 
     } catch (err) {
       console.error('Transcription setup error:', err);
