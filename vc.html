@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Vibe Calculator</title>
+<!-- Prevent flash of wrong theme -->
+<script>
+  (function() {
+    var saved = localStorage.getItem('theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -30,6 +41,25 @@
     --radius-lg: 12px;
   }
 
+  [data-theme="dark"] {
+    --bg: #1c1917;
+    --surface: #292524;
+    --surface-raised: #302c28;
+    --border: #3d3833;
+    --border-active: #564f47;
+    --text-primary: #e7e0d8;
+    --text-secondary: #9c928a;
+    --text-muted: #706860;
+    --accent: #d4774a;
+    --accent-light: rgba(212, 119, 74, 0.10);
+    --accent-glow: rgba(212, 119, 74, 0.15);
+    --success: #5ea852;
+    --success-glow: rgba(94, 168, 82, 0.12);
+    --result-bg: rgba(166, 136, 212, 0.12);
+    --result-border: rgba(166, 136, 212, 0.30);
+    --result-color: #a688d4;
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
@@ -38,11 +68,19 @@
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: background 0.3s ease, color 0.3s ease;
   }
 
+  /* ── Header (matches Tool Directory) ── */
   .site-header {
     padding: 28px 40px;
     border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: border-color 0.3s ease;
   }
 
   .site-header h1 {
@@ -57,12 +95,55 @@
     color: var(--accent);
   }
 
+  /* ── Theme Toggle (matches Tool Directory) ── */
+  .theme-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    width: 38px;
+    height: 38px;
+  }
+
+  .theme-toggle:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .theme-toggle svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.5;
+    transition: transform 0.3s ease;
+  }
+
+  .theme-toggle:hover svg {
+    transform: rotate(15deg);
+  }
+
+  .theme-toggle .icon-sun,
+  .theme-toggle .icon-moon { display: none; }
+
+  .theme-toggle .icon-moon { display: block; }
+  .theme-toggle .icon-sun { display: none; }
+
+  [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+  [data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+
   .container {
     position: relative;
     z-index: 1;
     max-width: 780px;
     margin: 0 auto;
     padding: 48px 24px 80px;
+    flex: 1;
+    width: 100%;
   }
 
   .input-area {
@@ -72,6 +153,7 @@
     padding: 20px;
     margin-bottom: 12px;
     animation: fadeInUp 0.5s ease 0.1s both;
+    transition: background 0.3s ease, border-color 0.3s ease;
   }
 
   .input-area label {
@@ -181,6 +263,7 @@
     position: relative;
     overflow: hidden;
     margin-bottom: 10px;
+    transition: background 0.3s ease, border-color 0.3s ease;
   }
 
   .result-card::before {
@@ -311,6 +394,7 @@
     animation: slideIn 0.3s ease;
     position: relative;
     overflow: hidden;
+    transition: background 0.3s ease, border-color 0.3s ease;
   }
 
   .history-item::before {
@@ -407,6 +491,28 @@
     line-height: 1.6;
   }
 
+  /* ── Footer (matches Tool Directory) ── */
+  footer {
+    padding: 28px 40px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--text-secondary);
+    transition: border-color 0.3s ease, color 0.3s ease;
+  }
+
+  footer a {
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.2s ease;
+  }
+
+  footer a:hover {
+    color: var(--accent);
+  }
+
   @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: translateY(0); }
@@ -426,13 +532,26 @@
     .site-header { padding: 20px 16px; }
     .container { padding: 32px 16px 60px; }
     .input-row { flex-direction: column; }
+    footer { padding: 24px 16px; }
   }
 </style>
 </head>
 <body>
 
 <header class="site-header">
-  <h1><a href="index.html" style="text-decoration:none;color:inherit;"><span>VIBE</span> CALCULATOR</a></h1>
+  <h1><span>VIBE</span> CALCULATOR</h1>
+  <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+    </svg>
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2"/><path d="M12 20v2"/>
+      <path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+      <path d="M2 12h2"/><path d="M20 12h2"/>
+      <path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+    </svg>
+  </button>
 </header>
 
 <div class="container">
@@ -487,7 +606,20 @@
 
 </div>
 
+<footer><a href="index.html"><span style="color: var(--accent);">dev.</span>nialfernandes.com</a></footer>
+
 <script>
+  // ── Theme toggle ────────────────────────────────────────────────────
+  (function() {
+    var toggle = document.querySelector('.theme-toggle');
+    toggle.addEventListener('click', function() {
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      var next = isDark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    });
+  })();
+
   const LETTER_MAP = {
     A:1, B:2, C:3, D:4, E:5, F:8, G:3, H:5, I:1, J:1, K:2, L:3,
     M:4, N:5, O:7, P:8, Q:1, R:2, S:3, T:4, U:6, V:6, W:6, X:5,
@@ -513,7 +645,6 @@
       } else if (/[0-9]/.test(ch)) {
         digits.push(parseInt(ch, 10));
       }
-      // ignore spaces, punctuation, etc.
     }
     return digits;
   }
@@ -533,8 +664,6 @@
       const expr = current.join(' + ');
       const total = sumDigits(current);
       steps.push({ expr, total });
-
-      // Break total into its digits for next round
       current = String(total).split('').map(Number);
     }
 
@@ -553,7 +682,6 @@
 
     const { result, steps } = digitalRoot(digits);
 
-    // Show result
     emptyState.style.display = 'none';
     resultArea.classList.add('visible');
 
@@ -562,7 +690,6 @@
     document.getElementById('resultLabel').textContent = `Vibe: ${result}`;
     document.getElementById('resultSub').textContent = `from ${digits.length} mapped digit${digits.length !== 1 ? 's' : ''}: ${digits.join(', ')}`;
 
-    // Show steps
     const stepsEl = document.getElementById('breakdownSteps');
     stepsEl.innerHTML = '';
 
@@ -583,7 +710,6 @@
       });
     }
 
-    // Add to history
     history.unshift({ input: raw, result, digitCount: digits.length });
     vibeInput.value = '';
     vibeInput.focus();
@@ -594,7 +720,6 @@
     const section = document.getElementById('historySection');
     const list = document.getElementById('historyList');
 
-    // Only show past results (skip first which is the current result)
     const past = history.slice(1);
     if (past.length === 0) {
       section.style.display = 'none';
@@ -622,7 +747,7 @@
   }
 
   function removeHistory(idx) {
-    history.splice(idx + 1, 1); // +1 because index 0 is current result
+    history.splice(idx + 1, 1);
     renderHistory();
   }
 
