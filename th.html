@@ -213,7 +213,7 @@
     .transport-btn svg { width: 16px; height: 16px; }
     .transport-time {
       font-family: var(--mono); font-size: 14px; font-weight: 500;
-      color: var(--text-primary); letter-spacing: 1px; min-width: 105px;
+      color: var(--text-primary); letter-spacing: 1px; min-width: 80px;
     }
     .transport-duration {
       font-family: var(--mono); font-size: 12px; color: var(--text-muted);
@@ -424,7 +424,7 @@
     }
     .tc-input {
       font-family: var(--mono); font-size: 14px; font-weight: 500;
-      width: 108px; padding: 8px 6px; border: 1px solid var(--border);
+      width: 86px; padding: 8px 6px; border: 1px solid var(--border);
       border-radius: var(--radius); background: var(--bg);
       color: var(--text-primary); text-align: center;
       letter-spacing: 1.2px; outline: none;
@@ -588,7 +588,7 @@
       main { padding: 32px 16px 60px; }
       .segment-row { padding: 10px 12px; gap: 6px; }
       .quote-input { min-width: 60px; }
-      .tc-input { width: 98px; font-size: 13px; }
+      .tc-input { width: 76px; font-size: 13px; }
       .transport-hint { display: none; }
       .bottom-bar { flex-direction: column; align-items: stretch; }
       .btn-group { justify-content: flex-end; }
@@ -666,8 +666,8 @@
         <button class="transport-btn" id="btnSkipFwd" title="Skip forward 5s">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
         </button>
-        <span class="transport-time" id="transportTime">00.00.00.00</span>
-        <span class="transport-duration" id="transportDuration">/ 00.00.00.00</span>
+        <span class="transport-time" id="transportTime">00.00.00</span>
+        <span class="transport-duration" id="transportDuration">/ 00.00.00</span>
         <span class="speed-badge" id="speedBadge" title="Click to cycle speed (D faster, S slower, R reset)">1&times;</span>
         <span class="transport-spacer"></span>
         <span class="transport-hint">Focus a timecode field, press <kbd>T</kbd> to stamp</span>
@@ -881,26 +881,29 @@
   }
 
   function secondsToTimecode(s) {
-    var totalFrames = Math.round(s * FPS);
-    var ff = totalFrames % FPS;
-    var totalSec = Math.floor(totalFrames / FPS);
+    var totalSec = Math.round(s);
     var hh = Math.floor(totalSec / 3600);
     var mm = Math.floor((totalSec % 3600) / 60);
     var ss = totalSec % 60;
-    return String(hh).padStart(2, '0') + '.' + String(mm).padStart(2, '0') + '.' + String(ss).padStart(2, '0') + '.' + String(ff).padStart(2, '0');
+    return String(hh).padStart(2, '0') + '.' + String(mm).padStart(2, '0') + '.' + String(ss).padStart(2, '0');
+  }
+
+  function formatTimecodeForCopy(tc) {
+    if (!tc) return '??:??:??:00';
+    return tc.replace(/\./g, ':') + ':00';
   }
 
   function timecodeToSeconds(tc) {
     var parts = tc.split('.');
-    if (parts.length !== 4) return NaN;
-    var hh = parseInt(parts[0], 10), mm = parseInt(parts[1], 10), ss = parseInt(parts[2], 10), ff = parseInt(parts[3], 10);
-    if (isNaN(hh) || isNaN(mm) || isNaN(ss) || isNaN(ff)) return NaN;
-    if (ff < 0 || ff > 24 || mm < 0 || mm > 59 || ss < 0 || ss > 59) return NaN;
-    return hh * 3600 + mm * 60 + ss + ff / FPS;
+    if (parts.length !== 3) return NaN;
+    var hh = parseInt(parts[0], 10), mm = parseInt(parts[1], 10), ss = parseInt(parts[2], 10);
+    if (isNaN(hh) || isNaN(mm) || isNaN(ss)) return NaN;
+    if (mm < 0 || mm > 59 || ss < 0 || ss > 59) return NaN;
+    return hh * 3600 + mm * 60 + ss;
   }
 
   function isValidTimecode(tc) {
-    return /^\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,2}$/.test(tc) && !isNaN(timecodeToSeconds(tc));
+    return /^\d{1,2}\.\d{1,2}\.\d{1,2}$/.test(tc) && !isNaN(timecodeToSeconds(tc));
   }
 
   function showToast(msg) {
@@ -956,10 +959,10 @@
   function setupTimecodeInput(input) {
     input.addEventListener('input', function () {
       var digits = this.value.replace(/[^\d]/g, '');
-      if (digits.length > 8) digits = digits.substring(0, 8);
+      if (digits.length > 6) digits = digits.substring(0, 6);
       var formatted = '';
       for (var i = 0; i < digits.length; i++) {
-        if (i === 2 || i === 4 || i === 6) formatted += '.';
+        if (i === 2 || i === 4) formatted += '.';
         formatted += digits[i];
       }
       this.value = formatted;
@@ -1043,15 +1046,15 @@
     if (seg.customRows) {
       for (var c = 0; c < seg.customRows.length; c++) {
         var cr = seg.customRows[c];
-        rows += '<div class="segment-row"><span class="row-label-wide">' + cr.label + '</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + cr.tcId + '" placeholder="00.00.00.00" maxlength="11" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div></div>';
+        rows += '<div class="segment-row"><span class="row-label-wide">' + cr.label + '</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + cr.tcId + '" placeholder="00.00.00" maxlength="8" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div></div>';
       }
     } else if (seg.startEnd && !seg.hasQuotes) {
       ['Start', 'End'].forEach(function (lbl) {
-        rows += '<div class="segment-row"><span class="row-label">' + lbl + '</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + lbl.toLowerCase() + '" placeholder="00.00.00.00" maxlength="11" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div></div>';
+        rows += '<div class="segment-row"><span class="row-label">' + lbl + '</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + lbl.toLowerCase() + '" placeholder="00.00.00" maxlength="8" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div></div>';
       });
     } else {
-      rows += '<div class="segment-row"><span class="row-label">Start</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-start" placeholder="00.00.00.00" maxlength="11" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div><span class="quote-label">Quote in</span><input type="text" class="quote-input" data-quote-id="' + seg.id + '-quote-in" placeholder="First words…" required /></div>';
-      rows += '<div class="segment-row"><span class="row-label">End</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-end" placeholder="00.00.00.00" maxlength="11" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div><span class="quote-label">Quote out</span><input type="text" class="quote-input" data-quote-id="' + seg.id + '-quote-out" placeholder="Last words…" required /></div>';
+      rows += '<div class="segment-row"><span class="row-label">Start</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-start" placeholder="00.00.00" maxlength="8" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div><span class="quote-label">Quote in</span><input type="text" class="quote-input" data-quote-id="' + seg.id + '-quote-in" placeholder="First words…" required /></div>';
+      rows += '<div class="segment-row"><span class="row-label">End</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-end" placeholder="00.00.00" maxlength="8" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div><span class="quote-label">Quote out</span><input type="text" class="quote-input" data-quote-id="' + seg.id + '-quote-out" placeholder="Last words…" required /></div>';
     }
 
     card.innerHTML = header + rows;
@@ -1331,8 +1334,8 @@
     document.getElementById('transcribeRow').classList.remove('visible');
     document.getElementById('transcriptDisplay').classList.remove('visible');
     document.getElementById('transcriptDisplay').innerHTML = '';
-    document.getElementById('transportTime').textContent = '00.00.00.00';
-    document.getElementById('transportDuration').textContent = '/ 00.00.00.00';
+    document.getElementById('transportTime').textContent = '00.00.00';
+    document.getElementById('transportDuration').textContent = '/ 00.00.00';
     document.getElementById('transcribeBtn').disabled = false;
     document.getElementById('transcribeBtn').textContent = 'Transcribe';
     document.getElementById('transcribeBtn').classList.remove('done');
@@ -1527,8 +1530,9 @@
         }
         if (tc) {
           if (!tc.value || !isValidTimecode(tc.value)) { tc.classList.add('invalid'); valid = false; }
-          plainLine += tc.value || '??:??:??:??';
-          htmlLine += escapeHtml(tc.value || '??:??:??:??');
+          var copyTc = formatTimecodeForCopy(tc.value);
+          plainLine += copyTc;
+          htmlLine += escapeHtml(copyTc);
         }
         if (qi) {
           if (!qi.value.trim()) {
