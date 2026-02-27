@@ -118,6 +118,85 @@
     transform: none;
   }
 
+  /* Cookie section */
+  .cookie-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    transition: color 0.2s;
+  }
+
+  .cookie-toggle:hover { color: var(--accent); }
+
+  .cookie-toggle svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s;
+  }
+
+  .cookie-toggle.open svg { transform: rotate(90deg); }
+
+  .cookie-section {
+    display: none;
+    margin-top: 12px;
+    padding: 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    animation: fadeInUp 0.2s ease;
+  }
+
+  .cookie-section.visible { display: block; }
+
+  .cookie-section p {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin: 0 0 10px;
+    line-height: 1.6;
+  }
+
+  .cookie-section a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .cookie-section a:hover { text-decoration: underline; }
+
+  .cookie-drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .cookie-drop-zone:hover,
+  .cookie-drop-zone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-light, rgba(222, 120, 80, 0.05));
+  }
+
+  .cookie-drop-zone.loaded {
+    border-color: var(--success);
+    color: var(--success);
+    border-style: solid;
+  }
+
+  .cookie-file-input { display: none; }
+
   /* Error message */
   .error-msg {
     font-family: var(--mono);
@@ -460,6 +539,26 @@
     </div>
     <div class="loading-bar" id="fetchLoading"><div class="loading-bar-fill"></div></div>
     <div class="error-msg" id="fetchError"></div>
+
+    <!-- Cookie upload (collapsible) -->
+    <button class="cookie-toggle" id="cookieToggle" onclick="toggleCookies()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+      YouTube cookies (required)
+    </button>
+    <div class="cookie-section" id="cookieSection">
+      <p>
+        YouTube requires authentication from cloud servers. Export your cookies using
+        <a href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank" rel="noopener">Get cookies.txt LOCALLY</a>
+        (Chrome) or a similar extension. Visit youtube.com while signed in, export, then upload the file here.
+        Your cookies are sent with each request and never stored.
+      </p>
+      <div class="cookie-drop-zone" id="cookieDropZone" onclick="document.getElementById('cookieFileInput').click()">
+        Drop cookies.txt here or click to browse
+      </div>
+      <input type="file" class="cookie-file-input" id="cookieFileInput" accept=".txt">
+    </div>
   </div>
 
   <!-- Step 2: Video Info -->
@@ -537,13 +636,13 @@
   })();
 
   // ── Configuration ──
-  // Point this at your backend server. No trailing slash.
   const API_BASE = 'https://dl.nialfernandes.com';
 
   // ── State ──
   let videoData = null;
   let currentJobId = null;
   let pollTimer = null;
+  let cookiesText = '';  // holds the raw cookies.txt content
 
   const urlInput     = document.getElementById('urlInput');
   const fetchBtn     = document.getElementById('fetchBtn');
@@ -559,6 +658,47 @@
   urlInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') fetchInfo();
   });
+
+  // ── Cookie handling ──
+  function toggleCookies() {
+    const section = document.getElementById('cookieSection');
+    const toggle = document.getElementById('cookieToggle');
+    const isOpen = section.classList.contains('visible');
+    section.classList.toggle('visible');
+    toggle.classList.toggle('open');
+  }
+
+  // File input handler
+  document.getElementById('cookieFileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) loadCookieFile(file);
+  });
+
+  // Drag and drop
+  const dropZone = document.getElementById('cookieDropZone');
+  dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', function() {
+    dropZone.classList.remove('dragover');
+  });
+  dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) loadCookieFile(file);
+  });
+
+  function loadCookieFile(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      cookiesText = e.target.result;
+      dropZone.classList.add('loaded');
+      dropZone.textContent = '✓ ' + file.name + ' loaded';
+    };
+    reader.readAsText(file);
+  }
 
   // ── Helpers ──
   function formatDuration(sec) {
@@ -619,7 +759,7 @@
       const res = await fetch(`${API_BASE}/api/info`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, cookies: cookiesText }),
       });
       const data = await res.json();
 
@@ -715,6 +855,7 @@
           url: videoData.url,
           format_id: formatId,
           title: videoData.title,
+          cookies: cookiesText,
         }),
       });
       const data = await res.json();
