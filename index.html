@@ -30,6 +30,24 @@
             flex: 1;
         }
 
+        /* ── Site Blurb ── */
+        .site-blurb {
+            font-family: var(--mono);
+            font-size: 12px;
+            line-height: 1.7;
+            letter-spacing: 0.2px;
+            color: var(--text-muted);
+            max-width: 440px;
+            margin: 0 auto 40px;
+            opacity: 0;
+            animation: fadeInBlurb 0.5s ease 0.02s forwards;
+        }
+
+        @keyframes fadeInBlurb {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
         /* ── Icon Garden ── */
         .icon-garden {
             display: flex;
@@ -205,6 +223,8 @@
     </header>
 
     <main>
+        <p class="site-blurb">A personal collection of small web tools, built and maintained as a side project. Feel free to use anything here, but please don't depend on it — these tools are in constant evolution and may change or vanish at any time.</p>
+
         <div class="icon-garden">
 
             <a href="ch.html" class="tool-pod">
