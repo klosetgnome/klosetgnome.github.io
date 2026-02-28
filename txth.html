@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow">
+  <script src="/analytics.js"></script>
+  <title>Text Helper</title>
+  <!-- Prevent flash of wrong theme -->
+  <script>
+    (function() {
+      var saved = localStorage.getItem('theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="astyle.css">
+  <style>
+    /* ── Main content ── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+      gap: 20px;
+      width: 100%;
+    }
+
+    /* Warning banner */
+    .warn-banner {
+      width: 100%;
+      background: var(--warning-glow);
+      border: 1px solid rgba(160, 120, 40, 0.35);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--warning);
+      line-height: 1.9;
+      display: none;
+      animation: fadeInUp 0.4s ease;
+    }
+
+    .warn-banner.visible { display: block; }
+
+    .warn-banner code {
+      background: rgba(160, 120, 40, 0.12);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    /* Cards */
+    .card {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      animation: fadeInUp 0.5s ease 0.1s both;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+
+    .card-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding: 16px 20px 0;
+      display: block;
+    }
+
+    .card-hint {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      padding: 3px 20px 0;
+      display: block;
+    }
+
+    textarea {
+      display: block;
+      width: 100%;
+      min-height: 96px;
+      max-height: 96px;
+      resize: none;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text-primary);
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 12px 20px 18px;
+      overflow-y: auto;
+    }
+
+    textarea::placeholder { color: var(--text-muted); }
+
+    /* ── Drop-zone ── */
+    .drop-zone { position: relative; width: 100%; }
+
+    .drop-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background: var(--accent-light);
+      border: 2px dashed var(--accent);
+      border-radius: var(--radius);
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .drop-overlay.active { display: flex; }
+
+    .drop-overlay-label {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .drop-prompt {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 36px 20px;
+      min-height: 180px;
+      text-align: center;
+      cursor: default;
+    }
+
+    .drop-prompt.hidden { display: none; }
+
+    .drop-prompt-icon { color: var(--text-muted); opacity: 0.5; }
+    .drop-prompt-icon svg { width: 36px; height: 36px; }
+
+    .drop-prompt-text {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.9;
+    }
+
+    .drop-prompt-text .browse {
+      color: var(--accent);
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .drop-prompt-text .browse:hover { text-decoration: underline; }
+
+    .file-loaded-bar {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .file-loaded-bar.visible { display: flex; }
+
+    .file-loaded-bar .file-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .file-loaded-bar .file-size {
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .file-loaded-bar .file-remove {
+      flex-shrink: 0;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .file-loaded-bar .file-remove:hover {
+      border-color: var(--error);
+      color: var(--error);
+      background: var(--error-glow);
+    }
+
+    /* ── Submit row ── */
+    .submit-row {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      animation: fadeInUp 0.5s ease 0.2s both;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-group label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    /* Model select — styled to match the header category select */
+    .field-group select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 36px 10px 14px;
+      color: var(--text-primary);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a756b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      min-width: 320px;
+    }
+
+    .field-group select:hover {
+      border-color: var(--text-muted);
+    }
+
+    .field-group select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .field-group select option {
+      background: var(--surface);
+      color: var(--text-primary);
+    }
+
+    button.submit {
+      font-family: var(--serif);
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius);
+      padding: 12px 24px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    button.submit:hover {
+      background: #d4623e;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+
+    button.submit:active { transform: translateY(0); }
+
+    button.submit:disabled {
+      background: var(--border);
+      color: var(--text-muted);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    /* ── Progress ── */
+    .progress-wrap {
+      width: 100%;
+      display: none;
+      animation: fadeInUp 0.3s ease;
+    }
+
+    .progress-wrap.visible { display: block; }
+
+    .progress-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 3px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 100%;
+      background: var(--accent);
+      animation: indeterminate 1.8s ease-in-out infinite;
+    }
+
+    @keyframes indeterminate {
+      0%   { transform: translateX(-100%) scaleX(0.4); }
+      50%  { transform: translateX(60%)   scaleX(0.6); }
+      100% { transform: translateX(200%)  scaleX(0.4); }
+    }
+
+    /* ── Results ── */
+    .results {
+      width: 100%;
+      display: none;
+      flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      animation: fadeInUp 0.5s ease;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+
+    .results.visible { display: flex; }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .results-copy {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 5px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .results-copy:hover {
+      border-color: var(--text-secondary);
+      color: var(--text-primary);
+      background: var(--surface-raised);
+    }
+
+    .results-copy.copied {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .results-copy svg { width: 13px; height: 13px; }
+
+    .results-body {
+      padding: 20px;
+      font-size: 14px;
+      line-height: 1.75;
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+
+    .results-body strong { font-weight: 600; }
+
+    .results-body p {
+      margin: 0 0 0.8em;
+    }
+
+    .results-body p:last-child { margin-bottom: 0; }
+
+    /* ── Error box ── */
+    .error-box {
+      width: 100%;
+      background: var(--error-glow);
+      border: 1px solid rgba(181, 57, 46, 0.3);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--error);
+      display: none;
+      white-space: pre-wrap;
+      line-height: 1.7;
+      animation: fadeInUp 0.3s ease;
+    }
+
+    .error-box.visible { display: block; }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .site-header { padding: 20px 16px; gap: 8px; }
+      main { padding: 32px 16px 60px; }
+      .field-group select { min-width: 0; width: 100%; }
+      .submit-row { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1><span>TEXT</span> HELPER</h1>
+  <div class="header-center">
+    <select id="categorySelect">
+      <option value="summary" data-prompt="zpmttxths.txt">Summary</option>
+      <option value="message" data-prompt="zpmttxthe.txt">Message</option>
+    </select>
+  </div>
+  <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+    </svg>
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2"/><path d="M12 20v2"/>
+      <path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+      <path d="M2 12h2"/><path d="M20 12h2"/>
+      <path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+    </svg>
+  </button>
+</header>
+
+<main>
+
+  <div class="results" id="results">
+    <div class="results-header">
+      <span id="resultsLabel">Output</span>
+      <button class="results-copy" id="copyBtn" title="Copy to clipboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span class="copy-label">Copy</span>
+      </button>
+    </div>
+    <div class="results-body" id="resultContent"></div>
+  </div>
+
+  <div class="warn-banner" id="warnBanner">
+    <strong>Local file detected.</strong> Browsers block API requests when a file is opened directly from disk (<code>file://</code>) due to CORS restrictions.<br>
+    You need to serve this file over HTTP. The simplest way is to open a terminal in the same folder and run:<br>
+    <code>python3 -m http.server 8080</code><br>
+    Then open <code>http://localhost:8080/texthelper.html</code> in your browser.
+  </div>
+
+  <div class="card" id="inputCard">
+    <span class="card-label">Your Text</span>
+    <span class="card-hint" id="inputHint">Paste an article, email, or long-form text to summarise</span>
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-overlay" id="dropOverlay">
+        <span class="drop-overlay-label">Drop .txt file here</span>
+      </div>
+
+      <div class="drop-prompt" id="dropPrompt">
+        <div class="drop-prompt-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <div class="drop-prompt-text">
+          Drag &amp; drop a .txt file here<br>
+          or <span class="browse" id="browseLink">browse to select one</span>
+        </div>
+      </div>
+
+      <input type="file" id="fileInput" accept=".txt,text/plain" style="display:none;" />
+
+      <textarea id="inputText" placeholder="…or paste your text here"></textarea>
+    </div>
+
+    <div class="file-loaded-bar" id="fileBar">
+      <span class="file-name" id="fileName"></span>
+      <span class="file-size" id="fileSize"></span>
+      <button class="file-remove" id="fileRemove">Clear</button>
+    </div>
+  </div>
+
+  <div class="submit-row">
+    <div class="field-group">
+      <label>Model <span id="modelStatus" style="color:var(--text-muted);font-size:10px;letter-spacing:1px;">(loading…)</span></label>
+      <select id="model"></select>
+    </div>
+    <button class="submit" id="submitBtn">Create</button>
+  </div>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-label" id="progressLabel">Processing text…</div>
+    <div class="progress-track"><div class="progress-bar"></div></div>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+</main>
+
+<footer>
+  <a href="index.html"><span style="color: var(--accent);">dev.</span>nialfernandes.com</a>
+  <span style="color: var(--text-muted); margin: 0 8px;">|</span>
+  <a href="privacy.html">Privacy Policy</a>
+</footer>
+
+<script>
+(function () {
+  // ── Theme toggle ────────────────────────────────────────────────────
+  var toggle = document.querySelector('.theme-toggle');
+  toggle.addEventListener('click', function () {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+  });
+
+  // =========================================================================
+  // WORKER URL — Same Cloudflare Worker as Description Helper
+  // =========================================================================
+  var WORKER_URL = 'https://ddg-proxy.klosetgnome.workers.dev';
+
+  var modelEl        = document.getElementById('model');
+  var modelStatus    = document.getElementById('modelStatus');
+  var categorySelect = document.getElementById('categorySelect');
+  var inputHint      = document.getElementById('inputHint');
+  var progressLabel  = document.getElementById('progressLabel');
+  var resultsLabel   = document.getElementById('resultsLabel');
+  var promptLoaded   = false;
+  var PROMPT         = '';
+
+  // ── Hint text per category ──────────────────────────────────────────
+  var HINTS = {
+    summary: 'Paste an article, email, or long-form text to summarise',
+    message: 'Paste bullet points or rough notes to turn into a polished message'
+  };
+
+  var PROGRESS_LABELS = {
+    summary: 'Generating summary…',
+    message: 'Drafting message…'
+  };
+
+  var RESULT_LABELS = {
+    summary: 'Summary',
+    message: 'Message'
+  };
+
+  // ── Drop-zone elements ──────────────────────────────────────────────
+  var dropZone      = document.getElementById('dropZone');
+  var dropOverlay   = document.getElementById('dropOverlay');
+  var dropPrompt    = document.getElementById('dropPrompt');
+  var fileInput     = document.getElementById('fileInput');
+  var inputTextEl   = document.getElementById('inputText');
+  var fileBar       = document.getElementById('fileBar');
+  var fileNameEl    = document.getElementById('fileName');
+  var fileSizeEl    = document.getElementById('fileSize');
+  var fileRemoveBtn = document.getElementById('fileRemove');
+
+  var loadedFileText = null;
+
+  if (window.location.protocol === 'file:') {
+    document.getElementById('warnBanner').classList.add('visible');
+  }
+
+  // ── File helpers ────────────────────────────────────────────────────
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+
+  function handleFile(file) {
+    if (!file) return;
+    if (file.type && !file.type.startsWith('text/') && !file.name.endsWith('.txt')) {
+      showError('Only .txt (plain text) files are supported.');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      loadedFileText = e.target.result;
+      fileNameEl.textContent = file.name;
+      fileSizeEl.textContent = formatBytes(file.size);
+      fileBar.classList.add('visible');
+      dropPrompt.classList.add('hidden');
+      inputTextEl.style.display = 'none';
+    };
+    reader.onerror = function () { showError('Could not read the file. Please try again.'); };
+    reader.readAsText(file);
+  }
+
+  function clearFile() {
+    loadedFileText = null;
+    fileInput.value = '';
+    fileBar.classList.remove('visible');
+    dropPrompt.classList.remove('hidden');
+    inputTextEl.style.display = '';
+    inputTextEl.value = '';
+    inputTextEl.focus();
+  }
+
+  // ── Drag-and-drop events ────────────────────────────────────────────
+  var dragCounter = 0;
+
+  dropZone.addEventListener('dragenter', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter++;
+    dropOverlay.classList.add('active');
+  });
+  dropZone.addEventListener('dragover', function (e) {
+    e.preventDefault(); e.stopPropagation();
+  });
+  dropZone.addEventListener('dragleave', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter--;
+    if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('active'); }
+  });
+  dropZone.addEventListener('drop', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter = 0;
+    dropOverlay.classList.remove('active');
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length > 0) handleFile(files[0]);
+  });
+
+  // ── Browse link / file input ────────────────────────────────────────
+  document.getElementById('browseLink').addEventListener('click', function () { fileInput.click(); });
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files && fileInput.files.length > 0) handleFile(fileInput.files[0]);
+  });
+
+  // ── Clear button ────────────────────────────────────────────────────
+  fileRemoveBtn.addEventListener('click', clearFile);
+
+  inputTextEl.addEventListener('input', function () {
+    if (loadedFileText) {
+      loadedFileText = null;
+      fileBar.classList.remove('visible');
+    }
+  });
+
+  // ── Prompt loading ──────────────────────────────────────────────────
+  function loadPrompt(promptFile) {
+    return fetch(promptFile)
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.text();
+      })
+      .then(function (text) {
+        PROMPT = text;
+        promptLoaded = true;
+        console.log('Prompt loaded from ' + promptFile);
+      })
+      .catch(function (e) {
+        console.error('Could not load prompt file:', e.message);
+        showError('Failed to load prompt file "' + promptFile + '". Make sure it exists.');
+        promptLoaded = false;
+      });
+  }
+
+  // Load initial prompt (Summary by default)
+  loadPrompt('zpmttxths.txt');
+
+  // ── Category change handler ─────────────────────────────────────────
+  categorySelect.addEventListener('change', function () {
+    var selectedOption = categorySelect.options[categorySelect.selectedIndex];
+    var promptFile = selectedOption.getAttribute('data-prompt');
+    var cat = categorySelect.value;
+    loadPrompt(promptFile);
+
+    // Update hint text, progress label, and results label
+    inputHint.textContent = HINTS[cat] || HINTS.summary;
+    progressLabel.textContent = PROGRESS_LABELS[cat] || PROGRESS_LABELS.summary;
+    resultsLabel.textContent = RESULT_LABELS[cat] || RESULT_LABELS.summary;
+  });
+
+  // ── Model list ──────────────────────────────────────────────────────
+  var FALLBACK_MODELS = [
+    ['arcee-ai/trinity-mini:free',                    'Arcee AI: Trinity Mini (free)'],
+    ['deepseek/deepseek-chat:free',                   'DeepSeek: V3 Chat (free)'],
+    ['deepseek/deepseek-r1:free',                     'DeepSeek: R1 (free)'],
+    ['deepseek/deepseek-r1-zero:free',                'DeepSeek: R1 Zero (free)'],
+    ['google/gemini-2.0-flash-exp:free',              'Google: Gemini 2.0 Flash Exp (free)'],
+    ['google/gemini-2.0-flash-thinking-exp:free',     'Google: Gemini 2.0 Flash Thinking (free)'],
+    ['google/gemini-flash-1.5:free',                  'Google: Gemini 1.5 Flash (free)'],
+    ['google/gemini-pro-1.5:free',                    'Google: Gemini 1.5 Pro (free)'],
+    ['google/learnlm-1.5-pro-experimental:free',      'Google: LearnLM 1.5 Pro Exp (free)'],
+    ['meta-llama/llama-3.1-8b-instruct:free',         'Meta: Llama 3.1 8B (free)'],
+    ['meta-llama/llama-3.2-11b-vision-instruct:free', 'Meta: Llama 3.2 11B Vision (free)'],
+    ['meta-llama/llama-3.2-3b-instruct:free',         'Meta: Llama 3.2 3B (free)'],
+    ['meta-llama/llama-3.3-70b-instruct:free',        'Meta: Llama 3.3 70B (free)'],
+    ['microsoft/phi-3-medium-128k-instruct:free',     'Microsoft: Phi-3 Medium 128K (free)'],
+    ['microsoft/phi-3-mini-128k-instruct:free',       'Microsoft: Phi-3 Mini 128K (free)'],
+    ['mistralai/mistral-7b-instruct:free',            'Mistral: 7B Instruct (free)'],
+    ['mistralai/mistral-small-3.1-24b-instruct:free', 'Mistral: Small 3.1 24B (free)'],
+    ['nousresearch/hermes-3-llama-3.1-405b:free',     'Nous: Hermes 3 405B (free)'],
+    ['openchat/openchat-7b:free',                     'OpenChat: 7B (free)'],
+    ['qwen/qwen-2.5-72b-instruct:free',              'Qwen: 2.5 72B (free)'],
+    ['qwen/qwen-2.5-7b-instruct:free',               'Qwen: 2.5 7B (free)'],
+    ['qwen/qwen2.5-vl-72b-instruct:free',            'Qwen: QwQ 32B (free)']
+  ];
+
+  var PREFERRED = [
+    'arcee-ai/trinity-mini:free',
+    'stepfun/step-3.5-flash:free',
+    'google/gemini-2.0-flash-exp:free',
+  ];
+
+  function populateDropdown(models, sourceLabel) {
+    var html = '';
+    for (var i = 0; i < models.length; i++) {
+      html += '<option value="' + models[i][0] + '">' + models[i][1] + '</option>';
+    }
+    modelEl.innerHTML = html;
+    modelStatus.textContent = '(' + models.length + ' free models' + (sourceLabel ? ' — ' + sourceLabel : '') + ')';
+    for (var p = 0; p < PREFERRED.length; p++) {
+      var found = false;
+      for (var o = 0; o < modelEl.options.length; o++) {
+        if (modelEl.options[o].value === PREFERRED[p]) { modelEl.value = PREFERRED[p]; found = true; break; }
+      }
+      if (found) break;
+    }
+  }
+
+  populateDropdown(FALLBACK_MODELS, 'fallback');
+
+  // Fetch live models
+  (async function fetchModels() {
+    try {
+      var res = await fetch(WORKER_URL + '/models');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var data = await res.json();
+      var freeModels = (data.data || []).filter(function (m) { return m.id && m.id.endsWith(':free'); });
+      if (freeModels.length === 0) throw new Error('No free models returned');
+      freeModels.sort(function (a, b) { return (a.name || a.id).localeCompare(b.name || b.id); });
+      var models = freeModels.map(function (m) {
+        var label = m.name || m.id;
+        if (!/\bfree\b/i.test(label)) label += ' (free)';
+        return [m.id, label];
+      });
+      populateDropdown(models, 'live');
+    } catch (e) {
+      console.warn('Could not fetch models from OpenRouter, using fallback list:', e.message);
+      modelStatus.textContent = '(' + FALLBACK_MODELS.length + ' free models — fallback)';
+    }
+  })();
+
+  // ── Markdown-ish rendering ──────────────────────────────────────────
+  function renderFormatted(raw) {
+    // Escape HTML first
+    var safe = raw
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // Bold: **text**
+    safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+    // Italic: *text* (but not inside bold)
+    safe = safe.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+    // Split into paragraphs on double newlines
+    var paragraphs = safe.split(/\n{2,}/);
+    var html = paragraphs.map(function (p) {
+      // Convert single newlines to <br> within paragraphs
+      return '<p>' + p.trim().replace(/\n/g, '<br>') + '</p>';
+    }).join('');
+
+    return html;
+  }
+
+  // ── Submit ──────────────────────────────────────────────────────────
+  document.getElementById('submitBtn').addEventListener('click', async function () {
+    var userText   = loadedFileText ? loadedFileText.trim() : inputTextEl.value.trim();
+    var model      = modelEl.value;
+    var cat        = categorySelect.value;
+    var errorBox   = document.getElementById('errorBox');
+    var progress   = document.getElementById('progressWrap');
+    var results    = document.getElementById('results');
+    var btn        = document.getElementById('submitBtn');
+
+    errorBox.classList.remove('visible');
+    results.classList.remove('visible');
+
+    if (!userText) { showError('Please drop a text file or paste content before submitting.'); return; }
+    if (!promptLoaded) { showError('Prompt file is still loading. Please wait a moment and try again.'); return; }
+    if (!PROMPT) { showError('Prompt file could not be loaded. Make sure the prompt file exists in the same directory.'); return; }
+
+    // Update progress label to match category
+    progressLabel.textContent = PROGRESS_LABELS[cat] || PROGRESS_LABELS.summary;
+    resultsLabel.textContent = RESULT_LABELS[cat] || RESULT_LABELS.summary;
+
+    progress.classList.add('visible');
+    btn.disabled = true;
+
+    try {
+      var res = await fetch(WORKER_URL + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: model,
+          max_tokens: 2048,
+          messages: [
+            { role: 'system', content: PROMPT },
+            { role: 'user',   content: userText }
+          ]
+        })
+      });
+
+      var data = await res.json();
+      if (!res.ok) {
+        throw new Error((data && data.error && data.error.message) || ('API error ' + res.status + ': ' + JSON.stringify(data)));
+      }
+
+      var text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (!text) throw new Error('Model returned an empty response. Try a different model.');
+
+      // Strip any wrapping markdown code fences the model might add
+      text = text.replace(/^```(?:markdown|md)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+
+      document.getElementById('resultContent').innerHTML = renderFormatted(text);
+
+      results.classList.add('visible');
+      results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    } catch (err) {
+      var msg = err.message || String(err);
+      if (/failed to fetch|networkerror|load failed/i.test(msg)) {
+        msg = 'Network error: could not reach the proxy worker.\n\n'
+            + 'Check that WORKER_URL in this file points to your deployed Cloudflare Worker.\n\n'
+            + 'If running locally, also ensure you are serving over HTTP, not file://.';
+      }
+      showError(msg);
+    } finally {
+      progress.classList.remove('visible');
+      btn.disabled = false;
+    }
+  });
+
+  function showError(msg) {
+    var box = document.getElementById('errorBox');
+    box.textContent = msg;
+    box.classList.add('visible');
+    document.getElementById('progressWrap').classList.remove('visible');
+    document.getElementById('submitBtn').disabled = false;
+  }
+
+  // ── Copy button ─────────────────────────────────────────────────────
+  document.getElementById('copyBtn').addEventListener('click', async function () {
+    var el = document.getElementById('resultContent');
+    var text = el ? el.innerText.trim() : '';
+    if (!text) return;
+    var btn = document.getElementById('copyBtn');
+    var label = btn.querySelector('.copy-label');
+    try { await navigator.clipboard.writeText(text); }
+    catch (e) {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+    }
+    btn.classList.add('copied');
+    label.textContent = 'Copied';
+    setTimeout(function () {
+      btn.classList.remove('copied');
+      label.textContent = 'Copy';
+    }, 1800);
+  });
+}());
+</script>
+</body>
+</html>
