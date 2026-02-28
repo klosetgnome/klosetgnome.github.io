@@ -358,6 +358,17 @@
     .results-body strong { font-weight: 600; }
     .results-body p { margin: 0 0 0.8em; }
     .results-body p:last-child { margin-bottom: 0; }
+    .results-body ul {
+      margin: 0 0 0.8em;
+      padding-left: 1.4em;
+      list-style: disc;
+    }
+    .results-body ul:last-child { margin-bottom: 0; }
+    .results-body li {
+      margin-bottom: 0.35em;
+      line-height: 1.6;
+    }
+    .results-body li:last-child { margin-bottom: 0; }
 
     /* Error */
     .error-box {
@@ -441,7 +452,7 @@
           <path d="m15 5 4 4"/>
         </svg>
       </div>
-      <textarea id="inputText" placeholder="Type, paste, or drop a link here…"></textarea>
+      <textarea id="inputText" placeholder="Type or paste here…"></textarea>
     </div>
     <div class="fetch-bar" id="fetchBar">
       <div class="fetch-spinner" id="fetchSpinner"></div>
@@ -505,6 +516,11 @@
     message: 'Paste bullet points or rough notes to turn into a polished email',
     summarise: 'Paste text, or a link to a webpage, to summarise',
     review:  'Paste notes or key details about your experience'
+  };
+  var PLACEHOLDERS = {
+    message:   'Type or paste here…',
+    summarise: 'Type, paste, or drop a link here…',
+    review:    'Type or paste here…'
   };
   var PROGRESS_LABELS = {
     message: 'Drafting email…',
@@ -606,12 +622,11 @@
     }
   }
 
-  // Listen for paste events to detect URLs
+  // Listen for paste events to detect URLs (Summarise mode only)
   inputTextEl.addEventListener('paste', function (e) {
-    // Short delay to let the paste populate the textarea
     setTimeout(function () {
       var val = inputTextEl.value.trim();
-      if (isUrl(val)) {
+      if (categorySelect.value === 'summarise' && isUrl(val)) {
         fetchPageContent(val);
       }
     }, 50);
@@ -632,11 +647,13 @@
     var opt = categorySelect.options[categorySelect.selectedIndex];
     var cat = categorySelect.value;
     loadPrompt(opt.getAttribute('data-prompt'));
-    inputHint.textContent     = HINTS[cat];
-    progressLabel.textContent = PROGRESS_LABELS[cat];
+    inputHint.textContent      = HINTS[cat];
+    inputTextEl.placeholder    = PLACEHOLDERS[cat];
+    progressLabel.textContent  = PROGRESS_LABELS[cat];
     resultsLabel.textContent  = RESULT_LABELS[cat];
     document.getElementById('submitBtn').textContent = 'Create';
     document.getElementById('results').classList.remove('visible');
+    hideFetchBar();
   });
 
   // ── Models ────────────────────────────────────────────────────────
@@ -698,9 +715,40 @@
     var s = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    return s.split(/\n{2,}/).map(function (p) {
-      return '<p>' + p.trim().replace(/\n/g,'<br>') + '</p>';
-    }).join('');
+
+    var blocks = s.split(/\n{2,}/);
+    var html = '';
+    for (var i = 0; i < blocks.length; i++) {
+      var block = blocks[i].trim();
+      if (!block) continue;
+
+      // Check if this block is a list (lines starting with "- ")
+      var lines = block.split('\n');
+      var listLines = [];
+      var preLines = [];
+      for (var j = 0; j < lines.length; j++) {
+        var line = lines[j].trim();
+        if (/^- /.test(line)) {
+          listLines.push(line.replace(/^- /, ''));
+        } else {
+          preLines.push(line);
+        }
+      }
+
+      // If we have non-list lines before the list, render as paragraph
+      if (preLines.length > 0) {
+        html += '<p>' + preLines.join('<br>') + '</p>';
+      }
+      // Render list items
+      if (listLines.length > 0) {
+        html += '<ul>';
+        for (var k = 0; k < listLines.length; k++) {
+          html += '<li>' + listLines[k] + '</li>';
+        }
+        html += '</ul>';
+      }
+    }
+    return html;
   }
 
   // ── Submit ────────────────────────────────────────────────────────
