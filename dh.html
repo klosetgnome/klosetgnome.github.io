@@ -6,7 +6,6 @@
   <meta name="robots" content="noindex, nofollow">
   <script src="/analytics.js"></script>
   <title>Description Helper</title>
-  <!-- Prevent flash of wrong theme -->
   <script>
     (function() {
       var saved = localStorage.getItem('theme');
@@ -19,168 +18,11 @@
   </script>
   <link rel="stylesheet" href="astyle.css">
   <style>
-    /* ── Header overrides for 3-column layout ── */
-    .site-header h1 { flex-shrink: 0; }
-    .theme-toggle { flex-shrink: 0; }
-
-    /* ── Main content ── */
-    main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      max-width: 780px;
-      margin: 0 auto;
-      padding: 48px 24px 80px;
-      gap: 20px;
-      width: 100%;
-    }
-
-    /* Warning banner */
-    .warn-banner {
-      width: 100%;
-      background: var(--warning-glow);
-      border: 1px solid rgba(160, 120, 40, 0.35);
-      border-radius: var(--radius);
-      padding: 14px 18px;
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--warning);
-      line-height: 1.9;
-      display: none;
-      animation: fadeInUp 0.4s ease;
-    }
-
-    .warn-banner.visible { display: block; }
-
-    .warn-banner code {
-      background: rgba(160, 120, 40, 0.12);
-      padding: 2px 7px;
-      border-radius: 4px;
-      font-size: 11px;
-    }
-
-    /* Model field group */
-    .field-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      animation: fadeInUp 0.5s ease 0.1s both;
-    }
-
-    .field-group label {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-    }
-
-    /* Model select — matches header-center select from astyle.css */
-    .field-group select {
-      background: transparent;
-      border: none;
-      border-radius: 0;
-      padding: 4px 20px 4px 0;
-      color: var(--text-primary);
-      font-family: var(--mono);
-      font-size: 13px;
-      font-weight: 400;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      outline: none;
-      cursor: pointer;
-      transition: opacity 0.2s;
-      appearance: none;
-      -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%232c2a26' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 2px center;
-      min-width: 0;
-    }
-
-    [data-theme="dark"] .field-group select {
-      background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23e7e0d8' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    }
-
-    .field-group select:hover { opacity: 0.75; }
-
-    .field-group select:focus {
-      border: none;
-      box-shadow: none;
-    }
-
-    .field-group select option {
-      background: var(--surface);
-      color: var(--text-primary);
-      font-size: 12px;
-      letter-spacing: 1px;
-      text-transform: none;
-    }
-
-    /* Cards */
-    .card {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      animation: fadeInUp 0.5s ease 0.15s both;
-      transition: background 0.3s ease, border-color 0.3s ease;
-    }
-
-    .card-label {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-      padding: 16px 20px 0;
-      display: block;
-    }
-
-    .card-hint {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      padding: 3px 20px 0;
-      display: block;
-    }
-
+    /* ── Page-specific: textarea height ── */
     textarea {
-      display: block;
-      width: 100%;
       min-height: 96px;
       max-height: 96px;
-      resize: none;
-      font-family: var(--mono);
-      font-size: 13px;
-      line-height: 1.7;
-      color: var(--text-primary);
-      background: transparent;
-      border: none;
-      outline: none;
-      padding: 12px 20px 18px;
-      overflow-y: auto;
     }
-
-    textarea::placeholder { color: var(--text-muted); }
-
-    input.title-input {
-      display: block;
-      width: 100%;
-      font-family: var(--mono);
-      font-size: 13px;
-      line-height: 1.7;
-      color: var(--text-primary);
-      background: transparent;
-      border: none;
-      outline: none;
-      padding: 12px 20px 14px;
-    }
-
-    input.title-input::placeholder { color: var(--text-muted); }
 
     /* ── Drop-zone ── */
     .drop-zone { position: relative; width: 100%; }
@@ -197,7 +39,6 @@
       justify-content: center;
       pointer-events: none;
     }
-
     .drop-overlay.active { display: flex; }
 
     .drop-overlay-label {
@@ -220,7 +61,6 @@
       text-align: center;
       cursor: default;
     }
-
     .drop-prompt.hidden { display: none; }
 
     .drop-prompt-icon { color: var(--text-muted); opacity: 0.5; }
@@ -232,13 +72,11 @@
       color: var(--text-secondary);
       line-height: 1.9;
     }
-
     .drop-prompt-text .browse {
       color: var(--accent);
       cursor: pointer;
       transition: opacity 0.2s;
     }
-
     .drop-prompt-text .browse:hover { text-decoration: underline; }
 
     .file-loaded-bar {
@@ -251,7 +89,6 @@
       font-size: 12px;
       color: var(--text-secondary);
     }
-
     .file-loaded-bar.visible { display: flex; }
 
     .file-loaded-bar .file-name {
@@ -262,12 +99,10 @@
       color: var(--text-primary);
       font-weight: 500;
     }
-
     .file-loaded-bar .file-size {
       color: var(--text-muted);
       flex-shrink: 0;
     }
-
     .file-loaded-bar .file-remove {
       flex-shrink: 0;
       background: none;
@@ -282,123 +117,18 @@
       cursor: pointer;
       transition: all 0.2s;
     }
-
     .file-loaded-bar .file-remove:hover {
       border-color: var(--error);
       color: var(--error);
       background: var(--error-glow);
     }
 
-    /* Submit row */
-    .submit-row {
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      gap: 16px;
-      animation: fadeInUp 0.5s ease 0.2s both;
-    }
-
-    button.submit {
-      font-family: var(--serif);
-      font-size: 14px;
-      font-weight: 600;
-      border: none;
-      border-radius: var(--radius);
-      padding: 12px 24px;
-      cursor: pointer;
-      transition: all 0.2s;
-      white-space: nowrap;
-      background: var(--accent);
-      color: #fff;
-    }
-
-    button.submit:hover {
-      background: #d4623e;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 16px var(--accent-glow);
-    }
-
-    button.submit:active { transform: translateY(0); }
-
-    button.submit:disabled {
-      background: var(--border);
-      color: var(--text-muted);
-      cursor: not-allowed;
-      box-shadow: none;
-      transform: none;
-    }
-
-    /* Progress */
-    .progress-wrap {
-      width: 100%;
-      display: none;
-      animation: fadeInUp 0.3s ease;
-    }
-
-    .progress-wrap.visible { display: block; }
-
-    .progress-label {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-    }
-
-    .progress-track {
-      width: 100%;
-      height: 3px;
-      background: var(--border);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .progress-bar {
-      height: 100%;
-      width: 100%;
-      background: var(--accent);
-      animation: indeterminate 1.8s ease-in-out infinite;
-    }
-
-    @keyframes indeterminate {
-      0%   { transform: translateX(-100%) scaleX(0.4); }
-      50%  { transform: translateX(60%)   scaleX(0.6); }
-      100% { transform: translateX(200%)  scaleX(0.4); }
-    }
-
-    /* Results */
-    .results {
-      width: 100%;
-      display: none;
-      flex-direction: column;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      animation: fadeInUp 0.5s ease;
-      transition: background 0.3s ease, border-color 0.3s ease;
-    }
-
-    .results.visible { display: flex; }
-
-    .results-header {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-    }
-
+    /* ── Result rows ── */
     .result-row {
       display: flex;
       align-items: stretch;
       border-bottom: 1px solid var(--border);
     }
-
     .result-row:last-child { border-bottom: none; }
 
     .row-meta {
@@ -408,7 +138,6 @@
       display: flex;
       align-items: center;
     }
-
     .row-tag {
       font-family: var(--mono);
       font-size: 10px;
@@ -416,7 +145,6 @@
       text-transform: uppercase;
       color: var(--text-muted);
     }
-
     .row-content {
       flex: 1;
       padding: 16px 14px;
@@ -425,12 +153,10 @@
       word-break: break-word;
       border-left: 1px solid var(--border);
     }
-
     .result-row.headline .row-content {
       font-weight: 600;
       font-size: 15px;
     }
-
     .result-row.description .row-content {
       font-size: 14px;
       color: var(--text-primary);
@@ -449,39 +175,15 @@
       color: var(--text-muted);
       transition: all 0.2s;
     }
-
     .copy-btn:hover {
       color: var(--text-primary);
       background: var(--surface-raised);
     }
-
     .copy-btn.copied { color: var(--accent); }
     .copy-btn svg { width: 15px; height: 15px; }
 
-    /* Error box */
-    .error-box {
-      width: 100%;
-      background: var(--error-glow);
-      border: 1px solid rgba(181, 57, 46, 0.3);
-      border-radius: var(--radius);
-      padding: 14px 18px;
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--error);
-      display: none;
-      white-space: pre-wrap;
-      line-height: 1.7;
-      animation: fadeInUp 0.3s ease;
-    }
-
-    .error-box.visible { display: block; }
-
-    /* Responsive */
+    /* ── Responsive (page-specific) ── */
     @media (max-width: 600px) {
-      .site-header { padding: 20px 16px; gap: 8px; }
-      main { padding: 32px 16px 60px; }
-      .field-group select { font-size: 11px; letter-spacing: 2px; }
-      .submit-row { flex-direction: column; align-items: stretch; }
       .row-meta { width: 90px; padding: 12px 10px; }
       .row-content { padding: 12px 10px; }
     }
@@ -492,17 +194,15 @@
 <header class="site-header">
   <h1><span>DESCRIPTION</span> HELPER</h1>
   <div class="header-center">
-    <select id="categorySelect">
+    <select id="categorySelect" class="minimal-select">
       <option value="finance" data-prompt="zpmtdha.txt">Finance</option>
       <option value="news" data-prompt="zpmtdhb.txt">News</option>
     </select>
   </div>
   <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
-    <!-- Moon: shown in light mode -->
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
     </svg>
-    <!-- Sun: shown in dark mode -->
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="4"/>
       <path d="M12 2v2"/><path d="M12 20v2"/>
@@ -558,7 +258,6 @@
       <div class="drop-overlay" id="dropOverlay">
         <span class="drop-overlay-label">Drop .txt file here</span>
       </div>
-
       <div class="drop-prompt" id="dropPrompt">
         <div class="drop-prompt-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -568,12 +267,9 @@
           or <span class="browse" id="browseLink">browse to select one</span>
         </div>
       </div>
-
       <input type="file" id="fileInput" accept=".txt,text/plain" style="display:none;" />
-
       <textarea id="transcript" placeholder="…or paste the full episode transcript here"></textarea>
     </div>
-
     <div class="file-loaded-bar" id="fileBar">
       <span class="file-name" id="fileName"></span>
       <span class="file-size" id="fileSize"></span>
@@ -584,7 +280,7 @@
   <div class="submit-row">
     <div class="field-group">
       <label>Model <span id="modelStatus" style="color:var(--text-muted);font-size:10px;letter-spacing:1px;">(loading...)</span></label>
-      <select id="model"></select>
+      <select id="model" class="minimal-select"></select>
     </div>
     <button class="submit" id="submitBtn">Create</button>
   </div>
@@ -598,14 +294,13 @@
 </main>
 
 <footer>
-      <a href="index.html"><span style="color: var(--accent);">dev.</span>nialfernandes.com</a>
-      <span style="color: var(--text-muted); margin: 0 8px;">|</span>
-      <a href="privacy.html">Privacy Policy</a>
+  <a href="index.html"><span style="color: var(--accent);">dev.</span>nialfernandes.com</a>
+  <span style="color: var(--text-muted); margin: 0 8px;">|</span>
+  <a href="privacy.html">Privacy Policy</a>
 </footer>
 
 <script>
 (function () {
-  // ── Theme toggle ────────────────────────────────────────────────────
   var toggle = document.querySelector('.theme-toggle');
   toggle.addEventListener('click', function () {
     var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -614,18 +309,14 @@
     localStorage.setItem('theme', next);
   });
 
-  // =========================================================================
-  // WORKER URL — Change this to your Cloudflare Worker URL after deploying.
-  // =========================================================================
   var WORKER_URL = 'https://ddg-proxy.klosetgnome.workers.dev';
 
-  var modelEl       = document.getElementById('model');
-  var modelStatus   = document.getElementById('modelStatus');
+  var modelEl        = document.getElementById('model');
+  var modelStatus    = document.getElementById('modelStatus');
   var categorySelect = document.getElementById('categorySelect');
-  var promptLoaded  = false;
-  var PROMPT        = '';
+  var promptLoaded   = false;
+  var PROMPT         = '';
 
-  // ── Drop-zone elements ──────────────────────────────────────────────
   var dropZone      = document.getElementById('dropZone');
   var dropOverlay   = document.getElementById('dropOverlay');
   var dropPrompt    = document.getElementById('dropPrompt');
@@ -635,15 +326,12 @@
   var fileNameEl    = document.getElementById('fileName');
   var fileSizeEl    = document.getElementById('fileSize');
   var fileRemoveBtn = document.getElementById('fileRemove');
-
-  // State: text read from a dropped / browsed file (null = none loaded)
   var loadedFileText = null;
 
   if (window.location.protocol === 'file:') {
     document.getElementById('warnBanner').classList.add('visible');
   }
 
-  // ── File helpers ────────────────────────────────────────────────────
   function formatBytes(b) {
     if (b < 1024) return b + ' B';
     if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
@@ -660,7 +348,7 @@
     reader.onload = function (e) {
       loadedFileText = e.target.result;
       fileNameEl.textContent = file.name;
-      fileSizeEl.textContent  = formatBytes(file.size);
+      fileSizeEl.textContent = formatBytes(file.size);
       fileBar.classList.add('visible');
       dropPrompt.classList.add('hidden');
       transcriptEl.style.display = 'none';
@@ -679,148 +367,83 @@
     transcriptEl.focus();
   }
 
-  // ── Drag-and-drop events ────────────────────────────────────────────
   var dragCounter = 0;
+  dropZone.addEventListener('dragenter', function (e) { e.preventDefault(); e.stopPropagation(); dragCounter++; dropOverlay.classList.add('active'); });
+  dropZone.addEventListener('dragover', function (e) { e.preventDefault(); e.stopPropagation(); });
+  dropZone.addEventListener('dragleave', function (e) { e.preventDefault(); e.stopPropagation(); dragCounter--; if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('active'); } });
+  dropZone.addEventListener('drop', function (e) { e.preventDefault(); e.stopPropagation(); dragCounter = 0; dropOverlay.classList.remove('active'); var files = e.dataTransfer && e.dataTransfer.files; if (files && files.length > 0) handleFile(files[0]); });
 
-  dropZone.addEventListener('dragenter', function (e) {
-    e.preventDefault(); e.stopPropagation();
-    dragCounter++;
-    dropOverlay.classList.add('active');
-  });
-  dropZone.addEventListener('dragover', function (e) {
-    e.preventDefault(); e.stopPropagation();
-  });
-  dropZone.addEventListener('dragleave', function (e) {
-    e.preventDefault(); e.stopPropagation();
-    dragCounter--;
-    if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('active'); }
-  });
-  dropZone.addEventListener('drop', function (e) {
-    e.preventDefault(); e.stopPropagation();
-    dragCounter = 0;
-    dropOverlay.classList.remove('active');
-    var files = e.dataTransfer && e.dataTransfer.files;
-    if (files && files.length > 0) handleFile(files[0]);
-  });
-
-  // ── Browse link / file input ────────────────────────────────────────
   document.getElementById('browseLink').addEventListener('click', function () { fileInput.click(); });
-  fileInput.addEventListener('change', function () {
-    if (fileInput.files && fileInput.files.length > 0) handleFile(fileInput.files[0]);
-  });
-
-  // ── Clear button ────────────────────────────────────────────────────
+  fileInput.addEventListener('change', function () { if (fileInput.files && fileInput.files.length > 0) handleFile(fileInput.files[0]); });
   fileRemoveBtn.addEventListener('click', clearFile);
+  transcriptEl.addEventListener('input', function () { if (loadedFileText) { loadedFileText = null; fileBar.classList.remove('visible'); } });
 
-  // If user starts typing in the textarea, drop loaded-file state
-  transcriptEl.addEventListener('input', function () {
-    if (loadedFileText) {
-      loadedFileText = null;
-      fileBar.classList.remove('visible');
-    }
-  });
-
-  // ── Model list ──────────────────────────────────────────────────────
   var FALLBACK_MODELS = [
-    ['arcee-ai/trinity-mini:free',                    'Arcee AI: Trinity Mini (free)'],
-    ['deepseek/deepseek-chat:free',                   'DeepSeek: V3 Chat (free)'],
-    ['deepseek/deepseek-r1:free',                     'DeepSeek: R1 (free)'],
-    ['deepseek/deepseek-r1-zero:free',                'DeepSeek: R1 Zero (free)'],
-    ['google/gemini-2.0-flash-exp:free',              'Google: Gemini 2.0 Flash Exp (free)'],
-    ['google/gemini-2.0-flash-thinking-exp:free',     'Google: Gemini 2.0 Flash Thinking (free)'],
-    ['google/gemini-flash-1.5:free',                  'Google: Gemini 1.5 Flash (free)'],
-    ['google/gemini-pro-1.5:free',                    'Google: Gemini 1.5 Pro (free)'],
-    ['google/learnlm-1.5-pro-experimental:free',      'Google: LearnLM 1.5 Pro Exp (free)'],
-    ['meta-llama/llama-3.1-8b-instruct:free',         'Meta: Llama 3.1 8B (free)'],
-    ['meta-llama/llama-3.2-11b-vision-instruct:free', 'Meta: Llama 3.2 11B Vision (free)'],
-    ['meta-llama/llama-3.2-3b-instruct:free',         'Meta: Llama 3.2 3B (free)'],
-    ['meta-llama/llama-3.3-70b-instruct:free',        'Meta: Llama 3.3 70B (free)'],
-    ['microsoft/phi-3-medium-128k-instruct:free',     'Microsoft: Phi-3 Medium 128K (free)'],
-    ['microsoft/phi-3-mini-128k-instruct:free',       'Microsoft: Phi-3 Mini 128K (free)'],
-    ['mistralai/mistral-7b-instruct:free',            'Mistral: 7B Instruct (free)'],
-    ['mistralai/mistral-small-3.1-24b-instruct:free', 'Mistral: Small 3.1 24B (free)'],
-    ['nousresearch/hermes-3-llama-3.1-405b:free',     'Nous: Hermes 3 405B (free)'],
-    ['openchat/openchat-7b:free',                     'OpenChat: 7B (free)'],
-    ['qwen/qwen-2.5-72b-instruct:free',               'Qwen: 2.5 72B (free)'],
-    ['qwen/qwen-2.5-7b-instruct:free',                'Qwen: 2.5 7B (free)'],
-    ['qwen/qwen2.5-vl-72b-instruct:free',             'Qwen: QwQ 32B (free)']
+    ['arcee-ai/trinity-mini:free','Arcee AI: Trinity Mini (free)'],
+    ['deepseek/deepseek-chat:free','DeepSeek: V3 Chat (free)'],
+    ['deepseek/deepseek-r1:free','DeepSeek: R1 (free)'],
+    ['deepseek/deepseek-r1-zero:free','DeepSeek: R1 Zero (free)'],
+    ['google/gemini-2.0-flash-exp:free','Google: Gemini 2.0 Flash Exp (free)'],
+    ['google/gemini-2.0-flash-thinking-exp:free','Google: Gemini 2.0 Flash Thinking (free)'],
+    ['google/gemini-flash-1.5:free','Google: Gemini 1.5 Flash (free)'],
+    ['google/gemini-pro-1.5:free','Google: Gemini 1.5 Pro (free)'],
+    ['google/learnlm-1.5-pro-experimental:free','Google: LearnLM 1.5 Pro Exp (free)'],
+    ['meta-llama/llama-3.1-8b-instruct:free','Meta: Llama 3.1 8B (free)'],
+    ['meta-llama/llama-3.2-11b-vision-instruct:free','Meta: Llama 3.2 11B Vision (free)'],
+    ['meta-llama/llama-3.2-3b-instruct:free','Meta: Llama 3.2 3B (free)'],
+    ['meta-llama/llama-3.3-70b-instruct:free','Meta: Llama 3.3 70B (free)'],
+    ['microsoft/phi-3-medium-128k-instruct:free','Microsoft: Phi-3 Medium 128K (free)'],
+    ['microsoft/phi-3-mini-128k-instruct:free','Microsoft: Phi-3 Mini 128K (free)'],
+    ['mistralai/mistral-7b-instruct:free','Mistral: 7B Instruct (free)'],
+    ['mistralai/mistral-small-3.1-24b-instruct:free','Mistral: Small 3.1 24B (free)'],
+    ['nousresearch/hermes-3-llama-3.1-405b:free','Nous: Hermes 3 405B (free)'],
+    ['openchat/openchat-7b:free','OpenChat: 7B (free)'],
+    ['qwen/qwen-2.5-72b-instruct:free','Qwen: 2.5 72B (free)'],
+    ['qwen/qwen-2.5-7b-instruct:free','Qwen: 2.5 7B (free)'],
+    ['qwen/qwen2.5-vl-72b-instruct:free','Qwen: QwQ 32B (free)']
   ];
+  var PREFERRED = ['arcee-ai/trinity-mini:free','stepfun/step-3.5-flash:free','google/gemini-2.0-flash-exp:free'];
 
-  var PREFERRED = [
-    'arcee-ai/trinity-mini:free',
-    'stepfun/step-3.5-flash:free',
-    'google/gemini-2.0-flash-exp:free',
-  ];
-
-  function populateDropdown(models, sourceLabel) {
-    var html = '';
-    for (var i = 0; i < models.length; i++) {
-      html += '<option value="' + models[i][0] + '">' + models[i][1] + '</option>';
-    }
-    modelEl.innerHTML = html;
-    modelStatus.textContent = '(' + models.length + ' free models' + (sourceLabel ? ' — ' + sourceLabel : '') + ')';
+  function populateDropdown(models, src) {
+    modelEl.innerHTML = models.map(function (m) { return '<option value="'+m[0]+'">'+m[1]+'</option>'; }).join('');
+    modelStatus.textContent = '(' + models.length + ' free models' + (src ? ' — ' + src : '') + ')';
     for (var p = 0; p < PREFERRED.length; p++) {
-      var found = false;
       for (var o = 0; o < modelEl.options.length; o++) {
-        if (modelEl.options[o].value === PREFERRED[p]) { modelEl.value = PREFERRED[p]; found = true; break; }
+        if (modelEl.options[o].value === PREFERRED[p]) { modelEl.value = PREFERRED[p]; return; }
       }
-      if (found) break;
     }
   }
-
   populateDropdown(FALLBACK_MODELS, 'fallback');
 
-  // ── Prompt loading function ─────────────────────────────────────────
-  function loadPrompt(promptFile) {
-    return fetch(promptFile)
-      .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.text();
-      })
-      .then(function (text) {
-        PROMPT = text;
-        promptLoaded = true;
-        console.log('Prompt loaded from ' + promptFile);
-      })
-      .catch(function (e) {
-        console.error('Could not load prompt file:', e.message);
-        showError('Failed to load prompt file "' + promptFile + '". Make sure it exists.');
-        promptLoaded = false;
-      });
+  function loadPrompt(file) {
+    fetch(file)
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function (t) { PROMPT = t; promptLoaded = true; })
+      .catch(function (e) { showError('Failed to load prompt file "' + file + '".'); promptLoaded = false; });
   }
-
-  // Load initial prompt (Finance by default)
   loadPrompt('zpmtdha.txt');
 
-  // ── Category change handler ─────────────────────────────────────────
   categorySelect.addEventListener('change', function () {
-    var selectedOption = categorySelect.options[categorySelect.selectedIndex];
-    var promptFile = selectedOption.getAttribute('data-prompt');
-    loadPrompt(promptFile);
+    var opt = categorySelect.options[categorySelect.selectedIndex];
+    loadPrompt(opt.getAttribute('data-prompt'));
   });
 
-  // Fetch live models
-  (async function fetchModels() {
+  (async function () {
     try {
       var res = await fetch(WORKER_URL + '/models');
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) throw new Error();
       var data = await res.json();
-      var freeModels = (data.data || []).filter(function (m) { return m.id && m.id.endsWith(':free'); });
-      if (freeModels.length === 0) throw new Error('No free models returned');
-      freeModels.sort(function (a, b) { return (a.name || a.id).localeCompare(b.name || b.id); });
-      var models = freeModels.map(function (m) {
-        var label = m.name || m.id;
-        if (!/\bfree\b/i.test(label)) label += ' (free)';
-        return [m.id, label];
-      });
-      populateDropdown(models, 'live');
+      var free = (data.data || []).filter(function (m) { return m.id && m.id.endsWith(':free'); });
+      if (!free.length) throw new Error();
+      free.sort(function (a, b) { return (a.name||a.id).localeCompare(b.name||b.id); });
+      populateDropdown(free.map(function (m) {
+        var l = m.name || m.id; if (!/\bfree\b/i.test(l)) l += ' (free)'; return [m.id, l];
+      }), 'live');
     } catch (e) {
-      console.warn('Could not fetch models from OpenRouter, using fallback list:', e.message);
       modelStatus.textContent = '(' + FALLBACK_MODELS.length + ' free models — fallback)';
     }
   })();
 
-  // ── Submit ──────────────────────────────────────────────────────────
   document.getElementById('submitBtn').addEventListener('click', async function () {
     var titleVal   = document.getElementById('titleInput').value.trim();
     var transcript = loadedFileText ? loadedFileText.trim() : transcriptEl.value.trim();
@@ -834,8 +457,7 @@
     results.classList.remove('visible');
 
     if (!transcript) { showError('Please drop a transcript file or paste text before submitting.'); return; }
-    if (!promptLoaded) { showError('Prompt file is still loading. Please wait a moment and try again.'); return; }
-    if (!PROMPT) { showError('Prompt file could not be loaded. Make sure the prompt file exists in the same directory.'); return; }
+    if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); return; }
 
     var userMessage = '';
     if (titleVal) { userMessage = 'Suggested title: ' + titleVal + '\n\n'; }
@@ -849,59 +471,44 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: model,
-          max_tokens: 1024,
+          model: model, max_tokens: 1024,
           messages: [
             { role: 'system', content: PROMPT },
             { role: 'user',   content: userMessage }
           ]
         })
       });
-
       var data = await res.json();
-      if (!res.ok) {
-        throw new Error((data && data.error && data.error.message) || ('API error ' + res.status + ': ' + JSON.stringify(data)));
-      }
+      if (!res.ok) throw new Error((data.error && data.error.message) || 'API error ' + res.status);
 
       var text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
       if (!text) throw new Error('Model returned an empty response. Try a different model.');
 
       var clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
       var parsed;
-      try {
-        parsed = JSON.parse(clean);
-      } catch (e) {
+      try { parsed = JSON.parse(clean); }
+      catch (e) {
         var match = clean.match(/\{[\s\S]*\}/);
-        if (match) {
-          try { parsed = JSON.parse(match[0]); }
-          catch (e2) { throw new Error('Could not parse JSON from model response.\n\nRaw output:\n' + text); }
-        } else {
-          throw new Error('Model did not return JSON. It may have refused the input or asked a follow-up question. Try a different model or provide a fuller transcript.\n\nRaw output:\n' + text);
-        }
+        if (match) { try { parsed = JSON.parse(match[0]); } catch (e2) { throw new Error('Could not parse JSON.\n\nRaw output:\n' + text); } }
+        else { throw new Error('Model did not return JSON. Try a different model.\n\nRaw output:\n' + text); }
       }
 
-      document.getElementById('h1').textContent   = parsed.headline1   || '';
-      document.getElementById('h2').textContent   = parsed.headline2   || '';
-      document.getElementById('h3').textContent   = parsed.headline3   || '';
+      document.getElementById('h1').textContent = parsed.headline1 || '';
+      document.getElementById('h2').textContent = parsed.headline2 || '';
+      document.getElementById('h3').textContent = parsed.headline3 || '';
 
-      // Parse markdown in description: **text** → bold, \n → line breaks
       var descEl = document.getElementById('desc');
-      var description = parsed.description || '';
-      description = description
+      var description = (parsed.description || '')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/\n/g, '<br>');
       descEl.innerHTML = description;
 
       results.classList.add('visible');
       results.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
     } catch (err) {
       var msg = err.message || String(err);
-      if (/failed to fetch|networkerror|load failed/i.test(msg)) {
-        msg = 'Network error: could not reach the proxy worker.\n\n'
-            + 'Check that WORKER_URL in this file points to your deployed Cloudflare Worker.\n\n'
-            + 'If running locally, also ensure you are serving over HTTP, not file://.';
-      }
+      if (/failed to fetch|networkerror|load failed/i.test(msg))
+        msg = 'Network error: could not reach the proxy worker.\nCheck WORKER_URL and ensure you are serving over HTTP.';
       showError(msg);
     } finally {
       progress.classList.remove('visible');
@@ -917,7 +524,6 @@
     document.getElementById('submitBtn').disabled = false;
   }
 
-  // ── Copy buttons ────────────────────────────────────────────────────
   document.querySelectorAll('.copy-btn').forEach(function (btn) {
     btn.addEventListener('click', async function () {
       var el = document.getElementById(btn.dataset.target);
