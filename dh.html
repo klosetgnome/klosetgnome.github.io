@@ -428,6 +428,15 @@
     loadPrompt(opt.getAttribute('data-prompt'));
   });
 
+  // ── Deep-link via hash (e.g. #finance or #news) ──────────────────
+  (function () {
+    var hash = window.location.hash.replace('#', '').toLowerCase();
+    if (hash && categorySelect.querySelector('option[value="' + hash + '"]')) {
+      categorySelect.value = hash;
+      categorySelect.dispatchEvent(new Event('change'));
+    }
+  })();
+
   (async function () {
     try {
       var res = await fetch(WORKER_URL + '/models');
