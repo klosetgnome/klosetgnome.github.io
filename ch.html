@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow">
   <script src="/analytics.js"></script>
-  <title>Text Helper</title>
+  <title>Copy Helper</title>
   <script>
     (function() {
       var saved = localStorage.getItem('theme');
@@ -119,7 +119,7 @@
     }
     textarea::placeholder { color: var(--text-muted); }
 
-    /* Submit row */
+    /* ── Submit row ── */
     .submit-row {
       width: 100%;
       display: flex;
@@ -143,33 +143,46 @@
       color: var(--text-secondary);
     }
 
+    /* Model select — matches header-center select from astyle.css */
     .field-group select {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 10px 36px 10px 14px;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 4px 20px 4px 0;
       color: var(--text-primary);
       font-family: var(--mono);
-      font-size: 12px;
-      letter-spacing: 0.5px;
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 3px;
+      text-transform: uppercase;
       outline: none;
       cursor: pointer;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      transition: opacity 0.2s;
       appearance: none;
       -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a756b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%232c2a26' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
-      background-position: right 14px center;
-      min-width: 320px;
+      background-position: right 2px center;
+      min-width: 0;
     }
-    .field-group select:hover { border-color: var(--text-muted); }
+
+    [data-theme="dark"] .field-group select {
+      background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23e7e0d8' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    }
+
+    .field-group select:hover { opacity: 0.75; }
+
     .field-group select:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-glow);
+      border: none;
+      box-shadow: none;
     }
+
     .field-group select option {
       background: var(--surface);
       color: var(--text-primary);
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: none;
     }
 
     button.submit {
@@ -318,7 +331,7 @@
     @media (max-width: 600px) {
       .site-header { padding: 20px 16px; gap: 8px; }
       main { padding: 32px 16px 60px; }
-      .field-group select { min-width: 0; width: 100%; }
+      .field-group select { font-size: 11px; letter-spacing: 2px; }
       .submit-row { flex-direction: column; align-items: stretch; }
     }
   </style>
@@ -326,11 +339,12 @@
 <body>
 
 <header class="site-header">
-  <h1><span>TEXT</span> HELPER</h1>
+  <h1><span>COPY</span> HELPER</h1>
   <div class="header-center">
     <select id="categorySelect">
       <option value="summary" data-prompt="zpmttxths.txt">Summary</option>
       <option value="message" data-prompt="zpmttxthe.txt">Message</option>
+      <option value="review" data-prompt="zpmttxthr.txt">Review</option>
     </select>
   </div>
   <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
@@ -364,7 +378,7 @@
     <strong>Local file detected.</strong> Browsers block API requests when a file is opened directly from disk (<code>file://</code>) due to CORS restrictions.<br>
     You need to serve this file over HTTP. The simplest way is to open a terminal in the same folder and run:<br>
     <code>python3 -m http.server 8080</code><br>
-    Then open <code>http://localhost:8080/texthelper.html</code> in your browser.
+    Then open <code>http://localhost:8080/copyhelper.html</code> in your browser.
   </div>
 
   <div class="card">
@@ -427,15 +441,26 @@
   var promptLoaded   = false;
   var PROMPT         = '';
 
-  var HINTS            = { summary: 'Paste an article, email, or long-form text to summarise', message: 'Paste bullet points or rough notes to turn into a polished email' };
-  var PROGRESS_LABELS  = { summary: 'Generating summary…', message: 'Drafting email…' };
-  var RESULT_LABELS    = { summary: 'Summary', message: 'Email' };
+  var HINTS = {
+    summary: 'Paste an article, email, or long-form text to summarise',
+    message: 'Paste bullet points or rough notes to turn into a polished email',
+    review:  'Paste notes or key details about your experience'
+  };
+  var PROGRESS_LABELS = {
+    summary: 'Generating summary…',
+    message: 'Drafting email…',
+    review:  'Writing review…'
+  };
+  var RESULT_LABELS = {
+    summary: 'Summary',
+    message: 'Email',
+    review:  'Review'
+  };
 
   // ── Textarea icon visibility ──────────────────────────────────────
-  function updateIcon() {
+  inputTextEl.addEventListener('input', function () {
     textareaWrap.classList.toggle('has-text', inputTextEl.value.length > 0);
-  }
-  inputTextEl.addEventListener('input', updateIcon);
+  });
 
   if (window.location.protocol === 'file:') {
     document.getElementById('warnBanner').classList.add('visible');
@@ -446,7 +471,7 @@
     fetch(file)
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
       .then(function (t) { PROMPT = t; promptLoaded = true; })
-      .catch(function (e) { showError('Failed to load prompt file "' + file + '".'); promptLoaded = false; });
+      .catch(function () { showError('Failed to load prompt file "' + file + '".'); promptLoaded = false; });
   }
   loadPrompt('zpmttxths.txt');
 
@@ -455,9 +480,9 @@
     var opt = categorySelect.options[categorySelect.selectedIndex];
     var cat = categorySelect.value;
     loadPrompt(opt.getAttribute('data-prompt'));
-    inputHint.textContent      = HINTS[cat];
-    progressLabel.textContent  = PROGRESS_LABELS[cat];
-    resultsLabel.textContent   = RESULT_LABELS[cat];
+    inputHint.textContent     = HINTS[cat];
+    progressLabel.textContent = PROGRESS_LABELS[cat];
+    resultsLabel.textContent  = RESULT_LABELS[cat];
     document.getElementById('submitBtn').textContent = 'Create';
     document.getElementById('results').classList.remove('visible');
   });
