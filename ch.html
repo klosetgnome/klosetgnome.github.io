@@ -487,6 +487,15 @@
     hideFetchBar();
   });
 
+  // ── Deep-link via hash (e.g. #summarise or #review) ──────────────
+  (function () {
+    var hash = window.location.hash.replace('#', '').toLowerCase();
+    if (hash && categorySelect.querySelector('option[value="' + hash + '"]')) {
+      categorySelect.value = hash;
+      categorySelect.dispatchEvent(new Event('change'));
+    }
+  })();
+
   // ── Models ────────────────────────────────────────────────────────
   var FALLBACK_MODELS = [
     ['arcee-ai/trinity-mini:free','Arcee AI: Trinity Mini (free)'],
