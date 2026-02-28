@@ -91,6 +91,44 @@
       background: var(--error-glow);
     }
 
+    /* ── Countdown ring ── */
+    .countdown-ring {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .countdown-ring svg {
+      width: 22px;
+      height: 22px;
+      transform: rotate(-90deg);
+    }
+    .countdown-ring .ring-bg {
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 2.5;
+    }
+    .countdown-ring .ring-fg {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-dasharray: 50.27;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 1s linear;
+    }
+    .countdown-number {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--accent);
+      font-family: var(--mono);
+    }
+
     /* ── Results (page-specific: copy button, body, lists) ── */
     .results-copy {
       background: none;
@@ -203,6 +241,13 @@
     </div>
     <div class="fetch-bar" id="fetchBar">
       <div class="fetch-spinner" id="fetchSpinner"></div>
+      <div class="countdown-ring" id="countdownRing" style="display:none;">
+        <svg viewBox="0 0 20 20">
+          <circle class="ring-bg" cx="10" cy="10" r="8"/>
+          <circle class="ring-fg" id="ringFg" cx="10" cy="10" r="8"/>
+        </svg>
+        <span class="countdown-number" id="countdownNumber">3</span>
+      </div>
       <span class="fetch-label" id="fetchLabel">Fetching page content…</span>
       <button class="fetch-clear" id="fetchClear">Clear</button>
     </div>
@@ -253,9 +298,14 @@
   var fetchLabel     = document.getElementById('fetchLabel');
   var fetchSpinner   = document.getElementById('fetchSpinner');
   var fetchClearBtn  = document.getElementById('fetchClear');
+  var countdownRing  = document.getElementById('countdownRing');
+  var countdownNumber= document.getElementById('countdownNumber');
+  var ringFg         = document.getElementById('ringFg');
   var promptLoaded   = false;
   var PROMPT         = '';
   var fetchedFromUrl = null;
+  var countdownTimer = null;
+  var RING_CIRCUMFERENCE = 2 * Math.PI * 8; // r=8 → ≈50.27
 
   var HINTS = {
     message:   'Paste bullet points or rough notes to turn into a polished email',
@@ -295,16 +345,68 @@
   function showFetchBar(msg, loading) {
     fetchLabel.textContent = msg;
     fetchSpinner.style.display = loading ? 'block' : 'none';
+    countdownRing.style.display = 'none';
     fetchClearBtn.classList.toggle('visible', !loading);
     fetchBar.classList.add('visible');
   }
 
   function hideFetchBar() {
     fetchBar.classList.remove('visible');
+    cancelCountdown();
     fetchedFromUrl = null;
   }
 
+  // ── Auto-submit countdown ─────────────────────────────────────────
+  function cancelCountdown() {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+    countdownRing.style.display = 'none';
+  }
+
+  function startAutoSubmitCountdown() {
+    cancelCountdown();
+    var remaining = 3;
+
+    // Show countdown ring, hide spinner
+    fetchSpinner.style.display = 'none';
+    countdownRing.style.display = '';
+    countdownNumber.textContent = remaining;
+
+    // Reset ring to full
+    ringFg.style.transition = 'none';
+    ringFg.style.strokeDashoffset = '0';
+
+    // Kick off the first ring animation after a frame
+    requestAnimationFrame(function () {
+      ringFg.style.transition = 'stroke-dashoffset 1s linear';
+      ringFg.style.strokeDashoffset = (RING_CIRCUMFERENCE / 3).toFixed(2);
+    });
+
+    // Update the fetch label
+    fetchLabel.textContent = 'Summarising in ' + remaining + 's…';
+    fetchClearBtn.classList.add('visible');
+
+    countdownTimer = setInterval(function () {
+      remaining--;
+      if (remaining <= 0) {
+        cancelCountdown();
+        // Auto-click the submit button
+        document.getElementById('submitBtn').click();
+        return;
+      }
+      countdownNumber.textContent = remaining;
+      fetchLabel.textContent = 'Summarising in ' + remaining + 's…';
+
+      // Advance the ring
+      var offset = RING_CIRCUMFERENCE * ((3 - remaining) / 3);
+      ringFg.style.strokeDashoffset = offset.toFixed(2);
+    }, 1000);
+  }
+
   fetchClearBtn.addEventListener('click', function () {
+    cancelCountdown();
     inputTextEl.value = '';
     textareaWrap.classList.remove('has-text');
     hideFetchBar();
@@ -341,6 +443,9 @@
       inputTextEl.value = text;
       textareaWrap.classList.add('has-text');
       showFetchBar('Fetched from ' + new URL(url).hostname, false);
+
+      // Start auto-submit countdown (only for URL pastes in summarise mode)
+      startAutoSubmitCountdown();
     } catch (err) {
       if (err.name === 'AbortError') return;
       inputTextEl.value = url;
@@ -477,6 +582,9 @@
     errorBox.classList.remove('visible');
     results.classList.remove('visible');
 
+    // Cancel any running countdown when submit fires
+    cancelCountdown();
+
     if (!text) { showError('Please type or paste some text before submitting.'); return; }
     if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); return; }
 
@@ -484,6 +592,9 @@
     resultsLabel.textContent  = RESULT_LABELS[cat];
     progress.classList.add('visible');
     btn.disabled = true;
+
+    // Hide the fetch bar once generation starts
+    fetchBar.classList.remove('visible');
 
     try {
       var res = await fetch(WORKER_URL + '/chat/completions', {
