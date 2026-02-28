@@ -289,7 +289,7 @@
   <div class="header-center">
     <select id="categorySelect" class="minimal-select">
       <option value="message" data-prompt="zpmtche.txt">Message</option>
-      <option value="summarise" data-prompt="zpmtchs.txt">Summarise</option>
+      <option value="summarise" data-prompt="zpmtchs.txt" selected>Summarise</option>
       <option value="review" data-prompt="zpmtchr.txt">Review</option>
     </select>
   </div>
@@ -326,7 +326,7 @@
 
   <div class="results" id="results">
     <div class="results-header">
-      <span id="resultsLabel">Email</span>
+      <span id="resultsLabel">Summary</span>
       <button class="results-copy" id="copyBtn" title="Copy to clipboard">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         <span class="copy-label">Copy</span>
@@ -344,7 +344,7 @@
 
   <div class="card">
     <span class="card-label">Your Text</span>
-    <span class="card-hint" id="inputHint">Paste bullet points or rough notes to turn into a polished email</span>
+    <span class="card-hint" id="inputHint">Paste text, or a link to a webpage, to summarise</span>
     <div class="textarea-wrap" id="textareaWrap">
       <div class="textarea-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
@@ -352,7 +352,7 @@
           <path d="m15 5 4 4"/>
         </svg>
       </div>
-      <textarea id="inputText" placeholder="Type or paste here…"></textarea>
+      <textarea id="inputText" placeholder="Type, paste, or drop a link here…"></textarea>
     </div>
     <div class="fetch-bar" id="fetchBar">
       <div class="fetch-spinner" id="fetchSpinner"></div>
@@ -377,7 +377,7 @@
   </div>
 
   <div class="progress-wrap" id="progressWrap">
-    <div class="progress-label" id="progressLabel">Drafting email…</div>
+    <div class="progress-label" id="progressLabel">Generating summary…</div>
     <div class="progress-track"><div class="progress-bar"></div></div>
   </div>
 
@@ -478,6 +478,7 @@
     fetchLabel.textContent = msg;
     fetchSpinner.style.display = loading ? 'block' : 'none';
     countdownRing.style.display = 'none';
+    fetchClearBtn.textContent = 'Clear';
     fetchClearBtn.classList.toggle('visible', !loading);
     fetchBar.classList.add('visible');
   }
@@ -495,6 +496,7 @@
       countdownTimer = null;
     }
     countdownRing.style.display = 'none';
+    fetchClearBtn.textContent = 'Clear';
   }
 
   function startAutoSubmitCountdown() {
@@ -516,8 +518,9 @@
       ringFg.style.strokeDashoffset = (RING_CIRCUMFERENCE / 3).toFixed(2);
     });
 
-    // Update the fetch label
+    // Update the fetch label and show Cancel button
     fetchLabel.textContent = 'Summarising in ' + remaining + 's…';
+    fetchClearBtn.textContent = 'Cancel';
     fetchClearBtn.classList.add('visible');
 
     countdownTimer = setInterval(function () {
@@ -604,7 +607,8 @@
       .then(function (t) { PROMPT = t; promptLoaded = true; })
       .catch(function () { showError('Failed to load prompt file "' + file + '".'); promptLoaded = false; });
   }
-  loadPrompt('zpmtche.txt');
+  // Default is now Summarise
+  loadPrompt('zpmtchs.txt');
 
   categorySelect.addEventListener('change', function () {
     var opt = categorySelect.options[categorySelect.selectedIndex];
@@ -616,6 +620,11 @@
     resultsLabel.textContent   = RESULT_LABELS[cat];
     document.getElementById('submitBtn').textContent = 'Create';
     document.getElementById('results').classList.remove('visible');
+    document.getElementById('errorBox').classList.remove('visible');
+
+    // Clear text when switching modes
+    inputTextEl.value = '';
+    textareaWrap.classList.remove('has-text');
     hideFetchBar();
   });
 
