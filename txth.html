@@ -6,7 +6,6 @@
   <meta name="robots" content="noindex, nofollow">
   <script src="/analytics.js"></script>
   <title>Text Helper</title>
-  <!-- Prevent flash of wrong theme -->
   <script>
     (function() {
       var saved = localStorage.getItem('theme');
@@ -19,7 +18,6 @@
   </script>
   <link rel="stylesheet" href="astyle.css">
   <style>
-    /* ── Main content ── */
     main {
       flex: 1;
       display: flex;
@@ -46,9 +44,7 @@
       display: none;
       animation: fadeInUp 0.4s ease;
     }
-
     .warn-banner.visible { display: block; }
-
     .warn-banner code {
       background: rgba(160, 120, 40, 0.12);
       padding: 2px 7px;
@@ -56,7 +52,7 @@
       font-size: 11px;
     }
 
-    /* Cards */
+    /* Card */
     .card {
       width: 100%;
       background: var(--surface);
@@ -86,11 +82,30 @@
       display: block;
     }
 
+    /* Textarea with centred icon */
+    .textarea-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    .textarea-icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--text-muted);
+      opacity: 0.18;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .textarea-icon svg { width: 40px; height: 40px; }
+    .textarea-wrap.has-text .textarea-icon { opacity: 0; }
+
     textarea {
       display: block;
       width: 100%;
-      min-height: 96px;
-      max-height: 96px;
+      min-height: 160px;
+      max-height: 160px;
       resize: none;
       font-family: var(--mono);
       font-size: 13px;
@@ -99,120 +114,12 @@
       background: transparent;
       border: none;
       outline: none;
-      padding: 12px 20px 18px;
+      padding: 14px 20px 18px;
       overflow-y: auto;
     }
-
     textarea::placeholder { color: var(--text-muted); }
 
-    /* ── Drop-zone ── */
-    .drop-zone { position: relative; width: 100%; }
-
-    .drop-overlay {
-      display: none;
-      position: absolute;
-      inset: 0;
-      z-index: 10;
-      background: var(--accent-light);
-      border: 2px dashed var(--accent);
-      border-radius: var(--radius);
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-    }
-
-    .drop-overlay.active { display: flex; }
-
-    .drop-overlay-label {
-      font-family: var(--mono);
-      font-size: 12px;
-      font-weight: 500;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--accent);
-    }
-
-    .drop-prompt {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      padding: 36px 20px;
-      min-height: 180px;
-      text-align: center;
-      cursor: default;
-    }
-
-    .drop-prompt.hidden { display: none; }
-
-    .drop-prompt-icon { color: var(--text-muted); opacity: 0.5; }
-    .drop-prompt-icon svg { width: 36px; height: 36px; }
-
-    .drop-prompt-text {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--text-secondary);
-      line-height: 1.9;
-    }
-
-    .drop-prompt-text .browse {
-      color: var(--accent);
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-
-    .drop-prompt-text .browse:hover { text-decoration: underline; }
-
-    .file-loaded-bar {
-      display: none;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 20px;
-      border-top: 1px solid var(--border);
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .file-loaded-bar.visible { display: flex; }
-
-    .file-loaded-bar .file-name {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      color: var(--text-primary);
-      font-weight: 500;
-    }
-
-    .file-loaded-bar .file-size {
-      color: var(--text-muted);
-      flex-shrink: 0;
-    }
-
-    .file-loaded-bar .file-remove {
-      flex-shrink: 0;
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-      padding: 5px 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .file-loaded-bar .file-remove:hover {
-      border-color: var(--error);
-      color: var(--error);
-      background: var(--error-glow);
-    }
-
-    /* ── Submit row ── */
+    /* Submit row */
     .submit-row {
       width: 100%;
       display: flex;
@@ -236,7 +143,6 @@
       color: var(--text-secondary);
     }
 
-    /* Model select — styled to match the header category select */
     .field-group select {
       background: var(--bg);
       border: 1px solid var(--border);
@@ -256,16 +162,11 @@
       background-position: right 14px center;
       min-width: 320px;
     }
-
-    .field-group select:hover {
-      border-color: var(--text-muted);
-    }
-
+    .field-group select:hover { border-color: var(--text-muted); }
     .field-group select:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px var(--accent-glow);
     }
-
     .field-group select option {
       background: var(--surface);
       color: var(--text-primary);
@@ -284,15 +185,12 @@
       background: var(--accent);
       color: #fff;
     }
-
     button.submit:hover {
       background: #d4623e;
       transform: translateY(-1px);
       box-shadow: 0 4px 16px var(--accent-glow);
     }
-
     button.submit:active { transform: translateY(0); }
-
     button.submit:disabled {
       background: var(--border);
       color: var(--text-muted);
@@ -301,15 +199,13 @@
       transform: none;
     }
 
-    /* ── Progress ── */
+    /* Progress */
     .progress-wrap {
       width: 100%;
       display: none;
       animation: fadeInUp 0.3s ease;
     }
-
     .progress-wrap.visible { display: block; }
-
     .progress-label {
       font-family: var(--mono);
       font-size: 11px;
@@ -318,7 +214,6 @@
       color: var(--text-secondary);
       margin-bottom: 8px;
     }
-
     .progress-track {
       width: 100%;
       height: 3px;
@@ -326,21 +221,19 @@
       border-radius: 3px;
       overflow: hidden;
     }
-
     .progress-bar {
       height: 100%;
       width: 100%;
       background: var(--accent);
       animation: indeterminate 1.8s ease-in-out infinite;
     }
-
     @keyframes indeterminate {
       0%   { transform: translateX(-100%) scaleX(0.4); }
       50%  { transform: translateX(60%)   scaleX(0.6); }
       100% { transform: translateX(200%)  scaleX(0.4); }
     }
 
-    /* ── Results ── */
+    /* Results */
     .results {
       width: 100%;
       display: none;
@@ -352,7 +245,6 @@
       animation: fadeInUp 0.5s ease;
       transition: background 0.3s ease, border-color 0.3s ease;
     }
-
     .results.visible { display: flex; }
 
     .results-header {
@@ -384,18 +276,15 @@
       gap: 6px;
       transition: all 0.2s;
     }
-
     .results-copy:hover {
       border-color: var(--text-secondary);
       color: var(--text-primary);
       background: var(--surface-raised);
     }
-
     .results-copy.copied {
       border-color: var(--accent);
       color: var(--accent);
     }
-
     .results-copy svg { width: 13px; height: 13px; }
 
     .results-body {
@@ -405,16 +294,11 @@
       color: var(--text-primary);
       word-break: break-word;
     }
-
     .results-body strong { font-weight: 600; }
-
-    .results-body p {
-      margin: 0 0 0.8em;
-    }
-
+    .results-body p { margin: 0 0 0.8em; }
     .results-body p:last-child { margin-bottom: 0; }
 
-    /* ── Error box ── */
+    /* Error */
     .error-box {
       width: 100%;
       background: var(--error-glow);
@@ -429,10 +313,8 @@
       line-height: 1.7;
       animation: fadeInUp 0.3s ease;
     }
-
     .error-box.visible { display: block; }
 
-    /* ── Responsive ── */
     @media (max-width: 600px) {
       .site-header { padding: 20px 16px; gap: 8px; }
       main { padding: 32px 16px 60px; }
@@ -469,7 +351,7 @@
 
   <div class="results" id="results">
     <div class="results-header">
-      <span id="resultsLabel">Output</span>
+      <span id="resultsLabel">Summary</span>
       <button class="results-copy" id="copyBtn" title="Copy to clipboard">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         <span class="copy-label">Copy</span>
@@ -485,33 +367,17 @@
     Then open <code>http://localhost:8080/texthelper.html</code> in your browser.
   </div>
 
-  <div class="card" id="inputCard">
+  <div class="card">
     <span class="card-label">Your Text</span>
     <span class="card-hint" id="inputHint">Paste an article, email, or long-form text to summarise</span>
-    <div class="drop-zone" id="dropZone">
-      <div class="drop-overlay" id="dropOverlay">
-        <span class="drop-overlay-label">Drop .txt file here</span>
+    <div class="textarea-wrap" id="textareaWrap">
+      <div class="textarea-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+          <path d="m15 5 4 4"/>
+        </svg>
       </div>
-
-      <div class="drop-prompt" id="dropPrompt">
-        <div class="drop-prompt-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </div>
-        <div class="drop-prompt-text">
-          Drag &amp; drop a .txt file here<br>
-          or <span class="browse" id="browseLink">browse to select one</span>
-        </div>
-      </div>
-
-      <input type="file" id="fileInput" accept=".txt,text/plain" style="display:none;" />
-
-      <textarea id="inputText" placeholder="…or paste your text here"></textarea>
-    </div>
-
-    <div class="file-loaded-bar" id="fileBar">
-      <span class="file-name" id="fileName"></span>
-      <span class="file-size" id="fileSize"></span>
-      <button class="file-remove" id="fileRemove">Clear</button>
+      <textarea id="inputText" placeholder="Type or paste here…"></textarea>
     </div>
   </div>
 
@@ -524,7 +390,7 @@
   </div>
 
   <div class="progress-wrap" id="progressWrap">
-    <div class="progress-label" id="progressLabel">Processing text…</div>
+    <div class="progress-label" id="progressLabel">Generating summary…</div>
     <div class="progress-track"><div class="progress-bar"></div></div>
   </div>
 
@@ -539,18 +405,15 @@
 
 <script>
 (function () {
-  // ── Theme toggle ────────────────────────────────────────────────────
-  var toggle = document.querySelector('.theme-toggle');
-  toggle.addEventListener('click', function () {
+  // ── Theme toggle ──────────────────────────────────────────────────
+  document.querySelector('.theme-toggle').addEventListener('click', function () {
     var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     var next = isDark ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
   });
 
-  // =========================================================================
-  // WORKER URL — Same Cloudflare Worker as Description Helper
-  // =========================================================================
+  // ── Worker URL ────────────────────────────────────────────────────
   var WORKER_URL = 'https://ddg-proxy.klosetgnome.workers.dev';
 
   var modelEl        = document.getElementById('model');
@@ -559,269 +422,128 @@
   var inputHint      = document.getElementById('inputHint');
   var progressLabel  = document.getElementById('progressLabel');
   var resultsLabel   = document.getElementById('resultsLabel');
+  var inputTextEl    = document.getElementById('inputText');
+  var textareaWrap   = document.getElementById('textareaWrap');
   var promptLoaded   = false;
   var PROMPT         = '';
 
-  // ── Hint text per category ──────────────────────────────────────────
-  var HINTS = {
-    summary: 'Paste an article, email, or long-form text to summarise',
-    message: 'Paste bullet points or rough notes to turn into a polished message'
-  };
+  var HINTS            = { summary: 'Paste an article, email, or long-form text to summarise', message: 'Paste bullet points or rough notes to turn into a polished email' };
+  var PROGRESS_LABELS  = { summary: 'Generating summary…', message: 'Drafting email…' };
+  var RESULT_LABELS    = { summary: 'Summary', message: 'Email' };
 
-  var PROGRESS_LABELS = {
-    summary: 'Generating summary…',
-    message: 'Drafting message…'
-  };
-
-  var RESULT_LABELS = {
-    summary: 'Summary',
-    message: 'Message'
-  };
-
-  // ── Drop-zone elements ──────────────────────────────────────────────
-  var dropZone      = document.getElementById('dropZone');
-  var dropOverlay   = document.getElementById('dropOverlay');
-  var dropPrompt    = document.getElementById('dropPrompt');
-  var fileInput     = document.getElementById('fileInput');
-  var inputTextEl   = document.getElementById('inputText');
-  var fileBar       = document.getElementById('fileBar');
-  var fileNameEl    = document.getElementById('fileName');
-  var fileSizeEl    = document.getElementById('fileSize');
-  var fileRemoveBtn = document.getElementById('fileRemove');
-
-  var loadedFileText = null;
+  // ── Textarea icon visibility ──────────────────────────────────────
+  function updateIcon() {
+    textareaWrap.classList.toggle('has-text', inputTextEl.value.length > 0);
+  }
+  inputTextEl.addEventListener('input', updateIcon);
 
   if (window.location.protocol === 'file:') {
     document.getElementById('warnBanner').classList.add('visible');
   }
 
-  // ── File helpers ────────────────────────────────────────────────────
-  function formatBytes(b) {
-    if (b < 1024) return b + ' B';
-    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
-    return (b / 1048576).toFixed(1) + ' MB';
+  // ── Prompt loading ────────────────────────────────────────────────
+  function loadPrompt(file) {
+    fetch(file)
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function (t) { PROMPT = t; promptLoaded = true; })
+      .catch(function (e) { showError('Failed to load prompt file "' + file + '".'); promptLoaded = false; });
   }
-
-  function handleFile(file) {
-    if (!file) return;
-    if (file.type && !file.type.startsWith('text/') && !file.name.endsWith('.txt')) {
-      showError('Only .txt (plain text) files are supported.');
-      return;
-    }
-    var reader = new FileReader();
-    reader.onload = function (e) {
-      loadedFileText = e.target.result;
-      fileNameEl.textContent = file.name;
-      fileSizeEl.textContent = formatBytes(file.size);
-      fileBar.classList.add('visible');
-      dropPrompt.classList.add('hidden');
-      inputTextEl.style.display = 'none';
-    };
-    reader.onerror = function () { showError('Could not read the file. Please try again.'); };
-    reader.readAsText(file);
-  }
-
-  function clearFile() {
-    loadedFileText = null;
-    fileInput.value = '';
-    fileBar.classList.remove('visible');
-    dropPrompt.classList.remove('hidden');
-    inputTextEl.style.display = '';
-    inputTextEl.value = '';
-    inputTextEl.focus();
-  }
-
-  // ── Drag-and-drop events ────────────────────────────────────────────
-  var dragCounter = 0;
-
-  dropZone.addEventListener('dragenter', function (e) {
-    e.preventDefault(); e.stopPropagation();
-    dragCounter++;
-    dropOverlay.classList.add('active');
-  });
-  dropZone.addEventListener('dragover', function (e) {
-    e.preventDefault(); e.stopPropagation();
-  });
-  dropZone.addEventListener('dragleave', function (e) {
-    e.preventDefault(); e.stopPropagation();
-    dragCounter--;
-    if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('active'); }
-  });
-  dropZone.addEventListener('drop', function (e) {
-    e.preventDefault(); e.stopPropagation();
-    dragCounter = 0;
-    dropOverlay.classList.remove('active');
-    var files = e.dataTransfer && e.dataTransfer.files;
-    if (files && files.length > 0) handleFile(files[0]);
-  });
-
-  // ── Browse link / file input ────────────────────────────────────────
-  document.getElementById('browseLink').addEventListener('click', function () { fileInput.click(); });
-  fileInput.addEventListener('change', function () {
-    if (fileInput.files && fileInput.files.length > 0) handleFile(fileInput.files[0]);
-  });
-
-  // ── Clear button ────────────────────────────────────────────────────
-  fileRemoveBtn.addEventListener('click', clearFile);
-
-  inputTextEl.addEventListener('input', function () {
-    if (loadedFileText) {
-      loadedFileText = null;
-      fileBar.classList.remove('visible');
-    }
-  });
-
-  // ── Prompt loading ──────────────────────────────────────────────────
-  function loadPrompt(promptFile) {
-    return fetch(promptFile)
-      .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.text();
-      })
-      .then(function (text) {
-        PROMPT = text;
-        promptLoaded = true;
-        console.log('Prompt loaded from ' + promptFile);
-      })
-      .catch(function (e) {
-        console.error('Could not load prompt file:', e.message);
-        showError('Failed to load prompt file "' + promptFile + '". Make sure it exists.');
-        promptLoaded = false;
-      });
-  }
-
-  // Load initial prompt (Summary by default)
   loadPrompt('zpmttxths.txt');
 
-  // ── Category change handler ─────────────────────────────────────────
+  // ── Category change ───────────────────────────────────────────────
   categorySelect.addEventListener('change', function () {
-    var selectedOption = categorySelect.options[categorySelect.selectedIndex];
-    var promptFile = selectedOption.getAttribute('data-prompt');
+    var opt = categorySelect.options[categorySelect.selectedIndex];
     var cat = categorySelect.value;
-    loadPrompt(promptFile);
-
-    // Update hint text, progress label, and results label
-    inputHint.textContent = HINTS[cat] || HINTS.summary;
-    progressLabel.textContent = PROGRESS_LABELS[cat] || PROGRESS_LABELS.summary;
-    resultsLabel.textContent = RESULT_LABELS[cat] || RESULT_LABELS.summary;
+    loadPrompt(opt.getAttribute('data-prompt'));
+    inputHint.textContent      = HINTS[cat];
+    progressLabel.textContent  = PROGRESS_LABELS[cat];
+    resultsLabel.textContent   = RESULT_LABELS[cat];
+    document.getElementById('submitBtn').textContent = 'Create';
+    document.getElementById('results').classList.remove('visible');
   });
 
-  // ── Model list ──────────────────────────────────────────────────────
+  // ── Models ────────────────────────────────────────────────────────
   var FALLBACK_MODELS = [
-    ['arcee-ai/trinity-mini:free',                    'Arcee AI: Trinity Mini (free)'],
-    ['deepseek/deepseek-chat:free',                   'DeepSeek: V3 Chat (free)'],
-    ['deepseek/deepseek-r1:free',                     'DeepSeek: R1 (free)'],
-    ['deepseek/deepseek-r1-zero:free',                'DeepSeek: R1 Zero (free)'],
-    ['google/gemini-2.0-flash-exp:free',              'Google: Gemini 2.0 Flash Exp (free)'],
-    ['google/gemini-2.0-flash-thinking-exp:free',     'Google: Gemini 2.0 Flash Thinking (free)'],
-    ['google/gemini-flash-1.5:free',                  'Google: Gemini 1.5 Flash (free)'],
-    ['google/gemini-pro-1.5:free',                    'Google: Gemini 1.5 Pro (free)'],
-    ['google/learnlm-1.5-pro-experimental:free',      'Google: LearnLM 1.5 Pro Exp (free)'],
-    ['meta-llama/llama-3.1-8b-instruct:free',         'Meta: Llama 3.1 8B (free)'],
-    ['meta-llama/llama-3.2-11b-vision-instruct:free', 'Meta: Llama 3.2 11B Vision (free)'],
-    ['meta-llama/llama-3.2-3b-instruct:free',         'Meta: Llama 3.2 3B (free)'],
-    ['meta-llama/llama-3.3-70b-instruct:free',        'Meta: Llama 3.3 70B (free)'],
-    ['microsoft/phi-3-medium-128k-instruct:free',     'Microsoft: Phi-3 Medium 128K (free)'],
-    ['microsoft/phi-3-mini-128k-instruct:free',       'Microsoft: Phi-3 Mini 128K (free)'],
-    ['mistralai/mistral-7b-instruct:free',            'Mistral: 7B Instruct (free)'],
-    ['mistralai/mistral-small-3.1-24b-instruct:free', 'Mistral: Small 3.1 24B (free)'],
-    ['nousresearch/hermes-3-llama-3.1-405b:free',     'Nous: Hermes 3 405B (free)'],
-    ['openchat/openchat-7b:free',                     'OpenChat: 7B (free)'],
-    ['qwen/qwen-2.5-72b-instruct:free',              'Qwen: 2.5 72B (free)'],
-    ['qwen/qwen-2.5-7b-instruct:free',               'Qwen: 2.5 7B (free)'],
-    ['qwen/qwen2.5-vl-72b-instruct:free',            'Qwen: QwQ 32B (free)']
+    ['arcee-ai/trinity-mini:free','Arcee AI: Trinity Mini (free)'],
+    ['deepseek/deepseek-chat:free','DeepSeek: V3 Chat (free)'],
+    ['deepseek/deepseek-r1:free','DeepSeek: R1 (free)'],
+    ['deepseek/deepseek-r1-zero:free','DeepSeek: R1 Zero (free)'],
+    ['google/gemini-2.0-flash-exp:free','Google: Gemini 2.0 Flash Exp (free)'],
+    ['google/gemini-2.0-flash-thinking-exp:free','Google: Gemini 2.0 Flash Thinking (free)'],
+    ['google/gemini-flash-1.5:free','Google: Gemini 1.5 Flash (free)'],
+    ['google/gemini-pro-1.5:free','Google: Gemini 1.5 Pro (free)'],
+    ['google/learnlm-1.5-pro-experimental:free','Google: LearnLM 1.5 Pro Exp (free)'],
+    ['meta-llama/llama-3.1-8b-instruct:free','Meta: Llama 3.1 8B (free)'],
+    ['meta-llama/llama-3.2-11b-vision-instruct:free','Meta: Llama 3.2 11B Vision (free)'],
+    ['meta-llama/llama-3.2-3b-instruct:free','Meta: Llama 3.2 3B (free)'],
+    ['meta-llama/llama-3.3-70b-instruct:free','Meta: Llama 3.3 70B (free)'],
+    ['microsoft/phi-3-medium-128k-instruct:free','Microsoft: Phi-3 Medium 128K (free)'],
+    ['microsoft/phi-3-mini-128k-instruct:free','Microsoft: Phi-3 Mini 128K (free)'],
+    ['mistralai/mistral-7b-instruct:free','Mistral: 7B Instruct (free)'],
+    ['mistralai/mistral-small-3.1-24b-instruct:free','Mistral: Small 3.1 24B (free)'],
+    ['nousresearch/hermes-3-llama-3.1-405b:free','Nous: Hermes 3 405B (free)'],
+    ['openchat/openchat-7b:free','OpenChat: 7B (free)'],
+    ['qwen/qwen-2.5-72b-instruct:free','Qwen: 2.5 72B (free)'],
+    ['qwen/qwen-2.5-7b-instruct:free','Qwen: 2.5 7B (free)'],
+    ['qwen/qwen2.5-vl-72b-instruct:free','Qwen: QwQ 32B (free)']
   ];
+  var PREFERRED = ['arcee-ai/trinity-mini:free','stepfun/step-3.5-flash:free','google/gemini-2.0-flash-exp:free'];
 
-  var PREFERRED = [
-    'arcee-ai/trinity-mini:free',
-    'stepfun/step-3.5-flash:free',
-    'google/gemini-2.0-flash-exp:free',
-  ];
-
-  function populateDropdown(models, sourceLabel) {
-    var html = '';
-    for (var i = 0; i < models.length; i++) {
-      html += '<option value="' + models[i][0] + '">' + models[i][1] + '</option>';
-    }
-    modelEl.innerHTML = html;
-    modelStatus.textContent = '(' + models.length + ' free models' + (sourceLabel ? ' — ' + sourceLabel : '') + ')';
+  function populateDropdown(models, src) {
+    modelEl.innerHTML = models.map(function (m) { return '<option value="'+m[0]+'">'+m[1]+'</option>'; }).join('');
+    modelStatus.textContent = '(' + models.length + ' free models' + (src ? ' — ' + src : '') + ')';
     for (var p = 0; p < PREFERRED.length; p++) {
-      var found = false;
       for (var o = 0; o < modelEl.options.length; o++) {
-        if (modelEl.options[o].value === PREFERRED[p]) { modelEl.value = PREFERRED[p]; found = true; break; }
+        if (modelEl.options[o].value === PREFERRED[p]) { modelEl.value = PREFERRED[p]; return; }
       }
-      if (found) break;
     }
   }
-
   populateDropdown(FALLBACK_MODELS, 'fallback');
 
-  // Fetch live models
-  (async function fetchModels() {
+  (async function () {
     try {
       var res = await fetch(WORKER_URL + '/models');
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) throw new Error();
       var data = await res.json();
-      var freeModels = (data.data || []).filter(function (m) { return m.id && m.id.endsWith(':free'); });
-      if (freeModels.length === 0) throw new Error('No free models returned');
-      freeModels.sort(function (a, b) { return (a.name || a.id).localeCompare(b.name || b.id); });
-      var models = freeModels.map(function (m) {
-        var label = m.name || m.id;
-        if (!/\bfree\b/i.test(label)) label += ' (free)';
-        return [m.id, label];
-      });
-      populateDropdown(models, 'live');
+      var free = (data.data || []).filter(function (m) { return m.id && m.id.endsWith(':free'); });
+      if (!free.length) throw new Error();
+      free.sort(function (a, b) { return (a.name||a.id).localeCompare(b.name||b.id); });
+      populateDropdown(free.map(function (m) {
+        var l = m.name || m.id; if (!/\bfree\b/i.test(l)) l += ' (free)'; return [m.id, l];
+      }), 'live');
     } catch (e) {
-      console.warn('Could not fetch models from OpenRouter, using fallback list:', e.message);
       modelStatus.textContent = '(' + FALLBACK_MODELS.length + ' free models — fallback)';
     }
   })();
 
-  // ── Markdown-ish rendering ──────────────────────────────────────────
-  function renderFormatted(raw) {
-    // Escape HTML first
-    var safe = raw
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-
-    // Bold: **text**
-    safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-
-    // Italic: *text* (but not inside bold)
-    safe = safe.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-    // Split into paragraphs on double newlines
-    var paragraphs = safe.split(/\n{2,}/);
-    var html = paragraphs.map(function (p) {
-      // Convert single newlines to <br> within paragraphs
-      return '<p>' + p.trim().replace(/\n/g, '<br>') + '</p>';
+  // ── Markdown-ish rendering ────────────────────────────────────────
+  function render(raw) {
+    var s = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    return s.split(/\n{2,}/).map(function (p) {
+      return '<p>' + p.trim().replace(/\n/g,'<br>') + '</p>';
     }).join('');
-
-    return html;
   }
 
-  // ── Submit ──────────────────────────────────────────────────────────
+  // ── Submit ────────────────────────────────────────────────────────
   document.getElementById('submitBtn').addEventListener('click', async function () {
-    var userText   = loadedFileText ? loadedFileText.trim() : inputTextEl.value.trim();
-    var model      = modelEl.value;
-    var cat        = categorySelect.value;
-    var errorBox   = document.getElementById('errorBox');
-    var progress   = document.getElementById('progressWrap');
-    var results    = document.getElementById('results');
-    var btn        = document.getElementById('submitBtn');
+    var text     = inputTextEl.value.trim();
+    var model    = modelEl.value;
+    var cat      = categorySelect.value;
+    var errorBox = document.getElementById('errorBox');
+    var progress = document.getElementById('progressWrap');
+    var results  = document.getElementById('results');
+    var btn      = document.getElementById('submitBtn');
 
     errorBox.classList.remove('visible');
     results.classList.remove('visible');
 
-    if (!userText) { showError('Please drop a text file or paste content before submitting.'); return; }
-    if (!promptLoaded) { showError('Prompt file is still loading. Please wait a moment and try again.'); return; }
-    if (!PROMPT) { showError('Prompt file could not be loaded. Make sure the prompt file exists in the same directory.'); return; }
+    if (!text) { showError('Please type or paste some text before submitting.'); return; }
+    if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); return; }
 
-    // Update progress label to match category
-    progressLabel.textContent = PROGRESS_LABELS[cat] || PROGRESS_LABELS.summary;
-    resultsLabel.textContent = RESULT_LABELS[cat] || RESULT_LABELS.summary;
-
+    progressLabel.textContent = PROGRESS_LABELS[cat];
+    resultsLabel.textContent  = RESULT_LABELS[cat];
     progress.classList.add('visible');
     btn.disabled = true;
 
@@ -830,38 +552,28 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: model,
-          max_tokens: 2048,
+          model: model, max_tokens: 2048,
           messages: [
             { role: 'system', content: PROMPT },
-            { role: 'user',   content: userText }
+            { role: 'user',   content: text }
           ]
         })
       });
-
       var data = await res.json();
-      if (!res.ok) {
-        throw new Error((data && data.error && data.error.message) || ('API error ' + res.status + ': ' + JSON.stringify(data)));
-      }
+      if (!res.ok) throw new Error((data.error && data.error.message) || 'API error ' + res.status);
 
-      var text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-      if (!text) throw new Error('Model returned an empty response. Try a different model.');
+      var out = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (!out) throw new Error('Model returned an empty response. Try a different model.');
+      out = out.replace(/^```(?:markdown|md)?\s*\n?/i,'').replace(/\n?```\s*$/i,'').trim();
 
-      // Strip any wrapping markdown code fences the model might add
-      text = text.replace(/^```(?:markdown|md)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-
-      document.getElementById('resultContent').innerHTML = renderFormatted(text);
-
+      document.getElementById('resultContent').innerHTML = render(out);
       results.classList.add('visible');
       results.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
+      btn.textContent = 'Recreate';
     } catch (err) {
       var msg = err.message || String(err);
-      if (/failed to fetch|networkerror|load failed/i.test(msg)) {
-        msg = 'Network error: could not reach the proxy worker.\n\n'
-            + 'Check that WORKER_URL in this file points to your deployed Cloudflare Worker.\n\n'
-            + 'If running locally, also ensure you are serving over HTTP, not file://.';
-      }
+      if (/failed to fetch|networkerror|load failed/i.test(msg))
+        msg = 'Network error: could not reach the proxy worker.\nCheck WORKER_URL and ensure you are serving over HTTP.';
       showError(msg);
     } finally {
       progress.classList.remove('visible');
@@ -877,26 +589,19 @@
     document.getElementById('submitBtn').disabled = false;
   }
 
-  // ── Copy button ─────────────────────────────────────────────────────
+  // ── Copy ──────────────────────────────────────────────────────────
   document.getElementById('copyBtn').addEventListener('click', async function () {
-    var el = document.getElementById('resultContent');
-    var text = el ? el.innerText.trim() : '';
+    var text = (document.getElementById('resultContent').innerText || '').trim();
     if (!text) return;
-    var btn = document.getElementById('copyBtn');
-    var label = btn.querySelector('.copy-label');
-    try { await navigator.clipboard.writeText(text); }
-    catch (e) {
+    var btn = this, label = btn.querySelector('.copy-label');
+    try { await navigator.clipboard.writeText(text); } catch (e) {
       var ta = document.createElement('textarea');
       ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
       document.body.appendChild(ta); ta.select();
       document.execCommand('copy'); document.body.removeChild(ta);
     }
-    btn.classList.add('copied');
-    label.textContent = 'Copied';
-    setTimeout(function () {
-      btn.classList.remove('copied');
-      label.textContent = 'Copy';
-    }, 1800);
+    btn.classList.add('copied'); label.textContent = 'Copied';
+    setTimeout(function () { btn.classList.remove('copied'); label.textContent = 'Copy'; }, 1800);
   });
 }());
 </script>
