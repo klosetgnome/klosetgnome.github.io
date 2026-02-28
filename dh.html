@@ -684,7 +684,17 @@
     ['qwen/qwen-2.5-7b-instruct:free','Qwen: 2.5 7B (free)'],
     ['qwen/qwen2.5-vl-72b-instruct:free','Qwen: QwQ 32B (free)']
   ];
-  var PREFERRED = ['arcee-ai/trinity-mini:free','stepfun/step-3.5-flash:free','google/gemini-2.0-flash-exp:free'];
+
+  /* ── Per-category preferred models ── */
+  var PREFERRED_BY_CATEGORY = {
+    finance: ['arcee-ai/trinity-large-preview:free'],
+    news:    ['arcee-ai/trinity-large-preview:free']
+  };
+
+  function getPreferred() {
+    var cat = categorySelect.value;
+    return PREFERRED_BY_CATEGORY[cat] || PREFERRED_BY_CATEGORY.finance;
+  }
 
   function updateModelStatus(count, src) {
     var label = count + ' free model' + (count !== 1 ? 's' : '');
@@ -695,12 +705,18 @@
   function populateDropdown(models, src) {
     modelEl.innerHTML = models.map(function (m) { return '<option value="'+m[0]+'">'+m[1]+'</option>'; }).join('');
     updateModelStatus(models.length, src);
-    for (var p = 0; p < PREFERRED.length; p++) {
+    selectPreferredModel();
+  }
+
+  function selectPreferredModel() {
+    var preferred = getPreferred();
+    for (var p = 0; p < preferred.length; p++) {
       for (var o = 0; o < modelEl.options.length; o++) {
-        if (modelEl.options[o].value === PREFERRED[p]) { modelEl.value = PREFERRED[p]; return; }
+        if (modelEl.options[o].value === preferred[p]) { modelEl.value = preferred[p]; return; }
       }
     }
   }
+
   populateDropdown(FALLBACK_MODELS, 'fallback');
 
   function loadPrompt(file) {
@@ -720,6 +736,9 @@
     clearFile();
     document.getElementById('results').classList.remove('visible');
     document.getElementById('errorBox').classList.remove('visible');
+
+    // Re-select the preferred model for the new category
+    selectPreferredModel();
   });
 
   // ── Deep-link via hash (e.g. #finance or #news) ──────────────────
