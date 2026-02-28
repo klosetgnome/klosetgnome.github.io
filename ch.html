@@ -63,14 +63,19 @@
       transition: background 0.3s ease, border-color 0.3s ease;
     }
 
+    .card-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 16px 20px 0;
+    }
+
     .card-label {
       font-family: var(--mono);
       font-size: 11px;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--text-secondary);
-      padding: 16px 20px 0;
-      display: block;
     }
 
     .card-hint {
@@ -119,6 +124,56 @@
     }
     textarea::placeholder { color: var(--text-muted); }
 
+    /* ── Fetch status bar (inside card) ── */
+    .fetch-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      animation: fadeInUp 0.3s ease;
+    }
+    .fetch-bar.visible { display: flex; }
+
+    .fetch-bar .fetch-label { flex: 1; }
+
+    .fetch-spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .fetch-bar .fetch-clear {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      display: none;
+    }
+    .fetch-bar .fetch-clear.visible { display: block; }
+    .fetch-bar .fetch-clear:hover {
+      border-color: var(--error);
+      color: var(--error);
+      background: var(--error-glow);
+    }
+
     /* ── Submit row ── */
     .submit-row {
       width: 100%;
@@ -165,18 +220,11 @@
       background-position: right 2px center;
       min-width: 0;
     }
-
     [data-theme="dark"] .field-group select {
       background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23e7e0d8' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     }
-
     .field-group select:hover { opacity: 0.75; }
-
-    .field-group select:focus {
-      border: none;
-      box-shadow: none;
-    }
-
+    .field-group select:focus { border: none; box-shadow: none; }
     .field-group select option {
       background: var(--surface);
       color: var(--text-primary);
@@ -342,9 +390,9 @@
   <h1><span>COPY</span> HELPER</h1>
   <div class="header-center">
     <select id="categorySelect">
-      <option value="summary" data-prompt="zpmttxths.txt">Summary</option>
-      <option value="message" data-prompt="zpmttxthe.txt">Message</option>
-      <option value="review" data-prompt="zpmttxthr.txt">Review</option>
+      <option value="message" data-prompt="zpmtche.txt">Message</option>
+      <option value="summarise" data-prompt="zpmtchs.txt">Summarise</option>
+      <option value="review" data-prompt="zpmtchr.txt">Review</option>
     </select>
   </div>
   <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
@@ -365,7 +413,7 @@
 
   <div class="results" id="results">
     <div class="results-header">
-      <span id="resultsLabel">Summary</span>
+      <span id="resultsLabel">Email</span>
       <button class="results-copy" id="copyBtn" title="Copy to clipboard">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         <span class="copy-label">Copy</span>
@@ -382,8 +430,10 @@
   </div>
 
   <div class="card">
-    <span class="card-label">Your Text</span>
-    <span class="card-hint" id="inputHint">Paste an article, email, or long-form text to summarise</span>
+    <div class="card-top">
+      <span class="card-label">Your Text</span>
+    </div>
+    <span class="card-hint" id="inputHint">Paste bullet points or rough notes to turn into a polished email</span>
     <div class="textarea-wrap" id="textareaWrap">
       <div class="textarea-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
@@ -391,7 +441,12 @@
           <path d="m15 5 4 4"/>
         </svg>
       </div>
-      <textarea id="inputText" placeholder="Type or paste here…"></textarea>
+      <textarea id="inputText" placeholder="Type, paste, or drop a link here…"></textarea>
+    </div>
+    <div class="fetch-bar" id="fetchBar">
+      <div class="fetch-spinner" id="fetchSpinner"></div>
+      <span class="fetch-label" id="fetchLabel">Fetching page content…</span>
+      <button class="fetch-clear" id="fetchClear">Clear</button>
     </div>
   </div>
 
@@ -404,7 +459,7 @@
   </div>
 
   <div class="progress-wrap" id="progressWrap">
-    <div class="progress-label" id="progressLabel">Generating summary…</div>
+    <div class="progress-label" id="progressLabel">Drafting email…</div>
     <div class="progress-track"><div class="progress-bar"></div></div>
   </div>
 
@@ -438,22 +493,27 @@
   var resultsLabel   = document.getElementById('resultsLabel');
   var inputTextEl    = document.getElementById('inputText');
   var textareaWrap   = document.getElementById('textareaWrap');
+  var fetchBar       = document.getElementById('fetchBar');
+  var fetchLabel     = document.getElementById('fetchLabel');
+  var fetchSpinner   = document.getElementById('fetchSpinner');
+  var fetchClearBtn  = document.getElementById('fetchClear');
   var promptLoaded   = false;
   var PROMPT         = '';
+  var fetchedFromUrl = null; // tracks the source URL if content was fetched
 
   var HINTS = {
-    summary: 'Paste an article, email, or long-form text to summarise',
     message: 'Paste bullet points or rough notes to turn into a polished email',
+    summarise: 'Paste text, or a link to a webpage, to summarise',
     review:  'Paste notes or key details about your experience'
   };
   var PROGRESS_LABELS = {
-    summary: 'Generating summary…',
     message: 'Drafting email…',
+    summarise: 'Generating summary…',
     review:  'Writing review…'
   };
   var RESULT_LABELS = {
-    summary: 'Summary',
     message: 'Email',
+    summarise: 'Summary',
     review:  'Review'
   };
 
@@ -466,6 +526,97 @@
     document.getElementById('warnBanner').classList.add('visible');
   }
 
+  // ── URL detection & fetching ──────────────────────────────────────
+  var URL_REGEX = /^https?:\/\/[^\s]+$/i;
+  var fetchAbort = null;
+
+  function isUrl(text) {
+    return URL_REGEX.test(text.trim());
+  }
+
+  function showFetchBar(msg, loading) {
+    fetchLabel.textContent = msg;
+    fetchSpinner.style.display = loading ? 'block' : 'none';
+    fetchClearBtn.classList.toggle('visible', !loading);
+    fetchBar.classList.add('visible');
+  }
+
+  function hideFetchBar() {
+    fetchBar.classList.remove('visible');
+    fetchedFromUrl = null;
+  }
+
+  fetchClearBtn.addEventListener('click', function () {
+    inputTextEl.value = '';
+    textareaWrap.classList.remove('has-text');
+    hideFetchBar();
+    inputTextEl.focus();
+  });
+
+  function extractText(html) {
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    // Remove noise elements
+    var remove = doc.querySelectorAll('script, style, nav, header, footer, aside, iframe, noscript, svg, form, [role="navigation"], [role="banner"], [role="complementary"]');
+    remove.forEach(function (el) { el.remove(); });
+
+    // Try to find main content
+    var main = doc.querySelector('article, [role="main"], main, .post-content, .entry-content, .article-body');
+    var source = main || doc.body;
+    if (!source) return '';
+
+    var text = source.innerText || source.textContent || '';
+    // Collapse whitespace runs but preserve paragraph breaks
+    text = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+    return text;
+  }
+
+  async function fetchPageContent(url) {
+    fetchedFromUrl = url;
+    showFetchBar('Fetching page content…', true);
+    inputTextEl.disabled = true;
+
+    if (fetchAbort) fetchAbort.abort();
+    fetchAbort = new AbortController();
+
+    try {
+      var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+      var res = await fetch(proxyUrl, { signal: fetchAbort.signal });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var data = await res.json();
+      if (!data.contents) throw new Error('Empty response');
+
+      var text = extractText(data.contents);
+      if (!text || text.length < 50) throw new Error('Could not extract meaningful content from this page.');
+
+      // Truncate extremely long pages to ~12k chars to stay within LLM context
+      if (text.length > 12000) {
+        text = text.substring(0, 12000) + '\n\n[Content truncated]';
+      }
+
+      inputTextEl.value = text;
+      textareaWrap.classList.add('has-text');
+      showFetchBar('Fetched from ' + new URL(url).hostname, false);
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      inputTextEl.value = url; // restore URL so user can try again or paste manually
+      hideFetchBar();
+      showError('Could not fetch page content. Try copying and pasting the text directly.\n\n' + (err.message || ''));
+    } finally {
+      inputTextEl.disabled = false;
+    }
+  }
+
+  // Listen for paste events to detect URLs
+  inputTextEl.addEventListener('paste', function (e) {
+    // Short delay to let the paste populate the textarea
+    setTimeout(function () {
+      var val = inputTextEl.value.trim();
+      if (isUrl(val)) {
+        fetchPageContent(val);
+      }
+    }, 50);
+  });
+
   // ── Prompt loading ────────────────────────────────────────────────
   function loadPrompt(file) {
     fetch(file)
@@ -473,7 +624,8 @@
       .then(function (t) { PROMPT = t; promptLoaded = true; })
       .catch(function () { showError('Failed to load prompt file "' + file + '".'); promptLoaded = false; });
   }
-  loadPrompt('zpmttxths.txt');
+  // Default: Message
+  loadPrompt('zpmtche.txt');
 
   // ── Category change ───────────────────────────────────────────────
   categorySelect.addEventListener('change', function () {
