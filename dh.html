@@ -123,6 +123,79 @@
       background: var(--error-glow);
     }
 
+    /* ── Countdown bar (auto-submit) ── */
+    .countdown-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      animation: fadeInUp 0.3s ease;
+    }
+    .countdown-bar.visible { display: flex; }
+    .countdown-bar .countdown-label { flex: 1; }
+
+    .countdown-ring {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .countdown-ring svg {
+      width: 22px;
+      height: 22px;
+      transform: rotate(-90deg);
+    }
+    .countdown-ring .ring-bg {
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 2.5;
+    }
+    .countdown-ring .ring-fg {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-dasharray: 50.27;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 1s linear;
+    }
+    .countdown-number {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--accent);
+      font-family: var(--mono);
+    }
+
+    .countdown-bar .countdown-cancel {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .countdown-bar .countdown-cancel:hover {
+      border-color: var(--error);
+      color: var(--error);
+      background: var(--error-glow);
+    }
+
     /* ── Result rows ── */
     .result-row {
       display: flex;
@@ -393,6 +466,17 @@
       <span class="file-size" id="fileSize"></span>
       <button class="file-remove" id="fileRemove">Clear</button>
     </div>
+    <div class="countdown-bar" id="countdownBar">
+      <div class="countdown-ring" id="countdownRing">
+        <svg viewBox="0 0 20 20">
+          <circle class="ring-bg" cx="10" cy="10" r="8"/>
+          <circle class="ring-fg" id="ringFg" cx="10" cy="10" r="8"/>
+        </svg>
+        <span class="countdown-number" id="countdownNumber">3</span>
+      </div>
+      <span class="countdown-label" id="countdownLabel">Creating in 3s…</span>
+      <button class="countdown-cancel" id="countdownCancel">Cancel</button>
+    </div>
   </div>
 
   <div class="submit-row">
@@ -464,9 +548,66 @@
   var fileRemoveBtn = document.getElementById('fileRemove');
   var loadedFileText = null;
 
+  // ── Countdown elements ──
+  var countdownBar    = document.getElementById('countdownBar');
+  var countdownLabel  = document.getElementById('countdownLabel');
+  var countdownCancel = document.getElementById('countdownCancel');
+  var countdownRing   = document.getElementById('countdownRing');
+  var countdownNumber = document.getElementById('countdownNumber');
+  var ringFg          = document.getElementById('ringFg');
+  var countdownTimer  = null;
+  var RING_CIRCUMFERENCE = 2 * Math.PI * 8; // r=8 → ≈50.27
+
   if (window.location.protocol === 'file:') {
     document.getElementById('warnBanner').classList.add('visible');
   }
+
+  // ── Auto-submit countdown ─────────────────────────────────────────
+  function cancelCountdown() {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+    countdownBar.classList.remove('visible');
+  }
+
+  function startAutoSubmitCountdown() {
+    cancelCountdown();
+    var remaining = 3;
+
+    // Show countdown bar
+    countdownBar.classList.add('visible');
+    countdownNumber.textContent = remaining;
+    countdownLabel.textContent = 'Creating in ' + remaining + 's…';
+
+    // Reset ring to full
+    ringFg.style.transition = 'none';
+    ringFg.style.strokeDashoffset = '0';
+
+    // Kick off the first ring animation after a frame
+    requestAnimationFrame(function () {
+      ringFg.style.transition = 'stroke-dashoffset 1s linear';
+      ringFg.style.strokeDashoffset = (RING_CIRCUMFERENCE / 3).toFixed(2);
+    });
+
+    countdownTimer = setInterval(function () {
+      remaining--;
+      if (remaining <= 0) {
+        cancelCountdown();
+        document.getElementById('submitBtn').click();
+        return;
+      }
+      countdownNumber.textContent = remaining;
+      countdownLabel.textContent = 'Creating in ' + remaining + 's…';
+
+      var offset = RING_CIRCUMFERENCE * ((3 - remaining) / 3);
+      ringFg.style.strokeDashoffset = offset.toFixed(2);
+    }, 1000);
+  }
+
+  countdownCancel.addEventListener('click', function () {
+    cancelCountdown();
+  });
 
   function formatBytes(b) {
     if (b < 1024) return b + ' B';
@@ -488,6 +629,11 @@
       fileBar.classList.add('visible');
       dropPrompt.classList.add('hidden');
       transcriptEl.style.display = 'none';
+
+      // Start auto-submit countdown after a short delay (0.3s)
+      setTimeout(function () {
+        startAutoSubmitCountdown();
+      }, 300);
     };
     reader.onerror = function () { showError('Could not read the file. Please try again.'); };
     reader.readAsText(file);
@@ -501,6 +647,7 @@
     transcriptEl.style.display = '';
     transcriptEl.value = '';
     transcriptEl.focus();
+    cancelCountdown();
   }
 
   var dragCounter = 0;
@@ -568,6 +715,12 @@
   categorySelect.addEventListener('change', function () {
     var opt = categorySelect.options[categorySelect.selectedIndex];
     loadPrompt(opt.getAttribute('data-prompt'));
+
+    // Clear all inputs when switching modes
+    document.getElementById('titleInput').value = '';
+    clearFile();
+    document.getElementById('results').classList.remove('visible');
+    document.getElementById('errorBox').classList.remove('visible');
   });
 
   // ── Deep-link via hash (e.g. #finance or #news) ──────────────────
@@ -606,6 +759,9 @@
 
     errorBox.classList.remove('visible');
     results.classList.remove('visible');
+
+    // Cancel any running countdown when submit fires
+    cancelCountdown();
 
     if (!transcript) { showError('Please drop a transcript file or paste text before submitting.'); return; }
     if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); return; }
