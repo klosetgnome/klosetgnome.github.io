@@ -39,42 +39,238 @@
     width: 100%;
   }
 
-  /* Instance status indicator */
-  .instance-status {
+  /* ── Gear settings toggle (mirrors Description Helper) ── */
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .settings-wrap {
+    position: relative;
+  }
+
+  .settings-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+  .settings-toggle:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .settings-toggle.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+  .settings-toggle svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.5;
+    transition: transform 0.4s ease;
+  }
+  .settings-toggle:hover svg,
+  .settings-toggle.active svg {
+    transform: rotate(60deg);
+  }
+
+  .settings-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 100;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow-sm);
+    padding: 20px;
+    min-width: 300px;
+    animation: fadeInDown 0.2s ease;
+  }
+  .settings-panel.visible { display: block; }
+
+  .settings-section {
+    margin-bottom: 18px;
+  }
+  .settings-section:last-child { margin-bottom: 0; }
+
+  .settings-section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  .settings-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .settings-field-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .settings-panel .format-select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 32px 10px 12px;
+    color: var(--text-primary);
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.3s;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a756b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+  }
+
+  .settings-panel .format-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .settings-panel .format-select option {
+    background: var(--surface);
+    color: var(--text-primary);
+  }
+
+  /* Server status inside settings panel */
+  .server-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-family: var(--mono);
     font-size: 11px;
-    color: var(--text-muted);
-    text-align: right;
-    margin-bottom: 8px;
-    animation: fadeInUp 0.3s ease 0.05s both;
+    color: var(--text-secondary);
+    line-height: 1.5;
   }
 
-  .instance-status a {
-    color: var(--accent);
-    text-decoration: none;
-  }
-
-  .instance-status a:hover { text-decoration: underline; }
-
-  .instance-status .dot {
+  .server-status .dot {
     display: inline-block;
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    margin-right: 4px;
-    vertical-align: middle;
+    flex-shrink: 0;
   }
 
-  .instance-status .dot.ok { background: var(--success); }
-  .instance-status .dot.loading { background: var(--fetching); animation: pulse 1.2s ease infinite; }
-  .instance-status .dot.error { background: var(--error); }
+  .server-status .dot.ok { background: var(--success); }
+  .server-status .dot.loading { background: var(--fetching); animation: pulse 1.2s ease infinite; }
+  .server-status .dot.error { background: var(--error); }
 
   @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.3; }
   }
 
-  /* Input area */
+  /* Gear dot indicator — shows server state at a glance */
+  .gear-dot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    border: 1.5px solid var(--surface);
+    pointer-events: none;
+    transition: background 0.3s;
+  }
+  .gear-dot.ok { background: var(--success); }
+  .gear-dot.loading { background: var(--fetching); animation: pulse 1.2s ease infinite; }
+  .gear-dot.error { background: var(--error); }
+
+  /* ── Default mode toggle ── */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 2px 0;
+  }
+
+  .toggle-row-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.25s ease;
+  }
+
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.25s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+
+  .toggle-switch input:checked + .toggle-track {
+    background: var(--accent);
+  }
+
+  .toggle-switch input:checked + .toggle-track::after {
+    transform: translateX(16px);
+  }
+
+  .settings-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 14px 0;
+  }
+
+  /* ── Input area ── */
   .input-area {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -189,8 +385,8 @@
     animation: indeterminate 1.8s ease-in-out infinite;
   }
 
-  /* Format select area */
-  .format-area {
+  /* Download buttons area */
+  .action-area {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
@@ -201,70 +397,19 @@
     transition: background 0.3s ease, border-color 0.3s ease;
   }
 
-  .format-area.visible { display: block; }
+  .action-area.visible { display: block; }
 
-  .format-area label {
+  .action-area label {
     display: block;
     font-family: var(--mono);
     font-size: 11px;
     color: var(--text-secondary);
     letter-spacing: 2px;
     text-transform: uppercase;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
   }
 
-  .options-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-
-  .option-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-muted);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 4px;
-  }
-
-  .format-select {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px 36px 12px 16px;
-    color: var(--text-primary);
-    font-family: var(--mono);
-    font-size: 13px;
-    outline: none;
-    cursor: pointer;
-    transition: border-color 0.2s, box-shadow 0.2s, background 0.3s;
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a756b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-  }
-
-  .format-select:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
-  }
-
-  .format-select option {
-    background: var(--surface);
-    color: var(--text-primary);
-  }
-
-  .format-select optgroup {
-    font-family: var(--mono);
-    font-weight: 500;
-    color: var(--text-secondary);
-  }
-
-  .format-row {
+  .action-row {
     display: flex;
     gap: 10px;
   }
@@ -311,6 +456,16 @@
     cursor: not-allowed;
     box-shadow: none;
     transform: none;
+  }
+
+  /* Active settings summary — shown below the label */
+  .settings-summary {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: -4px;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
   }
 
   /* Download progress / result card */
@@ -443,11 +598,17 @@
     to { transform: rotate(360deg); }
   }
 
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   /* Responsive */
   @media (max-width: 600px) {
     .container { padding: 32px 16px 60px; }
-    .input-row, .format-row { flex-direction: column; }
-    .options-grid { grid-template-columns: 1fr; }
+    .input-row, .action-row { flex-direction: column; }
+    .settings-panel { min-width: 260px; right: -40px; }
+    .settings-row { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -455,66 +616,104 @@
 
 <header class="site-header">
   <h1><span>VIDEO</span> GRABBER</h1>
-  <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
-    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
-    </svg>
-    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="4"/>
-      <path d="M12 2v2"/><path d="M12 20v2"/>
-      <path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
-      <path d="M2 12h2"/><path d="M20 12h2"/>
-      <path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
-    </svg>
-  </button>
+  <div class="header-actions">
+    <div class="settings-wrap">
+      <button class="settings-toggle" id="settingsToggle" aria-label="Settings" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        <span class="gear-dot loading" id="gearDot"></span>
+      </button>
+      <div class="settings-panel" id="settingsPanel">
+        <!-- Server status -->
+        <div class="settings-section">
+          <div class="settings-section-label">Server</div>
+          <div class="server-status" id="instanceStatus">
+            <span class="dot loading"></span>
+            <span>Connecting to server…</span>
+          </div>
+        </div>
+
+        <div class="settings-divider"></div>
+
+        <!-- Download defaults -->
+        <div class="settings-section">
+          <div class="settings-section-label">Defaults</div>
+          <div class="toggle-row">
+            <span class="toggle-row-label">Audio only by default</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="defaultAudioOnly">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-divider"></div>
+
+        <!-- Quality & format -->
+        <div class="settings-section">
+          <div class="settings-section-label">Quality &amp; Format</div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-field-label">Video quality</div>
+              <select class="format-select" id="qualitySelect">
+                <option value="max">Best available</option>
+                <option value="2160">4K (2160p)</option>
+                <option value="1080" selected>1080p</option>
+                <option value="720">720p</option>
+                <option value="480">480p</option>
+                <option value="360">360p</option>
+                <option value="144">144p</option>
+              </select>
+            </div>
+            <div>
+              <div class="settings-field-label">Audio format</div>
+              <select class="format-select" id="audioFormatSelect">
+                <option value="mp3">MP3</option>
+                <option value="best" selected>Best</option>
+                <option value="ogg">OGG</option>
+                <option value="wav">WAV</option>
+                <option value="opus">Opus</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+      <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+      </svg>
+      <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2"/><path d="M12 20v2"/>
+        <path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+        <path d="M2 12h2"/><path d="M20 12h2"/>
+        <path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+      </svg>
+    </button>
+  </div>
 </header>
 
 <div class="container">
-
-  <!-- Server status -->
-  <div class="instance-status" id="instanceStatus">
-    <span class="dot loading"></span> Connecting to server…
-  </div>
 
   <!-- Step 1: URL Input -->
   <div class="input-area" id="inputArea">
     <label for="urlInput">Video link</label>
     <div class="input-row">
       <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" spellcheck="false">
-      <button class="btn btn-fetch" id="fetchBtn" onclick="handleDownload('video')">Grab</button>
+      <button class="btn btn-fetch" id="fetchBtn" onclick="handleDownload()">Grab</button>
     </div>
     <div class="loading-bar" id="fetchLoading"><div class="loading-bar-fill"></div></div>
     <div class="error-msg" id="fetchError"></div>
   </div>
 
-  <!-- Step 2: Download Options -->
-  <div class="format-area" id="formatArea">
-    <label>Download options</label>
-    <div class="options-grid">
-      <div>
-        <div class="option-label">Video quality</div>
-        <select class="format-select" id="qualitySelect">
-          <option value="max">Best available</option>
-          <option value="2160">4K (2160p)</option>
-          <option value="1080" selected>1080p</option>
-          <option value="720">720p</option>
-          <option value="480">480p</option>
-          <option value="360">360p</option>
-          <option value="144">144p</option>
-        </select>
-      </div>
-      <div>
-        <div class="option-label">Audio format</div>
-        <select class="format-select" id="audioFormatSelect">
-          <option value="mp3">MP3</option>
-          <option value="best" selected>Best</option>
-          <option value="ogg">OGG</option>
-          <option value="wav">WAV</option>
-          <option value="opus">Opus</option>
-        </select>
-      </div>
-    </div>
-    <div class="format-row">
+  <!-- Step 2: Download Actions -->
+  <div class="action-area" id="actionArea">
+    <label>Download</label>
+    <div class="settings-summary" id="settingsSummary">1080p · Best audio</div>
+    <div class="action-row">
       <button class="btn btn-download" id="dlVideoBtn" onclick="handleDownload('video')">⬇ Download Video</button>
       <button class="btn btn-audio" id="dlAudioBtn" onclick="handleDownload('audio')">♫ Audio Only</button>
     </div>
@@ -561,12 +760,7 @@
   // ║  CONFIG — Set your Tailscale Funnel URL here             ║
   // ╚═══════════════════════════════════════════════════════════╝
   const SERVER_URL = 'https://mac-mini.tail257f46.ts.net';
-  // e.g. 'https://mac-mini.tail1a2b3.ts.net'
-  // After running `tailscale funnel 8787`, Tailscale will show
-  // you the public URL — paste it above (no trailing slash).
-
-  // Optional: set this if you configured API_KEY in server.py
-  const API_KEY = null; // e.g. 'my-secret-key-here'
+  const API_KEY = null;
 
   // ── Theme toggle ──
   (function() {
@@ -579,32 +773,70 @@
     });
   })();
 
+  // ── Settings gear toggle ──
+  (function() {
+    var settingsToggle = document.getElementById('settingsToggle');
+    var settingsPanel  = document.getElementById('settingsPanel');
+
+    settingsToggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      settingsPanel.classList.toggle('visible');
+      settingsToggle.classList.toggle('active');
+    });
+
+    document.addEventListener('click', function(e) {
+      if (!settingsPanel.contains(e.target) && e.target !== settingsToggle) {
+        settingsPanel.classList.remove('visible');
+        settingsToggle.classList.remove('active');
+      }
+    });
+  })();
+
   // ── State ──
   let serverOnline = false;
   let working = false;
   let healthTimer = null;
 
-  const urlInput     = document.getElementById('urlInput');
-  const fetchBtn     = document.getElementById('fetchBtn');
-  const fetchLoading = document.getElementById('fetchLoading');
-  const fetchError   = document.getElementById('fetchError');
-  const formatArea   = document.getElementById('formatArea');
-  const progressCard = document.getElementById('progressCard');
-  const emptyState   = document.getElementById('emptyState');
-  const statusEl     = document.getElementById('instanceStatus');
+  const urlInput      = document.getElementById('urlInput');
+  const fetchBtn      = document.getElementById('fetchBtn');
+  const fetchLoading  = document.getElementById('fetchLoading');
+  const fetchError    = document.getElementById('fetchError');
+  const actionArea    = document.getElementById('actionArea');
+  const progressCard  = document.getElementById('progressCard');
+  const emptyState    = document.getElementById('emptyState');
+  const statusEl      = document.getElementById('instanceStatus');
+  const gearDot       = document.getElementById('gearDot');
+  const settingsSummary = document.getElementById('settingsSummary');
 
   urlInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') handleDownload('video');
+    if (e.key === 'Enter') handleDownload();
   });
 
   urlInput.addEventListener('input', () => {
     const url = urlInput.value.trim();
     if (url && url.includes('http')) {
-      formatArea.classList.add('visible');
+      actionArea.classList.add('visible');
+      updateSettingsSummary();
     }
   });
 
+  // ── Settings summary text ──
+  function updateSettingsSummary() {
+    const quality = document.getElementById('qualitySelect');
+    const audioFmt = document.getElementById('audioFormatSelect');
+    const qText = quality.options[quality.selectedIndex].text;
+    const aText = audioFmt.options[audioFmt.selectedIndex].text;
+    settingsSummary.textContent = qText + ' · ' + aText + ' audio';
+  }
+
+  document.getElementById('qualitySelect').addEventListener('change', updateSettingsSummary);
+  document.getElementById('audioFormatSelect').addEventListener('change', updateSettingsSummary);
+
   // ── Server health check ──
+  function setGearDotState(state) {
+    gearDot.className = 'gear-dot ' + state;
+  }
+
   async function checkHealth() {
     try {
       const headers = {};
@@ -621,18 +853,20 @@
         const dlInfo = data.active_downloads > 0
           ? ` · ${data.active_downloads}/${data.max_concurrent} active`
           : '';
-        statusEl.innerHTML = `<span class="dot ok"></span> Server online · yt-dlp ${data.yt_dlp || '?'}${dlInfo}`;
+        statusEl.innerHTML = `<span class="dot ok"></span><span>Online · yt-dlp ${data.yt_dlp || '?'}${dlInfo}</span>`;
+        setGearDotState('ok');
       } else {
-        serverOnline = true; // degraded but reachable
-        statusEl.innerHTML = `<span class="dot error"></span> Server degraded — yt-dlp may need updating`;
+        serverOnline = true;
+        statusEl.innerHTML = `<span class="dot error"></span><span>Degraded — yt-dlp may need updating</span>`;
+        setGearDotState('error');
       }
     } catch (err) {
       serverOnline = false;
-      statusEl.innerHTML = `<span class="dot error"></span> Server offline`;
+      statusEl.innerHTML = `<span class="dot error"></span><span>Offline</span>`;
+      setGearDotState('error');
     }
   }
 
-  // Check health on load, then every 30s
   checkHealth();
   healthTimer = setInterval(checkHealth, 30000);
 
@@ -652,10 +886,19 @@
     document.getElementById('dlAudioBtn').disabled = state;
   }
 
+  // ── Resolve download mode ──
+  function resolveMode(explicit) {
+    if (explicit) return explicit;
+    // Use default from settings toggle
+    return document.getElementById('defaultAudioOnly').checked ? 'audio' : 'video';
+  }
+
   // ── Download via self-hosted yt-dlp ──
-  async function handleDownload(mode) {
+  async function handleDownload(explicitMode) {
     const url = urlInput.value.trim();
     if (!url) return;
+
+    const mode = resolveMode(explicitMode);
 
     // Quick health check if server was offline
     if (!serverOnline) {
@@ -674,7 +917,8 @@
     hideError();
     progressCard.classList.remove('visible');
     emptyState.style.display = 'none';
-    formatArea.classList.add('visible');
+    actionArea.classList.add('visible');
+    updateSettingsSummary();
     fetchLoading.classList.add('visible');
     setButtonsDisabled(true);
     working = true;
@@ -718,7 +962,6 @@
       if (API_KEY) headers['X-API-Key'] = API_KEY;
 
       const controller = new AbortController();
-      // 5 min timeout for large videos being processed server-side
       const timeout = setTimeout(() => controller.abort(), 300000);
 
       const res = await fetch(`${SERVER_URL}/api/download`, {
@@ -736,7 +979,6 @@
       working = false;
 
       if (data.status === 'redirect') {
-        // Success — file is ready on the server
         const fileUrl = `${SERVER_URL}${data.url}`;
 
         fillEl.className = 'dl-progress-fill done';
@@ -750,7 +992,6 @@
         saveLink.href = fileUrl;
         if (data.filename) saveLink.download = data.filename;
 
-        // Auto-trigger download
         window.open(fileUrl, '_blank');
 
       } else if (data.status === 'error') {
@@ -783,7 +1024,6 @@
       actionsEl.style.display = 'flex';
       saveLink.style.display = 'none';
 
-      // Refresh health status
       checkHealth();
     }
   }
@@ -791,7 +1031,7 @@
   function resetAll() {
     working = false;
     urlInput.value = '';
-    formatArea.classList.remove('visible');
+    actionArea.classList.remove('visible');
     progressCard.classList.remove('visible');
     emptyState.style.display = 'block';
     setButtonsDisabled(false);
