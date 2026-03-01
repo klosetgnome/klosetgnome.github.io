@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Content Edit</title>
+<script>
+  (function() {
+    var saved = localStorage.getItem('theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
+<link rel="stylesheet" href="astyle.css">
+<script src="https://unpkg.com/wavesurfer.js@7"></script>
+<style>
+  /* ── Page-specific tokens ── */
+  :root {
+    --success: #4a8c3f;
+    --success-light: rgba(74, 140, 63, 0.08);
+    --success-border: rgba(74, 140, 63, 0.35);
+    --waveform-wave: #d9d4cb;
+    --waveform-progress: #c0512d;
+    --waveform-cursor: #2c2a26;
+    --loading-overlay: rgba(255, 255, 255, 0.92);
+    --cut-overlay: rgba(44, 42, 38, 0.45);
+    --segment-highlight: rgba(192, 81, 45, 0.12);
+  }
+
+  [data-theme="dark"] {
+    --success-light: rgba(94, 168, 82, 0.08);
+    --success-border: rgba(94, 168, 82, 0.35);
+    --waveform-wave: #564f47;
+    --waveform-progress: #d4774a;
+    --waveform-cursor: #e7e0d8;
+    --loading-overlay: rgba(28, 25, 23, 0.92);
+    --cut-overlay: rgba(0, 0, 0, 0.55);
+    --segment-highlight: rgba(212, 119, 74, 0.12);
+  }
+
+  /* ── Header actions ── */
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .settings-wrap { position: relative; }
+
+  .settings-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+  .settings-toggle:hover { color: var(--accent); border-color: var(--accent); }
+  .settings-toggle.active { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+  .settings-toggle svg { width: 18px; height: 18px; stroke-width: 1.5; transition: transform 0.4s ease; }
+  .settings-toggle:hover svg,
+  .settings-toggle.active svg { transform: rotate(60deg); }
+
+  .gear-dot {
+    position: absolute; top: 4px; right: 4px;
+    width: 7px; height: 7px; border-radius: 50%;
+    border: 1.5px solid var(--surface);
+    pointer-events: none; transition: background 0.3s, opacity 0.3s;
+  }
+  .gear-dot.ok { background: var(--success); opacity: 0; }
+  .gear-dot.loading { background: var(--accent); opacity: 1; animation: pulse 1.2s ease infinite; }
+  .gear-dot.error { background: var(--error); opacity: 1; }
+
+  .settings-panel {
+    display: none; position: absolute; top: calc(100% + 10px); right: 0;
+    z-index: 100; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow-sm);
+    padding: 20px; min-width: 300px; animation: fadeInDown 0.2s ease;
+  }
+  .settings-panel.visible { display: block; }
+
+  .settings-section { margin-bottom: 18px; }
+  .settings-section:last-child { margin-bottom: 0; }
+  .settings-section-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;
+  }
+  .settings-divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+  .server-status {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px; color: var(--text-secondary); line-height: 1.5;
+  }
+  .server-status .dot {
+    display: inline-block; width: 7px; height: 7px;
+    border-radius: 50%; flex-shrink: 0;
+  }
+  .server-status .dot.ok { background: var(--success); }
+  .server-status .dot.loading { background: var(--accent); animation: pulse 1.2s ease infinite; }
+  .server-status .dot.error { background: var(--error); }
+
+  .shortcuts-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+  .shortcuts-toggle:hover { color: var(--accent); border-color: var(--accent); }
+  .shortcuts-toggle.active { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+  .shortcuts-toggle svg { width: 18px; height: 18px; stroke-width: 1.5; }
+
+  .shortcuts-panel {
+    display: none; position: absolute; top: calc(100% + 10px); right: 0;
+    z-index: 100; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow-sm);
+    padding: 16px 20px; min-width: 280px; animation: fadeInDown 0.2s ease;
+  }
+  .shortcuts-panel.visible { display: block; }
+  .shortcuts-panel-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px;
+  }
+  .shortcuts-panel-list { display: flex; flex-direction: column; gap: 8px; }
+  .shortcut-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .shortcut-keys { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .shortcut-keys kbd {
+    display: inline-block; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2px 7px; font-family: var(--mono); font-size: 10px;
+    font-weight: 500; color: var(--text-secondary); min-width: 22px; text-align: center; line-height: 1.4;
+  }
+  .shortcut-keys .key-plus { font-family: var(--mono); font-size: 9px; color: var(--text-muted); }
+  .shortcut-desc {
+    font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+    letter-spacing: 0.5px; text-align: right;
+  }
+  .shortcuts-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* ── Layout ── */
+  .container {
+    position: relative; z-index: 1; max-width: 960px; margin: 0 auto;
+    padding: 48px 24px 80px; flex: 1; width: 100%;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+    animation: fadeInUp 0.5s ease both;
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+  .card-label {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-secondary);
+    padding: 16px 20px 0; display: block;
+  }
+  .card-hint {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.5px;
+    color: var(--text-muted); padding: 3px 20px 0; display: block;
+  }
+
+  /* ── Import Card ── */
+  .import-card { animation-delay: 0.1s; }
+
+  .input-row {
+    display: flex; gap: 10px; padding: 12px 20px 0;
+  }
+  .input-row input[type="text"] {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 16px;
+    color: var(--text-primary); font-family: var(--mono); font-size: 13px;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s, background 0.3s;
+  }
+  .input-row input[type="text"]::placeholder { color: var(--text-muted); }
+  .input-row input[type="text"]:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .btn {
+    font-family: var(--serif); font-size: 14px; font-weight: 600;
+    border: none; border-radius: var(--radius); padding: 12px 20px;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover {
+    background: #d4623e; transform: translateY(-1px);
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled {
+    background: var(--border); color: var(--text-muted);
+    cursor: not-allowed; box-shadow: none; transform: none;
+  }
+  .btn-secondary {
+    background: var(--surface); color: var(--text-primary); border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    border-color: var(--accent); color: var(--accent);
+    background: var(--accent-light); box-shadow: none;
+  }
+
+  .or-divider {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 20px 8px;
+  }
+  .or-divider::before,
+  .or-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .or-divider span {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-muted);
+  }
+
+  .audio-drop-zone { position: relative; width: 100%; }
+  .audio-drop-overlay {
+    display: none; position: absolute; inset: 0; z-index: 10;
+    background: var(--accent-light); border: 2px dashed var(--accent);
+    border-radius: var(--radius); align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .audio-drop-overlay.active { display: flex; }
+  .audio-drop-overlay span {
+    font-family: var(--mono); font-size: 12px; font-weight: 500;
+    letter-spacing: 2px; text-transform: uppercase; color: var(--accent);
+  }
+  .drop-prompt {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 10px; padding: 24px 20px;
+    text-align: center;
+  }
+  .drop-prompt.hidden { display: none; }
+  .drop-prompt-icon { color: var(--text-muted); opacity: 0.5; }
+  .drop-prompt-icon svg { width: 32px; height: 32px; }
+  .drop-prompt-text {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-secondary); line-height: 1.9;
+  }
+  .drop-prompt-text .browse {
+    color: var(--accent); cursor: pointer; transition: opacity 0.2s;
+  }
+  .drop-prompt-text .browse:hover { text-decoration: underline; }
+
+  /* Import status bar */
+  .import-status {
+    display: none; align-items: center; gap: 10px;
+    padding: 12px 20px 16px; font-family: var(--mono); font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .import-status.visible { display: flex; }
+  .import-status .status-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  }
+  .import-status .status-dot.working { background: var(--accent); animation: pulse 1.2s ease infinite; }
+  .import-status .status-dot.done { background: var(--success); }
+  .import-status .status-dot.error { background: var(--error); }
+  .import-status .status-text { flex: 1; line-height: 1.4; }
+  .import-track {
+    height: 3px; background: var(--border); border-radius: 3px;
+    margin: 0 20px 16px; overflow: hidden; display: none;
+  }
+  .import-track.visible { display: block; }
+  .import-track-fill {
+    height: 100%; border-radius: 3px; width: 100%;
+    background: var(--accent); animation: indeterminate 1.8s ease-in-out infinite;
+  }
+  .import-track-fill.done { animation: none; width: 100%; background: var(--success); }
+  .import-track-fill.error { animation: none; width: 100%; background: var(--error); }
+
+  /* ── Editor Card ── */
+  .editor-card {
+    display: none; animation-delay: 0.15s;
+  }
+  .editor-card.visible { display: block; }
+
+  .video-preview {
+    display: none; background: #000; position: relative;
+    width: 100%; max-height: 440px; overflow: hidden;
+  }
+  .video-preview.visible { display: block; }
+  .video-preview video {
+    display: block; width: 100%; max-height: 440px; object-fit: contain;
+  }
+
+  .waveform-area { position: relative; }
+  .waveform-container {
+    padding: 16px 20px 8px; cursor: crosshair; position: relative;
+  }
+  #waveform { width: 100%; min-height: 100px; }
+
+  /* Cut region overlays on the waveform */
+  .segment-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none; z-index: 3;
+  }
+  .cut-region {
+    position: absolute; top: 0; bottom: 0;
+    background: var(--cut-overlay);
+    border-left: 1px dashed rgba(192, 81, 45, 0.4);
+    border-right: 1px dashed rgba(192, 81, 45, 0.4);
+    transition: background 0.2s;
+  }
+  .cut-region:first-child { border-left: none; }
+  .cut-region:last-child { border-right: none; }
+
+  /* Split marker on waveform */
+  .split-marker {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: var(--accent); z-index: 4; pointer-events: none;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .split-marker.visible { opacity: 1; }
+  .split-marker::before {
+    content: '✂'; position: absolute; top: -2px; left: 50%;
+    transform: translateX(-50%); font-size: 12px; color: var(--accent);
+  }
+
+  .waveform-loading {
+    position: absolute; inset: 0; z-index: 5;
+    background: var(--loading-overlay);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; border-radius: var(--radius); transition: background 0.3s ease;
+  }
+  .waveform-loading.visible { display: flex; }
+  .waveform-loading-label {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-secondary);
+  }
+  .waveform-loading-track {
+    width: 200px; height: 3px; background: var(--border);
+    border-radius: 3px; overflow: hidden;
+  }
+  .waveform-loading-bar {
+    height: 100%; width: 100%; background: var(--accent);
+    animation: indeterminate 1.8s ease-in-out infinite;
+  }
+
+  .transport {
+    display: flex; align-items: center; gap: 10px; padding: 8px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .transport-btn {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-primary); transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .transport-btn:hover {
+    border-color: var(--accent); color: var(--accent); background: var(--accent-light);
+  }
+  .transport-btn.active {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+  .transport-btn svg { width: 16px; height: 16px; }
+  .transport-time {
+    font-family: var(--mono); font-size: 14px; font-weight: 500;
+    color: var(--text-primary); letter-spacing: 1px; min-width: 80px;
+  }
+  .transport-duration {
+    font-family: var(--mono); font-size: 12px; color: var(--text-muted);
+  }
+  .transport-spacer { flex: 1; }
+
+  .speed-badge {
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.5px; color: var(--text-secondary);
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 4px 10px; cursor: pointer;
+    transition: all 0.2s; user-select: none; white-space: nowrap; flex-shrink: 0;
+  }
+  .speed-badge:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .speed-badge.modified { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+
+  /* ── Edit Toolbar ── */
+  .edit-toolbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 20px 12px;
+    flex-wrap: wrap;
+  }
+  .toolbar-btn {
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 1px; text-transform: uppercase;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px 14px;
+    cursor: pointer; color: var(--text-primary); transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .toolbar-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .toolbar-btn:disabled { opacity: 0.35; pointer-events: none; }
+  .toolbar-btn.danger:hover { border-color: var(--error); color: var(--error); background: var(--error-glow); }
+  .toolbar-btn svg { width: 14px; height: 14px; }
+  .toolbar-spacer { flex: 1; }
+  .toolbar-info {
+    font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+
+  /* ── File info bar ── */
+  .file-bar {
+    display: none; align-items: center; gap: 12px; padding: 12px 20px;
+    border-top: 1px solid var(--border); font-family: var(--mono);
+    font-size: 12px; color: var(--text-secondary);
+  }
+  .file-bar.visible { display: flex; }
+  .file-bar .file-name {
+    flex: 1; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; color: var(--text-primary); font-weight: 500;
+  }
+  .file-bar .file-meta { color: var(--text-muted); flex-shrink: 0; }
+  .file-bar .file-remove {
+    flex-shrink: 0; background: none; border: 1px solid var(--border);
+    border-radius: var(--radius); font-family: var(--mono); font-size: 11px;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--text-secondary);
+    padding: 5px 12px; cursor: pointer; transition: all 0.2s;
+  }
+  .file-bar .file-remove:hover {
+    border-color: var(--error); color: var(--error); background: var(--error-glow);
+  }
+
+  /* ── Timeline Card ── */
+  .timeline-card {
+    display: none; animation-delay: 0.2s;
+  }
+  .timeline-card.visible { display: block; }
+
+  /* Mini overview bar */
+  .mini-timeline {
+    padding: 14px 20px 10px; display: flex; gap: 2px;
+    height: 20px; align-items: stretch;
+  }
+  .mini-seg {
+    background: var(--accent); border-radius: 2px;
+    opacity: 0.6; transition: opacity 0.2s; cursor: pointer;
+    min-width: 3px; position: relative;
+  }
+  .mini-seg:hover { opacity: 1; }
+  .mini-seg.selected { opacity: 1; box-shadow: 0 0 0 2px var(--accent); }
+  .mini-gap {
+    background: var(--border); border-radius: 2px;
+    opacity: 0.3; min-width: 2px;
+  }
+
+  /* Segment list */
+  .segment-list { padding: 0 20px 4px; }
+  .seg-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+  }
+  .seg-item:last-child { border-bottom: none; }
+  .seg-item.selected { background: var(--segment-highlight); margin: 0 -20px; padding: 10px 20px; }
+  .seg-num {
+    font-family: var(--mono); font-size: 10px; font-weight: 600;
+    letter-spacing: 1px; color: var(--accent); width: 28px;
+    text-align: center; flex-shrink: 0;
+  }
+  .seg-times {
+    font-family: var(--mono); font-size: 12px; color: var(--text-primary);
+    letter-spacing: 0.5px; flex: 1;
+  }
+  .seg-times span { color: var(--text-muted); }
+  .seg-dur {
+    font-family: var(--mono); font-size: 11px; color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .seg-delete {
+    background: none; border: 1px solid var(--border); border-radius: var(--radius);
+    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-muted); transition: all 0.2s; flex-shrink: 0;
+  }
+  .seg-delete:hover { border-color: var(--error); color: var(--error); background: var(--error-glow); }
+  .seg-delete svg { width: 14px; height: 14px; }
+  .seg-delete:disabled { opacity: 0.3; pointer-events: none; }
+
+  .no-segments {
+    padding: 24px 0; text-align: center;
+    font-family: var(--mono); font-size: 12px; color: var(--text-muted);
+  }
+
+  /* ── Fade Controls ── */
+  .fade-controls {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    padding: 12px 20px 16px; border-top: 1px solid var(--border);
+    align-items: center;
+  }
+  .fade-group {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .fade-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-muted); white-space: nowrap;
+  }
+  .fade-input {
+    width: 60px; font-family: var(--mono); font-size: 12px; font-weight: 500;
+    padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--bg); color: var(--text-primary); text-align: center;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .fade-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .fade-unit {
+    font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+  }
+  .fade-spacer { flex: 1; }
+  .output-duration {
+    font-family: var(--mono); font-size: 12px; color: var(--text-secondary);
+    letter-spacing: 0.5px;
+  }
+  .output-duration strong {
+    color: var(--text-primary); font-weight: 600;
+  }
+
+  /* ── Export Bar ── */
+  .export-bar {
+    display: none; width: 100%; justify-content: space-between; align-items: center;
+    gap: 12px; animation: fadeInUp 0.5s ease 0.25s both;
+  }
+  .export-bar.visible { display: flex; }
+  .export-status {
+    font-family: var(--mono); font-size: 12px; color: var(--text-secondary);
+    flex: 1; display: flex; align-items: center; gap: 8px;
+  }
+  .export-status .dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  }
+  .btn-group { display: flex; gap: 10px; flex-shrink: 0; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 32px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    font-family: var(--mono); font-size: 12px; letter-spacing: 1px;
+    background: var(--text-primary); color: var(--bg);
+    padding: 12px 24px; border-radius: var(--radius);
+    opacity: 0; transition: all 0.3s ease; z-index: 100; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Animations ── */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  @keyframes indeterminate {
+    0%   { transform: translateX(-100%) scaleX(0.4); }
+    50%  { transform: translateX(60%)   scaleX(0.6); }
+    100% { transform: translateX(200%)  scaleX(0.4); }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .container { padding: 32px 16px 60px; }
+    .input-row { flex-direction: column; }
+    .settings-panel { min-width: 260px; right: -40px; }
+    .shortcuts-panel { min-width: 260px; right: -80px; }
+    .edit-toolbar { gap: 6px; }
+    .toolbar-btn { padding: 7px 10px; font-size: 10px; }
+    .fade-controls { flex-direction: column; gap: 10px; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1><span>CONTENT</span> EDIT</h1>
+  <div class="header-actions">
+    <!-- Shortcuts -->
+    <div class="settings-wrap">
+      <button class="shortcuts-toggle" id="shortcutsToggle" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2" ry="2"/>
+          <path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/>
+          <path d="M6 12h.001"/><path d="M10 12h.001"/><path d="M14 12h.001"/><path d="M18 12h.001"/>
+          <path d="M8 16h8"/>
+        </svg>
+      </button>
+      <div class="shortcuts-panel" id="shortcutsPanel">
+        <div class="shortcuts-panel-label">Keyboard Shortcuts</div>
+        <div class="shortcuts-panel-list">
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Play / Pause</span>
+            <span class="shortcut-keys"><kbd>Space</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Skip ±5s</span>
+            <span class="shortcut-keys"><kbd>←</kbd> <kbd>→</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Skip ±1s</span>
+            <span class="shortcut-keys"><kbd>Shift</kbd><span class="key-plus">+</span><kbd>←</kbd> <kbd>→</kbd></span>
+          </div>
+          <div class="shortcuts-divider"></div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Split at playhead</span>
+            <span class="shortcut-keys"><kbd>S</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Delete selected</span>
+            <span class="shortcut-keys"><kbd>Delete</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Undo</span>
+            <span class="shortcut-keys"><kbd>Ctrl</kbd><span class="key-plus">+</span><kbd>Z</kbd></span>
+          </div>
+          <div class="shortcuts-divider"></div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Faster</span>
+            <span class="shortcut-keys"><kbd>D</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Slower</span>
+            <span class="shortcut-keys"><kbd>F</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Reset speed</span>
+            <span class="shortcut-keys"><kbd>R</kbd></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Settings gear -->
+    <div class="settings-wrap">
+      <button class="settings-toggle" id="settingsToggle" aria-label="Settings" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        <span class="gear-dot loading" id="gearDot"></span>
+      </button>
+      <div class="settings-panel" id="settingsPanel">
+        <div class="settings-section">
+          <div class="settings-section-label">Server</div>
+          <div class="server-status" id="serverStatus">
+            <span class="dot loading"></span>
+            <span>Connecting…</span>
+          </div>
+        </div>
+        <div class="settings-divider"></div>
+        <div class="settings-section">
+          <div class="settings-section-label">Export Format</div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1;">
+              <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Audio</div>
+              <select class="fade-input" id="exportAudioFmt" style="width:100%;text-align:left;padding:8px 10px;">
+                <option value="wav" selected>WAV</option>
+                <option value="mp3">MP3</option>
+                <option value="aac">AAC</option>
+                <option value="ogg">OGG</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Video</div>
+              <select class="fade-input" id="exportVideoFmt" style="width:100%;text-align:left;padding:8px 10px;">
+                <option value="mp4" selected>MP4</option>
+                <option value="mov">MOV</option>
+                <option value="mkv">MKV</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Theme toggle -->
+    <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+      <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+      </svg>
+      <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2"/><path d="M12 20v2"/>
+        <path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+        <path d="M2 12h2"/><path d="M20 12h2"/>
+        <path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ════════ IMPORT CARD ════════ -->
+  <div class="card import-card" id="importCard">
+    <span class="card-label">Source</span>
+    <span class="card-hint">Grab from URL or drag &amp; drop a local file</span>
+
+    <div class="input-row">
+      <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" spellcheck="false">
+      <button class="btn btn-primary" id="grabBtn">Grab</button>
+    </div>
+
+    <div class="or-divider"><span>or</span></div>
+
+    <div class="audio-drop-zone" id="dropZone">
+      <div class="audio-drop-overlay" id="dropOverlay">
+        <span>Drop media file here</span>
+      </div>
+      <div class="drop-prompt" id="dropPrompt">
+        <div class="drop-prompt-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div class="drop-prompt-text">
+          Drag &amp; drop audio or video files<br>
+          or <span class="browse" id="fileBrowse">browse to select</span>
+        </div>
+      </div>
+      <input type="file" id="fileInput" accept="audio/*,video/*,.wav,.mp3,.m4a,.ogg,.flac,.mp4,.mov,.mkv,.webm" style="display:none;" />
+    </div>
+
+    <div class="import-status" id="importStatus">
+      <span class="status-dot working" id="importDot"></span>
+      <span class="status-text" id="importText">Processing…</span>
+    </div>
+    <div class="import-track" id="importTrack">
+      <div class="import-track-fill" id="importTrackFill"></div>
+    </div>
+  </div>
+
+  <!-- ════════ EDITOR CARD ════════ -->
+  <div class="card editor-card" id="editorCard">
+    <div class="video-preview" id="videoPreview">
+      <video id="videoEl" preload="auto" playsinline></video>
+    </div>
+
+    <div class="waveform-area">
+      <div class="waveform-loading" id="waveformLoading">
+        <span class="waveform-loading-label">Loading waveform…</span>
+        <div class="waveform-loading-track"><div class="waveform-loading-bar"></div></div>
+      </div>
+      <div class="waveform-container" id="waveformContainer">
+        <div id="waveform"></div>
+        <div class="segment-overlay" id="segmentOverlay"></div>
+      </div>
+    </div>
+
+    <div class="transport">
+      <button class="transport-btn" id="btnSkipBack" title="Skip back 5s">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+      </button>
+      <button class="transport-btn" id="btnPlay" title="Play / Pause (Space)">
+        <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6,4 20,12 6,20"/></svg>
+        <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none"><rect x="5" y="4" width="4" height="16"/><rect x="15" y="4" width="4" height="16"/></svg>
+      </button>
+      <button class="transport-btn" id="btnSkipFwd" title="Skip forward 5s">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+      </button>
+      <span class="transport-time" id="transportTime">00:00:00</span>
+      <span class="transport-duration" id="transportDuration">/ 00:00:00</span>
+      <span class="speed-badge" id="speedBadge" title="Click to cycle speed">1×</span>
+      <span class="transport-spacer"></span>
+    </div>
+
+    <div class="edit-toolbar">
+      <button class="toolbar-btn" id="btnSplit" disabled title="Split at playhead (S)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><polyline points="8 6 12 2 16 6"/><polyline points="8 18 12 22 16 18"/></svg>
+        Split
+      </button>
+      <button class="toolbar-btn danger" id="btnDelete" disabled title="Delete selected segment (Del)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Delete
+      </button>
+      <button class="toolbar-btn" id="btnUndo" disabled title="Undo (Ctrl+Z)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        Undo
+      </button>
+      <span class="toolbar-spacer"></span>
+      <span class="toolbar-info" id="editInfo"></span>
+    </div>
+
+    <div class="file-bar" id="fileBar">
+      <span class="file-name" id="fileName"></span>
+      <span class="file-meta" id="fileMeta"></span>
+      <button class="file-remove" id="fileRemove">Clear</button>
+    </div>
+  </div>
+
+  <!-- ════════ TIMELINE CARD ════════ -->
+  <div class="card timeline-card" id="timelineCard">
+    <span class="card-label">Edit Timeline</span>
+    <div class="mini-timeline" id="miniTimeline"></div>
+    <div class="segment-list" id="segmentList"></div>
+    <div class="fade-controls">
+      <div class="fade-group">
+        <span class="fade-label">Fade In</span>
+        <input type="number" class="fade-input" id="fadeIn" value="0.5" min="0" max="10" step="0.1">
+        <span class="fade-unit">s</span>
+      </div>
+      <div class="fade-group">
+        <span class="fade-label">Fade Out</span>
+        <input type="number" class="fade-input" id="fadeOut" value="0.5" min="0" max="10" step="0.1">
+        <span class="fade-unit">s</span>
+      </div>
+      <div class="fade-group">
+        <span class="fade-label">Crossfade</span>
+        <input type="number" class="fade-input" id="crossfade" value="0.3" min="0" max="5" step="0.1">
+        <span class="fade-unit">s</span>
+      </div>
+      <span class="fade-spacer"></span>
+      <span class="output-duration">Output: <strong id="outputDuration">00:00:00</strong></span>
+    </div>
+  </div>
+
+  <!-- ════════ EXPORT BAR ════════ -->
+  <div class="export-bar" id="exportBar">
+    <div class="export-status" id="exportStatus"></div>
+    <div class="btn-group">
+      <button class="btn btn-secondary" id="btnReset">Clear All</button>
+      <button class="btn btn-primary" id="btnExport">Export</button>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <a href="index.html"><span style="color: var(--accent);">dev.</span>nialfernandes.com</a>
+  <span style="color: var(--text-muted); margin: 0 8px;">|</span>
+  <a href="privacy.html">Privacy Policy</a>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  CONFIG                                                   ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  const SERVER_URL = 'https://mac-mini.tail257f46.ts.net';
+  const API_KEY = null;
+  const SPEED_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  STATE                                                    ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  let wavesurfer = null;
+  let mediaLoaded = false;
+  let isVideo = false;
+  let mediaDuration = 0;
+  let segments = [];          // { id, start, end }
+  let selectedSegmentId = null;
+  let nextSegmentId = 1;
+  let undoStack = [];
+  let speedIndex = 2;
+  let serverOnline = false;
+  let serverFilePath = null;  // server-side file reference for export
+  let localFile = null;       // local File object for upload-on-export
+  let mediaBlobUrl = null;
+  let previewMode = false;
+  let previewSegIdx = 0;
+  let animFrameId = null;
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  DOM REFS                                                 ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  const $ = id => document.getElementById(id);
+
+  const urlInput      = $('urlInput');
+  const grabBtn       = $('grabBtn');
+  const importStatus  = $('importStatus');
+  const importDot     = $('importDot');
+  const importText    = $('importText');
+  const importTrack   = $('importTrack');
+  const importTrackFill = $('importTrackFill');
+  const dropZone      = $('dropZone');
+  const dropOverlay   = $('dropOverlay');
+  const dropPrompt    = $('dropPrompt');
+  const fileInput     = $('fileInput');
+
+  const editorCard    = $('editorCard');
+  const videoPreview  = $('videoPreview');
+  const videoEl       = $('videoEl');
+  const waveformLoading = $('waveformLoading');
+  const segmentOverlay  = $('segmentOverlay');
+
+  const transportTime = $('transportTime');
+  const transportDur  = $('transportDuration');
+  const speedBadge    = $('speedBadge');
+  const editInfo      = $('editInfo');
+
+  const timelineCard  = $('timelineCard');
+  const miniTimeline  = $('miniTimeline');
+  const segmentList   = $('segmentList');
+  const outputDurEl   = $('outputDuration');
+
+  const exportBar     = $('exportBar');
+  const exportStatus  = $('exportStatus');
+  const fileBar       = $('fileBar');
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  THEME TOGGLE                                             ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  document.querySelector('.theme-toggle').addEventListener('click', function () {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    if (wavesurfer && mediaLoaded) updateWaveformTheme();
+  });
+
+  function updateWaveformTheme() {
+    const s = getComputedStyle(document.documentElement);
+    wavesurfer.setOptions({
+      waveColor: s.getPropertyValue('--waveform-wave').trim(),
+      progressColor: s.getPropertyValue('--waveform-progress').trim(),
+      cursorColor: s.getPropertyValue('--waveform-cursor').trim()
+    });
+  }
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  SETTINGS PANEL                                           ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  (function () {
+    const toggle = $('settingsToggle');
+    const panel  = $('settingsPanel');
+    toggle.addEventListener('click', e => {
+      e.stopPropagation();
+      panel.classList.toggle('visible');
+      toggle.classList.toggle('active');
+    });
+    document.addEventListener('click', e => {
+      if (!panel.contains(e.target) && e.target !== toggle) {
+        panel.classList.remove('visible');
+        toggle.classList.remove('active');
+      }
+    });
+  })();
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  SHORTCUTS PANEL                                          ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  (function () {
+    const toggle = $('shortcutsToggle');
+    const panel  = $('shortcutsPanel');
+    toggle.addEventListener('click', e => {
+      e.stopPropagation();
+      panel.classList.toggle('visible');
+      toggle.classList.toggle('active');
+    });
+    document.addEventListener('click', e => {
+      if (!panel.contains(e.target) && e.target !== toggle) {
+        panel.classList.remove('visible');
+        toggle.classList.remove('active');
+      }
+    });
+  })();
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  HELPERS                                                  ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  function formatTime(s) {
+    if (isNaN(s) || s < 0) s = 0;
+    const total = Math.round(s);
+    const hh = Math.floor(total / 3600);
+    const mm = Math.floor((total % 3600) / 60);
+    const ss = total % 60;
+    return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+  }
+
+  function formatTimePrecise(s) {
+    if (isNaN(s) || s < 0) s = 0;
+    const hh = Math.floor(s / 3600);
+    const mm = Math.floor((s % 3600) / 60);
+    const ss = (s % 60).toFixed(1);
+    return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(5, '0');
+  }
+
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+
+  function showToast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function isMediaFile(f) {
+    return f.type.startsWith('audio/') || f.type.startsWith('video/') ||
+      /\.(wav|mp3|m4a|ogg|flac|mp4|mov|mkv|webm|avi)$/i.test(f.name);
+  }
+
+  function isVideoFile(f) {
+    return f.type.startsWith('video/') ||
+      /\.(mp4|mov|mkv|webm|avi)$/i.test(f.name);
+  }
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  SERVER HEALTH CHECK                                      ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  const gearDot = $('gearDot');
+  const serverStatusEl = $('serverStatus');
+
+  function setGearState(state) { gearDot.className = 'gear-dot ' + state; }
+
+  async function checkHealth() {
+    try {
+      const headers = {};
+      if (API_KEY) headers['X-API-Key'] = API_KEY;
+      const res = await fetch(`${SERVER_URL}/api/health`, {
+        headers, signal: AbortSignal.timeout(5000)
+      });
+      const data = await res.json();
+      if (data.status === 'ok') {
+        serverOnline = true;
+        const ver = (data.yt_dlp || '').replace(/^yt-dlp\s*/i, '');
+        serverStatusEl.innerHTML = `<span class="dot ok"></span><span>Online${ver ? ' · ' + ver : ''}</span>`;
+        setGearState('ok');
+      } else {
+        serverOnline = true;
+        serverStatusEl.innerHTML = `<span class="dot error"></span><span>Degraded</span>`;
+        setGearState('error');
+      }
+    } catch {
+      serverOnline = false;
+      serverStatusEl.innerHTML = `<span class="dot error"></span><span>Offline</span>`;
+      setGearState('error');
+    }
+  }
+
+  checkHealth();
+  setInterval(checkHealth, 30000);
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  IMPORT: URL GRAB                                         ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  function setImportStatus(dotClass, text, showTrack, trackClass) {
+    importStatus.classList.add('visible');
+    importDot.className = 'status-dot ' + dotClass;
+    importText.textContent = text;
+    if (showTrack) {
+      importTrack.classList.add('visible');
+      importTrackFill.className = 'import-track-fill' + (trackClass ? ' ' + trackClass : '');
+    } else {
+      importTrack.classList.remove('visible');
+    }
+  }
+
+  function hideImportStatus() {
+    importStatus.classList.remove('visible');
+    importTrack.classList.remove('visible');
+  }
+
+  grabBtn.addEventListener('click', handleGrab);
+  urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleGrab(); });
+
+  async function handleGrab() {
+    const url = urlInput.value.trim();
+    if (!url) return;
+
+    if (!serverOnline) {
+      await checkHealth();
+      if (!serverOnline) {
+        setImportStatus('error', 'Server is offline. Check that the Mac Mini is running.', true, 'error');
+        return;
+      }
+    }
+
+    grabBtn.disabled = true;
+    setImportStatus('working', 'Sending to server…', true, '');
+
+    try {
+      const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
+      if (API_KEY) headers['X-API-Key'] = API_KEY;
+
+      const body = { url, downloadMode: 'video', videoQuality: 'max', audioFormat: 'wav' };
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 300000);
+
+      setImportStatus('working', 'Downloading content on server…', true, '');
+
+      const res = await fetch(`${SERVER_URL}/api/download`, {
+        method: 'POST', headers, body: JSON.stringify(body), signal: controller.signal
+      });
+      clearTimeout(timeout);
+      const data = await res.json();
+
+      if (data.status === 'redirect') {
+        const fileUrl = `${SERVER_URL}${data.url}`;
+        serverFilePath = data.url; // store for export reference
+
+        setImportStatus('working', 'Loading media into editor…', true, '');
+
+        // Fetch as blob for same-origin audio decoding
+        const mediaRes = await fetch(fileUrl);
+        const blob = await mediaRes.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        const isVid = blob.type.startsWith('video/') ||
+          /\.(mp4|mov|mkv|webm)/.test(data.filename || '');
+
+        setImportStatus('done', 'Ready — ' + (data.filename || 'file loaded'), false, '');
+        setTimeout(hideImportStatus, 3000);
+
+        loadMediaIntoEditor(blobUrl, data.filename || 'downloaded', blob.size, isVid);
+      } else {
+        setImportStatus('error', data.error || 'Download failed', true, 'error');
+      }
+    } catch (err) {
+      let msg = 'Connection failed';
+      if (err.name === 'AbortError') msg = 'Request timed out — the content may be too long.';
+      setImportStatus('error', msg, true, 'error');
+      checkHealth();
+    } finally {
+      grabBtn.disabled = false;
+    }
+  }
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  IMPORT: LOCAL FILE DROP / BROWSE                         ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  let dragCounter = 0;
+
+  dropZone.addEventListener('dragenter', e => {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter++; dropOverlay.classList.add('active');
+  });
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); });
+  dropZone.addEventListener('dragleave', e => {
+    e.preventDefault(); e.stopPropagation();
+    if (--dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('active'); }
+  });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter = 0; dropOverlay.classList.remove('active');
+    if (e.dataTransfer?.files.length) handleLocalFile(e.dataTransfer.files[0]);
+  });
+
+  $('fileBrowse').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', function () {
+    if (this.files.length) handleLocalFile(this.files[0]);
+    this.value = '';
+  });
+
+  function handleLocalFile(file) {
+    if (!isMediaFile(file)) {
+      showToast('Unsupported file type');
+      return;
+    }
+    localFile = file;
+    serverFilePath = null;
+    const blobUrl = URL.createObjectURL(file);
+    loadMediaIntoEditor(blobUrl, file.name, file.size, isVideoFile(file));
+  }
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  LOAD MEDIA INTO EDITOR                                   ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  function loadMediaIntoEditor(blobUrl, name, size, videoFlag) {
+    resetEditor();
+    mediaBlobUrl = blobUrl;
+    isVideo = videoFlag;
+
+    // Show cards
+    editorCard.classList.add('visible');
+    waveformLoading.classList.add('visible');
+
+    // Video preview
+    if (isVideo) {
+      videoPreview.classList.add('visible');
+      videoEl.src = blobUrl;
+      videoEl.muted = true; // we use WaveSurfer for audio
+      videoEl.load();
+    }
+
+    // File info
+    $('fileName').textContent = name;
+    $('fileMeta').textContent = formatBytes(size) + (isVideo ? ' · video' : ' · audio');
+    fileBar.classList.add('visible');
+
+    // Init WaveSurfer
+    const s = getComputedStyle(document.documentElement);
+    wavesurfer = WaveSurfer.create({
+      container: '#waveform',
+      waveColor: s.getPropertyValue('--waveform-wave').trim(),
+      progressColor: s.getPropertyValue('--waveform-progress').trim(),
+      cursorColor: s.getPropertyValue('--waveform-cursor').trim(),
+      cursorWidth: 1,
+      barWidth: 2, barGap: 1, barRadius: 2,
+      height: 100, normalize: true
+    });
+
+    wavesurfer.load(blobUrl);
+
+    wavesurfer.on('ready', () => {
+      mediaLoaded = true;
+      mediaDuration = wavesurfer.getDuration();
+      transportDur.textContent = '/ ' + formatTime(mediaDuration);
+      wavesurfer.setPlaybackRate(SPEED_STEPS[speedIndex]);
+      waveformLoading.classList.remove('visible');
+
+      // Init segments: one segment covering full duration
+      segments = [{ id: nextSegmentId++, start: 0, end: mediaDuration }];
+      selectedSegmentId = segments[0].id;
+      undoStack = [];
+
+      renderAll();
+      showTimeline();
+
+      $('btnSplit').disabled = false;
+      $('btnDelete').disabled = false;
+    });
+
+    wavesurfer.on('audioprocess', onTimeUpdate);
+    wavesurfer.on('seeking', onTimeUpdate);
+    wavesurfer.on('interaction', onTimeUpdate);
+
+    wavesurfer.on('play', () => {
+      $('iconPlay').style.display = 'none';
+      $('iconPause').style.display = '';
+      $('btnPlay').classList.add('active');
+      if (isVideo) { videoEl.currentTime = wavesurfer.getCurrentTime(); videoEl.play(); }
+      startPlaybackLoop();
+    });
+
+    wavesurfer.on('pause', () => {
+      $('iconPlay').style.display = '';
+      $('iconPause').style.display = 'none';
+      $('btnPlay').classList.remove('active');
+      if (isVideo) videoEl.pause();
+      stopPlaybackLoop();
+    });
+  }
+
+  function onTimeUpdate() {
+    if (!wavesurfer) return;
+    const t = wavesurfer.getCurrentTime();
+    transportTime.textContent = formatTime(t);
+    if (isVideo && videoEl && Math.abs(videoEl.currentTime - t) > 0.5) {
+      videoEl.currentTime = t;
+    }
+    highlightCurrentSegment(t);
+  }
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  PLAYBACK LOOP — skip cut regions                         ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  function startPlaybackLoop() {
+    stopPlaybackLoop();
+    function loop() {
+      if (!wavesurfer || !wavesurfer.isPlaying()) return;
+      const t = wavesurfer.getCurrentTime();
+
+      // Check if current time is inside a cut region
+      const inSeg = segments.find(s => t >= s.start - 0.05 && t <= s.end + 0.05);
+      if (!inSeg && segments.length > 0) {
+        // Find next segment after current time
+        const sorted = [...segments].sort((a, b) => a.start - b.start);
+        const next = sorted.find(s => s.start > t);
+        if (next) {
+          wavesurfer.seekTo(next.start / mediaDuration);
+          if (isVideo) videoEl.currentTime = next.start;
+        } else {
+          // Past last segment — stop
+          wavesurfer.pause();
+          return;
+        }
+      }
+
+      // Check if we've gone past the end of the current segment
+      if (inSeg && t > inSeg.end + 0.05) {
+        const sorted = [...segments].sort((a, b) => a.start - b.start);
+        const idx = sorted.indexOf(inSeg);
+        if (idx < sorted.length - 1) {
+          const next = sorted[idx + 1];
+          wavesurfer.seekTo(next.start / mediaDuration);
+          if (isVideo) videoEl.currentTime = next.start;
+        } else {
+          wavesurfer.pause();
+          return;
+        }
+      }
+
+      onTimeUpdate();
+      animFrameId = requestAnimationFrame(loop);
+    }
+    animFrameId = requestAnimationFrame(loop);
+  }
+
+  function stopPlaybackLoop() {
+    if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+  }
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  TRANSPORT CONTROLS                                       ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  $('btnPlay').addEventListener('click', () => {
+    if (wavesurfer && mediaLoaded) wavesurfer.playPause();
+  });
+  $('btnSkipBack').addEventListener('click', () => {
+    if (wavesurfer && mediaLoaded) wavesurfer.skip(-5);
+  });
+  $('btnSkipFwd').addEventListener('click', () => {
+    if (wavesurfer && mediaLoaded) wavesurfer.skip(5);
+  });
+
+  function setSpeed(idx) {
+    speedIndex = Math.max(0, Math.min(SPEED_STEPS.length - 1, idx));
+    const rate = SPEED_STEPS[speedIndex];
+    speedBadge.textContent = rate + '×';
+    speedBadge.classList.toggle('modified', rate !== 1);
+    if (wavesurfer) wavesurfer.setPlaybackRate(rate);
+  }
+
+  speedBadge.addEventListener('click', () => setSpeed((speedIndex + 1) % SPEED_STEPS.length));
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  SEGMENT OPERATIONS                                       ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  function saveUndo() {
+    undoStack.push(JSON.parse(JSON.stringify(segments)));
+    if (undoStack.length > 50) undoStack.shift();
+    $('btnUndo').disabled = false;
+  }
+
+  function undo() {
+    if (!undoStack.length) return;
+    segments = undoStack.pop();
+    if (!undoStack.length) $('btnUndo').disabled = true;
+    // Ensure selectedSegmentId still valid
+    if (!segments.find(s => s.id === selectedSegmentId)) {
+      selectedSegmentId = segments.length ? segments[0].id : null;
+    }
+    renderAll();
+    showToast('Undo');
+  }
+
+  function splitAtPlayhead() {
+    if (!wavesurfer || !mediaLoaded || !segments.length) return;
+    const t = wavesurfer.getCurrentTime();
+
+    // Find which segment contains the playhead
+    const seg = segments.find(s => t > s.start + 0.1 && t < s.end - 0.1);
+    if (!seg) {
+      showToast('Playhead is not inside a segment (or too close to an edge)');
+      return;
+    }
+
+    saveUndo();
+
+    const newSeg1 = { id: seg.id, start: seg.start, end: t };
+    const newSeg2 = { id: nextSegmentId++, start: t, end: seg.end };
+
+    const idx = segments.indexOf(seg);
+    segments.splice(idx, 1, newSeg1, newSeg2);
+    selectedSegmentId = newSeg2.id;
+
+    renderAll();
+    showToast('Split at ' + formatTime(t));
+  }
+
+  function deleteSegment(id) {
+    if (!id && selectedSegmentId) id = selectedSegmentId;
+    if (!id) return;
+    if (segments.length <= 1) {
+      showToast('Cannot delete the last segment');
+      return;
+    }
+
+    saveUndo();
+    segments = segments.filter(s => s.id !== id);
+
+    // Select adjacent
+    if (selectedSegmentId === id) {
+      selectedSegmentId = segments.length ? segments[0].id : null;
+    }
+
+    renderAll();
+    showToast('Segment deleted');
+  }
+
+  function selectSegment(id) {
+    selectedSegmentId = id;
+    renderAll();
+    // Seek to segment start
+    const seg = segments.find(s => s.id === id);
+    if (seg && wavesurfer) {
+      wavesurfer.seekTo(seg.start / mediaDuration);
+    }
+  }
+
+  function highlightCurrentSegment(t) {
+    const seg = segments.find(s => t >= s.start && t <= s.end);
+    if (seg && seg.id !== selectedSegmentId) {
+      // Don't auto-change selection during playback
+    }
+  }
+
+  // Button handlers
+  $('btnSplit').addEventListener('click', splitAtPlayhead);
+  $('btnDelete').addEventListener('click', () => deleteSegment());
+  $('btnUndo').addEventListener('click', undo);
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  RENDERING                                                ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  function renderAll() {
+    renderOverlays();
+    renderMiniTimeline();
+    renderSegmentList();
+    updateOutputDuration();
+    updateEditInfo();
+    $('btnDelete').disabled = segments.length <= 1;
+  }
+
+  // Waveform cut region overlays
+  function renderOverlays() {
+    segmentOverlay.innerHTML = '';
+    if (!mediaDuration || !segments.length) return;
+
+    const sorted = [...segments].sort((a, b) => a.start - b.start);
+    const cuts = [];
+
+    // Gap before first segment
+    if (sorted[0].start > 0.01) {
+      cuts.push({ start: 0, end: sorted[0].start });
+    }
+
+    // Gaps between segments
+    for (let i = 0; i < sorted.length - 1; i++) {
+      if (sorted[i + 1].start > sorted[i].end + 0.01) {
+        cuts.push({ start: sorted[i].end, end: sorted[i + 1].start });
+      }
+    }
+
+    // Gap after last segment
+    if (sorted[sorted.length - 1].end < mediaDuration - 0.01) {
+      cuts.push({ start: sorted[sorted.length - 1].end, end: mediaDuration });
+    }
+
+    cuts.forEach(cut => {
+      const div = document.createElement('div');
+      div.className = 'cut-region';
+      const left = (cut.start / mediaDuration) * 100;
+      const width = ((cut.end - cut.start) / mediaDuration) * 100;
+      div.style.left = left + '%';
+      div.style.width = width + '%';
+      segmentOverlay.appendChild(div);
+    });
+  }
+
+  // Mini timeline overview
+  function renderMiniTimeline() {
+    miniTimeline.innerHTML = '';
+    if (!mediaDuration || !segments.length) return;
+
+    const sorted = [...segments].sort((a, b) => a.start - b.start);
+
+    sorted.forEach((seg, i) => {
+      // Gap before this segment
+      const gapStart = i === 0 ? 0 : sorted[i - 1].end;
+      if (seg.start > gapStart + 0.01) {
+        const gap = document.createElement('div');
+        gap.className = 'mini-gap';
+        gap.style.flex = ((seg.start - gapStart) / mediaDuration);
+        miniTimeline.appendChild(gap);
+      }
+
+      const el = document.createElement('div');
+      el.className = 'mini-seg' + (seg.id === selectedSegmentId ? ' selected' : '');
+      el.style.flex = ((seg.end - seg.start) / mediaDuration);
+      el.title = 'Segment ' + (i + 1) + ': ' + formatTime(seg.start) + ' → ' + formatTime(seg.end);
+      el.addEventListener('click', () => selectSegment(seg.id));
+      miniTimeline.appendChild(el);
+    });
+
+    // Trailing gap
+    const last = sorted[sorted.length - 1];
+    if (last.end < mediaDuration - 0.01) {
+      const gap = document.createElement('div');
+      gap.className = 'mini-gap';
+      gap.style.flex = ((mediaDuration - last.end) / mediaDuration);
+      miniTimeline.appendChild(gap);
+    }
+  }
+
+  // Segment list
+  const TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+
+  function renderSegmentList() {
+    if (!segments.length) {
+      segmentList.innerHTML = '<div class="no-segments">No segments</div>';
+      return;
+    }
+
+    const sorted = [...segments].sort((a, b) => a.start - b.start);
+    segmentList.innerHTML = '';
+
+    sorted.forEach((seg, i) => {
+      const dur = seg.end - seg.start;
+      const item = document.createElement('div');
+      item.className = 'seg-item' + (seg.id === selectedSegmentId ? ' selected' : '');
+      item.innerHTML = `
+        <span class="seg-num">${i + 1}</span>
+        <span class="seg-times">${formatTimePrecise(seg.start)} <span>→</span> ${formatTimePrecise(seg.end)}</span>
+        <span class="seg-dur">${formatTime(dur)}</span>
+        <button class="seg-delete" data-id="${seg.id}" title="Delete segment" ${segments.length <= 1 ? 'disabled' : ''}>${TRASH_SVG}</button>
+      `;
+
+      item.addEventListener('click', e => {
+        if (!e.target.closest('.seg-delete')) selectSegment(seg.id);
+      });
+
+      const delBtn = item.querySelector('.seg-delete');
+      delBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        deleteSegment(seg.id);
+      });
+
+      segmentList.appendChild(item);
+    });
+  }
+
+  function updateOutputDuration() {
+    const total = segments.reduce((sum, s) => sum + (s.end - s.start), 0);
+    outputDurEl.textContent = formatTime(total);
+  }
+
+  function updateEditInfo() {
+    const sorted = [...segments].sort((a, b) => a.start - b.start);
+    const cuts = [];
+    for (let i = 0; i < sorted.length - 1; i++) {
+      if (sorted[i + 1].start > sorted[i].end + 0.01) cuts.push(1);
+    }
+    const cutCount = cuts.length;
+    if (sorted.length === 1 && sorted[0].start < 0.01 && sorted[0].end > mediaDuration - 0.01) {
+      editInfo.textContent = 'No edits';
+    } else {
+      editInfo.textContent = segments.length + ' segment' + (segments.length > 1 ? 's' : '') +
+        (cutCount > 0 ? ' · ' + cutCount + ' cut' + (cutCount > 1 ? 's' : '') : '');
+    }
+  }
+
+  function showTimeline() {
+    timelineCard.classList.add('visible');
+    exportBar.classList.add('visible');
+  }
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  EXPORT                                                   ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  $('btnExport').addEventListener('click', handleExport);
+
+  async function handleExport() {
+    if (!segments.length || !mediaLoaded) return;
+
+    if (!serverOnline) {
+      await checkHealth();
+      if (!serverOnline) {
+        showToast('Server is offline');
+        return;
+      }
+    }
+
+    const sorted = [...segments].sort((a, b) => a.start - b.start);
+    const manifest = {
+      segments: sorted.map(s => ({ start: parseFloat(s.start.toFixed(3)), end: parseFloat(s.end.toFixed(3)) })),
+      fadeIn: parseFloat($('fadeIn').value) || 0,
+      fadeOut: parseFloat($('fadeOut').value) || 0,
+      crossfade: parseFloat($('crossfade').value) || 0,
+      format: isVideo ? $('exportVideoFmt').value : $('exportAudioFmt').value,
+      sourceType: isVideo ? 'video' : 'audio'
+    };
+
+    // Add server file reference if available
+    if (serverFilePath) {
+      manifest.source = serverFilePath;
+    }
+
+    const exportBtn = $('btnExport');
+    exportBtn.disabled = true;
+    exportStatus.innerHTML = '<span class="dot" style="background:var(--accent);animation:pulse 1.2s ease infinite;width:7px;height:7px;border-radius:50;"></span> Exporting…';
+
+    try {
+      const headers = { 'Accept': 'application/json' };
+      if (API_KEY) headers['X-API-Key'] = API_KEY;
+
+      let res;
+
+      if (localFile && !serverFilePath) {
+        // Upload local file with manifest
+        const formData = new FormData();
+        formData.append('file', localFile);
+        formData.append('manifest', JSON.stringify(manifest));
+
+        res = await fetch(`${SERVER_URL}/api/edit`, {
+          method: 'POST', headers, body: formData,
+          signal: AbortSignal.timeout(600000)
+        });
+      } else {
+        // Server already has the file
+        headers['Content-Type'] = 'application/json';
+        res = await fetch(`${SERVER_URL}/api/edit`, {
+          method: 'POST', headers, body: JSON.stringify(manifest),
+          signal: AbortSignal.timeout(600000)
+        });
+      }
+
+      const data = await res.json();
+
+      if (data.status === 'redirect' || data.url) {
+        const fileUrl = `${SERVER_URL}${data.url}`;
+        const name = data.filename || 'edited_output';
+        exportStatus.innerHTML = `<span class="dot" style="background:var(--success);width:7px;height:7px;border-radius:50%;"></span> Exported: ${escapeHtml(name)}`;
+        window.open(fileUrl, '_blank');
+        showToast('Export complete');
+      } else {
+        exportStatus.innerHTML = `<span class="dot" style="background:var(--error);width:7px;height:7px;border-radius:50%;"></span> ${escapeHtml(data.error || 'Export failed')}`;
+      }
+    } catch (err) {
+      let msg = 'Export failed';
+      if (err.name === 'AbortError') msg = 'Export timed out';
+      exportStatus.innerHTML = `<span class="dot" style="background:var(--error);width:7px;height:7px;border-radius:50%;"></span> ${msg}`;
+    } finally {
+      exportBtn.disabled = false;
+    }
+  }
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  RESET / CLEAR                                            ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  $('fileRemove').addEventListener('click', fullReset);
+  $('btnReset').addEventListener('click', () => {
+    if (!confirm('Clear everything and start over?')) return;
+    fullReset();
+  });
+
+  function resetEditor() {
+    if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
+    mediaLoaded = false;
+    isVideo = false;
+    mediaDuration = 0;
+    segments = [];
+    selectedSegmentId = null;
+    nextSegmentId = 1;
+    undoStack = [];
+    previewMode = false;
+    stopPlaybackLoop();
+    if (mediaBlobUrl) { URL.revokeObjectURL(mediaBlobUrl); mediaBlobUrl = null; }
+
+    editorCard.classList.remove('visible');
+    videoPreview.classList.remove('visible');
+    timelineCard.classList.remove('visible');
+    exportBar.classList.remove('visible');
+    fileBar.classList.remove('visible');
+    waveformLoading.classList.remove('visible');
+    segmentOverlay.innerHTML = '';
+
+    transportTime.textContent = '00:00:00';
+    transportDur.textContent = '/ 00:00:00';
+    editInfo.textContent = '';
+    exportStatus.innerHTML = '';
+
+    $('btnSplit').disabled = true;
+    $('btnDelete').disabled = true;
+    $('btnUndo').disabled = true;
+
+    $('iconPlay').style.display = '';
+    $('iconPause').style.display = 'none';
+    $('btnPlay').classList.remove('active');
+
+    setSpeed(2); // reset to 1x
+  }
+
+  function fullReset() {
+    resetEditor();
+    serverFilePath = null;
+    localFile = null;
+    urlInput.value = '';
+    hideImportStatus();
+    dropPrompt.classList.remove('hidden');
+    showToast('Cleared');
+  }
+
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  KEYBOARD SHORTCUTS                                       ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  document.addEventListener('keydown', e => {
+    const tag = e.target.tagName.toLowerCase();
+    const isInput = tag === 'input' || tag === 'textarea' || tag === 'select';
+
+    // Space: play/pause (when not in input)
+    if (e.code === 'Space' && !isInput) {
+      e.preventDefault();
+      if (wavesurfer && mediaLoaded) wavesurfer.playPause();
+    }
+
+    // Arrow keys: skip
+    if (!isInput) {
+      if (e.key === 'ArrowLeft' && wavesurfer && mediaLoaded) {
+        e.preventDefault();
+        wavesurfer.skip(e.shiftKey ? -1 : -5);
+      }
+      if (e.key === 'ArrowRight' && wavesurfer && mediaLoaded) {
+        e.preventDefault();
+        wavesurfer.skip(e.shiftKey ? 1 : 5);
+      }
+    }
+
+    if (!isInput) {
+      // S: split
+      if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        splitAtPlayhead();
+      }
+
+      // Delete/Backspace: delete selected
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        deleteSegment();
+      }
+
+      // Ctrl+Z / Cmd+Z: undo
+      if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        undo();
+      }
+
+      // D: speed up, F: speed down, R: reset
+      if (e.key === 'd' || e.key === 'D') { e.preventDefault(); setSpeed(speedIndex + 1); }
+      if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setSpeed(speedIndex - 1); }
+      if (e.key === 'r' || e.key === 'R') { e.preventDefault(); setSpeed(SPEED_STEPS.indexOf(1)); }
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>
