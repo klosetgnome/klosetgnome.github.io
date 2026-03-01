@@ -290,6 +290,7 @@
   }
   .import-track-fill.done { animation: none; width: 100%; background: var(--success); }
   .import-track-fill.error { animation: none; width: 100%; background: var(--error); }
+  .import-track-fill.determinate { animation: none; transition: width 0.3s ease; }
 
   /* ── Editor Card ── */
   .editor-card {
@@ -1074,6 +1075,20 @@
     importTrack.classList.remove('visible');
   }
 
+  function setImportProgress(percent, text) {
+    importStatus.classList.add('visible');
+    importDot.className = 'status-dot working';
+    importText.textContent = text;
+    importTrack.classList.add('visible');
+    if (percent !== null && percent >= 0) {
+      importTrackFill.className = 'import-track-fill determinate';
+      importTrackFill.style.width = Math.min(100, Math.round(percent)) + '%';
+    } else {
+      importTrackFill.className = 'import-track-fill';
+      importTrackFill.style.width = '100%';
+    }
+  }
+
   grabBtn.addEventListener('click', handleGrab);
   urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleGrab(); });
 
@@ -1090,45 +1105,112 @@
     }
 
     grabBtn.disabled = true;
-    setImportStatus('working', 'Sending to server…', true, '');
+    setImportProgress(0, 'Connecting to server…');
 
     try {
-      const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
+      const headers = { 'Content-Type': 'application/json' };
       if (API_KEY) headers['X-API-Key'] = API_KEY;
 
       const body = { url, downloadMode: 'video', videoQuality: 'max', audioFormat: 'wav' };
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 300000);
 
-      setImportStatus('working', 'Downloading content on server…', true, '');
-
-      const res = await fetch(`${SERVER_URL}/api/download`, {
-        method: 'POST', headers, body: JSON.stringify(body), signal: controller.signal
+      const res = await fetch(`${SERVER_URL}/api/download-stream`, {
+        method: 'POST', headers, body: JSON.stringify(body)
       });
-      clearTimeout(timeout);
-      const data = await res.json();
 
-      if (data.status === 'redirect') {
-        const fileUrl = `${SERVER_URL}${data.url}`;
-        serverFilePath = data.url; // store for export reference
-
-        setImportStatus('working', 'Loading media into editor…', true, '');
-
-        // Fetch as blob for same-origin audio decoding
-        const mediaRes = await fetch(fileUrl);
-        const blob = await mediaRes.blob();
-        const blobUrl = URL.createObjectURL(blob);
-
-        const isVid = blob.type.startsWith('video/') ||
-          /\.(mp4|mov|mkv|webm)/.test(data.filename || '');
-
-        setImportStatus('done', 'Ready — ' + (data.filename || 'file loaded'), false, '');
-        setTimeout(hideImportStatus, 3000);
-
-        loadMediaIntoEditor(blobUrl, data.filename || 'downloaded', blob.size, isVid);
-      } else {
-        setImportStatus('error', data.error || 'Download failed', true, 'error');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setImportStatus('error', err.error || 'Server error', true, 'error');
+        grabBtn.disabled = false;
+        return;
       }
+
+      // Read SSE stream for download progress
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let completed = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop();
+
+        for (const part of parts) {
+          const dataLine = part.split('\n').find(l => l.startsWith('data: '));
+          if (!dataLine) continue;
+
+          try {
+            const event = JSON.parse(dataLine.slice(6));
+
+            if (event.type === 'progress') {
+              if (event.stage === 'downloading' && event.percent !== null) {
+                setImportProgress(event.percent, 'Downloading… ' + Math.round(event.percent) + '%');
+              } else if (event.stage === 'merging') {
+                setImportProgress(null, 'Merging audio and video…');
+              } else if (event.stage === 'extracting') {
+                setImportProgress(null, 'Extracting audio…');
+              } else if (event.stage === 'processing') {
+                setImportProgress(null, 'Processing…');
+              }
+            } else if (event.type === 'complete') {
+              completed = event;
+            } else if (event.type === 'error') {
+              setImportStatus('error', event.error || 'Download failed', true, 'error');
+              grabBtn.disabled = false;
+              return;
+            }
+          } catch {}
+        }
+      }
+
+      if (!completed) {
+        setImportStatus('error', 'Download stream ended without result', true, 'error');
+        grabBtn.disabled = false;
+        return;
+      }
+
+      // Phase 2: Fetch the file into the browser with progress
+      const fileUrl = `${SERVER_URL}${completed.url}`;
+      serverFilePath = completed.url;
+
+      setImportProgress(0, 'Loading into editor… 0%');
+
+      const mediaRes = await fetch(fileUrl);
+      const contentLength = parseInt(mediaRes.headers.get('Content-Length'), 10) || completed.bytes || 0;
+
+      let blob;
+      if (contentLength && mediaRes.body) {
+        const blobReader = mediaRes.body.getReader();
+        const chunks = [];
+        let received = 0;
+
+        while (true) {
+          const { done, value } = await blobReader.read();
+          if (done) break;
+          chunks.push(value);
+          received += value.length;
+          const pct = Math.round((received / contentLength) * 100);
+          setImportProgress(pct, 'Loading into editor… ' + pct + '%');
+        }
+
+        blob = new Blob(chunks);
+      } else {
+        setImportProgress(null, 'Loading into editor…');
+        blob = await mediaRes.blob();
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
+      const isVid = blob.type.startsWith('video/') ||
+        /\.(mp4|mov|mkv|webm)/.test(completed.filename || '');
+
+      setImportStatus('done', 'Ready — ' + (completed.filename || 'file loaded'), false, '');
+      setTimeout(hideImportStatus, 3000);
+
+      loadMediaIntoEditor(blobUrl, completed.filename || 'downloaded', blob.size, isVid);
+
     } catch (err) {
       let msg = 'Connection failed';
       if (err.name === 'AbortError') msg = 'Request timed out — the content may be too long.';
