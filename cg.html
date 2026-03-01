@@ -198,11 +198,11 @@
     border-radius: 50%;
     border: 1.5px solid var(--surface);
     pointer-events: none;
-    transition: background 0.3s;
+    transition: background 0.3s, opacity 0.3s;
   }
-  .gear-dot.ok { background: var(--success); }
-  .gear-dot.loading { background: var(--fetching); animation: pulse 1.2s ease infinite; }
-  .gear-dot.error { background: var(--error); }
+  .gear-dot.ok { background: var(--success); opacity: 0; }
+  .gear-dot.loading { background: var(--fetching); opacity: 1; animation: pulse 1.2s ease infinite; }
+  .gear-dot.error { background: var(--error); opacity: 1; }
 
   /* ── Toggle switches ── */
   .toggle-row {
@@ -546,14 +546,14 @@
         <div class="settings-section">
           <div class="settings-section-label">Behaviour</div>
           <div class="toggle-row">
-            <span class="toggle-row-label">Audio only by default</span>
+            <span class="toggle-row-label">Audio only</span>
             <label class="toggle-switch">
               <input type="checkbox" id="defaultAudioOnly" checked>
               <span class="toggle-track"></span>
             </label>
           </div>
           <div class="toggle-row">
-            <span class="toggle-row-label">Auto-save when ready</span>
+            <span class="toggle-row-label">Auto-download</span>
             <label class="toggle-switch">
               <input type="checkbox" id="autoSave" checked>
               <span class="toggle-track"></span>
@@ -570,9 +570,9 @@
             <div>
               <div class="settings-field-label">Video quality</div>
               <select class="format-select" id="qualitySelect">
-                <option value="max">Best available</option>
+                <option value="max" selected>Best available</option>
                 <option value="2160">4K (2160p)</option>
-                <option value="1080" selected>1080p</option>
+                <option value="1080">1080p</option>
                 <option value="720">720p</option>
                 <option value="480">480p</option>
                 <option value="360">360p</option>
@@ -583,9 +583,9 @@
               <div class="settings-field-label">Audio format</div>
               <select class="format-select" id="audioFormatSelect">
                 <option value="mp3">MP3</option>
-                <option value="best" selected>Best</option>
+                <option value="best">Best</option>
                 <option value="ogg">OGG</option>
-                <option value="wav">WAV</option>
+                <option value="wav" selected>WAV</option>
                 <option value="opus">Opus</option>
               </select>
             </div>
@@ -728,10 +728,12 @@
 
       if (data.status === 'ok') {
         serverOnline = true;
+        // Strip "yt-dlp" prefix — show just the version number
+        const version = (data.yt_dlp || '').replace(/^yt-dlp\s*/i, '');
         const dlInfo = data.active_downloads > 0
           ? ` · ${data.active_downloads}/${data.max_concurrent} active`
           : '';
-        statusEl.innerHTML = `<span class="dot ok"></span><span>Online · yt-dlp ${data.yt_dlp || '?'}${dlInfo}</span>`;
+        statusEl.innerHTML = `<span class="dot ok"></span><span>Online${version ? ' · ' + version : ''}${dlInfo}</span>`;
         setGearDotState('ok');
       } else {
         serverOnline = true;
