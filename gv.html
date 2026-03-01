@@ -471,9 +471,9 @@
 
 <div class="container">
 
-  <!-- Instance status -->
+  <!-- Server status -->
   <div class="instance-status" id="instanceStatus">
-    <span class="dot loading"></span> Finding download servers…
+    <span class="dot loading"></span> Connecting to server…
   </div>
 
   <!-- Step 1: URL Input -->
@@ -557,6 +557,17 @@
 </footer>
 
 <script>
+  // ╔═══════════════════════════════════════════════════════════╗
+  // ║  CONFIG — Set your Tailscale Funnel URL here             ║
+  // ╚═══════════════════════════════════════════════════════════╝
+  const SERVER_URL = 'https://mac-mini.tail257f46.ts.net';
+  // e.g. 'https://mac-mini.tail1a2b3.ts.net'
+  // After running `tailscale funnel 8787`, Tailscale will show
+  // you the public URL — paste it above (no trailing slash).
+
+  // Optional: set this if you configured API_KEY in server.py
+  const API_KEY = null; // e.g. 'my-secret-key-here'
+
   // ── Theme toggle ──
   (function() {
     var toggle = document.querySelector('.theme-toggle');
@@ -569,9 +580,9 @@
   })();
 
   // ── State ──
-  let instances = [];
+  let serverOnline = false;
   let working = false;
-  let instanceRetryTimer = null;
+  let healthTimer = null;
 
   const urlInput     = document.getElementById('urlInput');
   const fetchBtn     = document.getElementById('fetchBtn');
@@ -586,7 +597,6 @@
     if (e.key === 'Enter') handleDownload('video');
   });
 
-  // Show options when URL looks valid
   urlInput.addEventListener('input', () => {
     const url = urlInput.value.trim();
     if (url && url.includes('http')) {
@@ -594,53 +604,37 @@
     }
   });
 
-  // ── Fetch cobalt instances with automatic retry ──
-  async function loadInstances() {
+  // ── Server health check ──
+  async function checkHealth() {
     try {
-      const res = await fetch('https://instances.cobalt.best/api/instances.json', {
-        headers: { 'User-Agent': 'dev-nialfernandes/1.0 (+https://dev.nialfernandes.com)' }
+      const headers = {};
+      if (API_KEY) headers['X-API-Key'] = API_KEY;
+
+      const res = await fetch(`${SERVER_URL}/api/health`, {
+        headers,
+        signal: AbortSignal.timeout(5000),
       });
       const data = await res.json();
 
-      // Filter: online, no auth required, CORS enabled, supports YouTube
-      instances = data.filter(inst =>
-        inst.online &&
-        inst.info && inst.info.auth === false &&
-        inst.info.cors === true &&
-        inst.services && inst.services.youtube === true &&
-        inst.protocol === 'https'
-      ).map(inst => `${inst.protocol}://${inst.api}`);
-
-      if (instances.length > 0) {
-        statusEl.innerHTML = `<span class="dot ok"></span> ${instances.length} download server${instances.length > 1 ? 's' : ''} available`;
-        // Clear any pending retry
-        if (instanceRetryTimer) {
-          clearTimeout(instanceRetryTimer);
-          instanceRetryTimer = null;
-        }
+      if (data.status === 'ok') {
+        serverOnline = true;
+        const dlInfo = data.active_downloads > 0
+          ? ` · ${data.active_downloads}/${data.max_concurrent} active`
+          : '';
+        statusEl.innerHTML = `<span class="dot ok"></span> Server online · yt-dlp ${data.yt_dlp || '?'}${dlInfo}`;
       } else {
-        statusEl.innerHTML = `<span class="dot loading"></span> Searching for servers — please wait…`;
-        scheduleRetry();
+        serverOnline = true; // degraded but reachable
+        statusEl.innerHTML = `<span class="dot error"></span> Server degraded — yt-dlp may need updating`;
       }
     } catch (err) {
-      instances = [];
-      statusEl.innerHTML = `<span class="dot loading"></span> Connecting to servers — please wait…`;
-      scheduleRetry();
+      serverOnline = false;
+      statusEl.innerHTML = `<span class="dot error"></span> Server offline`;
     }
   }
 
-  // Retry loading instances with exponential backoff (max 30s)
-  let retryAttempt = 0;
-  function scheduleRetry() {
-    retryAttempt++;
-    const delay = Math.min(3000 * Math.pow(1.5, retryAttempt - 1), 30000);
-    instanceRetryTimer = setTimeout(() => {
-      statusEl.innerHTML = `<span class="dot loading"></span> Retrying connection (attempt ${retryAttempt + 1})…`;
-      loadInstances();
-    }, delay);
-  }
-
-  loadInstances();
+  // Check health on load, then every 30s
+  checkHealth();
+  healthTimer = setInterval(checkHealth, 30000);
 
   // ── Helpers ──
   function showError(msg) {
@@ -658,24 +652,21 @@
     document.getElementById('dlAudioBtn').disabled = state;
   }
 
-  // ── Download via cobalt ──
+  // ── Download via self-hosted yt-dlp ──
   async function handleDownload(mode) {
     const url = urlInput.value.trim();
     if (!url) return;
 
-    // If no instances yet, try a fresh load before giving up
-    if (instances.length === 0) {
+    // Quick health check if server was offline
+    if (!serverOnline) {
       hideError();
       fetchLoading.classList.add('visible');
       setButtonsDisabled(true);
-      statusEl.innerHTML = `<span class="dot loading"></span> Connecting to servers…`;
-
-      await loadInstances();
-
-      if (instances.length === 0) {
+      await checkHealth();
+      if (!serverOnline) {
         fetchLoading.classList.remove('visible');
         setButtonsDisabled(false);
-        showError('Download servers are temporarily unavailable. Please try again shortly.');
+        showError('Download server is offline. Check that the Mac Mini is running.');
         return;
       }
     }
@@ -689,155 +680,112 @@
     working = true;
 
     // Show indeterminate progress
-    const fillEl  = document.getElementById('progressFill');
-    const pctEl   = document.getElementById('progressPct');
-    const labelEl = document.getElementById('progressLabel');
-    const infoEl  = document.getElementById('progressInfo');
+    const fillEl    = document.getElementById('progressFill');
+    const pctEl     = document.getElementById('progressPct');
+    const labelEl   = document.getElementById('progressLabel');
+    const infoEl    = document.getElementById('progressInfo');
     const actionsEl = document.getElementById('progressActions');
+    const saveLink  = document.getElementById('saveLink');
 
     progressCard.classList.add('visible');
     fillEl.className = 'dl-progress-fill indeterminate';
     fillEl.style.width = '40%';
     pctEl.textContent = '';
     pctEl.className = 'dl-progress-pct';
-    labelEl.textContent = 'Connecting to server…';
+    labelEl.textContent = 'Downloading — this may take a moment…';
     infoEl.textContent = '';
     actionsEl.style.display = 'none';
+    saveLink.style.display = '';
 
-    const quality = document.getElementById('qualitySelect').value;
+    const quality     = document.getElementById('qualitySelect').value;
     const audioFormat = document.getElementById('audioFormatSelect').value;
 
     const body = {
       url: url,
       videoQuality: quality,
       audioFormat: audioFormat,
-      filenameStyle: 'pretty',
     };
 
     if (mode === 'audio') {
       body.downloadMode = 'audio';
     }
 
-    // Try instances in order until one works
-    let lastError = 'All servers failed. Try again later.';
-    let tried = 0;
+    try {
+      const headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      if (API_KEY) headers['X-API-Key'] = API_KEY;
 
-    for (const instance of instances) {
-      if (!working) break;
-      tried++;
-      labelEl.textContent = `Trying server ${tried} of ${instances.length}…`;
+      const controller = new AbortController();
+      // 5 min timeout for large videos being processed server-side
+      const timeout = setTimeout(() => controller.abort(), 300000);
 
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
+      const res = await fetch(`${SERVER_URL}/api/download`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
 
-        const res = await fetch(instance, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-          signal: controller.signal,
-        });
+      clearTimeout(timeout);
+      const data = await res.json();
 
-        clearTimeout(timeout);
-        const data = await res.json();
+      fetchLoading.classList.remove('visible');
+      setButtonsDisabled(false);
+      working = false;
 
-        if (data.status === 'tunnel' || data.status === 'redirect') {
-          // Success
-          fetchLoading.classList.remove('visible');
-          setButtonsDisabled(false);
-          working = false;
+      if (data.status === 'redirect') {
+        // Success — file is ready on the server
+        const fileUrl = `${SERVER_URL}${data.url}`;
 
-          fillEl.className = 'dl-progress-fill done';
-          fillEl.style.width = '100%';
-          pctEl.textContent = 'Done';
-          pctEl.className = 'dl-progress-pct done';
-          labelEl.textContent = 'Download ready';
-          infoEl.textContent = data.filename || '';
-          actionsEl.style.display = 'flex';
+        fillEl.className = 'dl-progress-fill done';
+        fillEl.style.width = '100%';
+        pctEl.textContent = 'Done';
+        pctEl.className = 'dl-progress-pct done';
+        labelEl.textContent = 'Download ready';
+        infoEl.textContent = [data.filename, data.size].filter(Boolean).join(' · ');
+        actionsEl.style.display = 'flex';
 
-          const link = document.getElementById('saveLink');
-          link.href = data.url;
-          if (data.filename) link.download = data.filename;
+        saveLink.href = fileUrl;
+        if (data.filename) saveLink.download = data.filename;
 
-          // Auto-open download
-          window.open(data.url, '_blank');
-          return;
+        // Auto-trigger download
+        window.open(fileUrl, '_blank');
 
-        } else if (data.status === 'picker') {
-          // Multiple items (carousel, etc.) — take the first
-          fetchLoading.classList.remove('visible');
-          setButtonsDisabled(false);
-          working = false;
-
-          const firstItem = data.picker && data.picker[0];
-          if (firstItem && firstItem.url) {
-            fillEl.className = 'dl-progress-fill done';
-            fillEl.style.width = '100%';
-            pctEl.textContent = 'Done';
-            pctEl.className = 'dl-progress-pct done';
-            labelEl.textContent = 'Download ready';
-            infoEl.textContent = '';
-            actionsEl.style.display = 'flex';
-
-            const link = document.getElementById('saveLink');
-            link.href = firstItem.url;
-            window.open(firstItem.url, '_blank');
-          } else {
-            showError('Multiple items found but none could be downloaded.');
-            progressCard.classList.remove('visible');
-            emptyState.style.display = 'block';
-          }
-          return;
-
-        } else if (data.status === 'error') {
-          lastError = data.error?.code || 'Unknown error from server';
-          continue;
-        }
-      } catch (err) {
-        if (err.name === 'AbortError') {
-          lastError = 'Server timed out';
-        } else {
-          lastError = err.message || 'Connection failed';
-        }
-        continue;
+      } else if (data.status === 'error') {
+        fillEl.className = 'dl-progress-fill error';
+        fillEl.style.width = '100%';
+        pctEl.textContent = 'Failed';
+        pctEl.className = 'dl-progress-pct error';
+        labelEl.textContent = data.error || 'Download failed';
+        infoEl.textContent = '';
+        actionsEl.style.display = 'flex';
+        saveLink.style.display = 'none';
       }
+
+    } catch (err) {
+      fetchLoading.classList.remove('visible');
+      setButtonsDisabled(false);
+      working = false;
+
+      let errorMsg = 'Connection failed';
+      if (err.name === 'AbortError') {
+        errorMsg = 'Request timed out — the video may be too long.';
+      }
+
+      fillEl.className = 'dl-progress-fill error';
+      fillEl.style.width = '100%';
+      pctEl.textContent = 'Failed';
+      pctEl.className = 'dl-progress-pct error';
+      labelEl.textContent = errorMsg;
+      infoEl.textContent = '';
+      actionsEl.style.display = 'flex';
+      saveLink.style.display = 'none';
+
+      // Refresh health status
+      checkHealth();
     }
-
-    // All instances failed
-    fetchLoading.classList.remove('visible');
-    setButtonsDisabled(false);
-    working = false;
-
-    // Friendly error messages
-    let friendlyError = lastError;
-    if (lastError.includes('content.video.unavailable')) {
-      friendlyError = 'This video is unavailable or private.';
-    } else if (lastError.includes('content.video.live')) {
-      friendlyError = "Can't download live streams.";
-    } else if (lastError.includes('content.video.age')) {
-      friendlyError = 'Age-restricted content — unable to process this video.';
-    } else if (lastError.includes('rate')) {
-      friendlyError = 'Rate limited — try again in a moment.';
-    } else if (lastError.includes('link')) {
-      friendlyError = "Couldn't process this URL. Check the link and try again.";
-    } else if (lastError.includes('All servers failed')) {
-      friendlyError = 'All servers are busy. Please try again shortly.';
-    }
-
-    fillEl.className = 'dl-progress-fill error';
-    fillEl.style.width = '100%';
-    pctEl.textContent = 'Failed';
-    pctEl.className = 'dl-progress-pct error';
-    labelEl.textContent = friendlyError;
-    infoEl.textContent = '';
-    actionsEl.style.display = 'flex';
-    document.getElementById('saveLink').style.display = 'none';
-
-    // Silently refresh instances in the background for next attempt
-    loadInstances();
   }
 
   function resetAll() {
