@@ -39,6 +39,41 @@
     width: 100%;
   }
 
+  /* Instance status indicator */
+  .instance-status {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: right;
+    margin-bottom: 8px;
+    animation: fadeInUp 0.3s ease 0.05s both;
+  }
+
+  .instance-status a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .instance-status a:hover { text-decoration: underline; }
+
+  .instance-status .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+
+  .instance-status .dot.ok { background: var(--success); }
+  .instance-status .dot.loading { background: var(--fetching); animation: pulse 1.2s ease infinite; }
+  .instance-status .dot.error { background: var(--error); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
   /* Input area */
   .input-area {
     background: var(--surface);
@@ -95,6 +130,10 @@
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .btn-fetch {
@@ -118,85 +157,6 @@
     transform: none;
   }
 
-  /* Cookie section */
-  .cookie-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 12px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-muted);
-    cursor: pointer;
-    background: none;
-    border: none;
-    padding: 0;
-    transition: color 0.2s;
-  }
-
-  .cookie-toggle:hover { color: var(--accent); }
-
-  .cookie-toggle svg {
-    width: 14px;
-    height: 14px;
-    transition: transform 0.2s;
-  }
-
-  .cookie-toggle.open svg { transform: rotate(90deg); }
-
-  .cookie-section {
-    display: none;
-    margin-top: 12px;
-    padding: 14px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    animation: fadeInUp 0.2s ease;
-  }
-
-  .cookie-section.visible { display: block; }
-
-  .cookie-section p {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-muted);
-    margin: 0 0 10px;
-    line-height: 1.6;
-  }
-
-  .cookie-section a {
-    color: var(--accent);
-    text-decoration: none;
-  }
-
-  .cookie-section a:hover { text-decoration: underline; }
-
-  .cookie-drop-zone {
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    text-align: center;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-  }
-
-  .cookie-drop-zone:hover,
-  .cookie-drop-zone.dragover {
-    border-color: var(--accent);
-    background: var(--accent-light, rgba(222, 120, 80, 0.05));
-  }
-
-  .cookie-drop-zone.loaded {
-    border-color: var(--success);
-    color: var(--success);
-    border-style: solid;
-  }
-
-  .cookie-file-input { display: none; }
-
   /* Error message */
   .error-msg {
     font-family: var(--mono);
@@ -204,6 +164,7 @@
     color: var(--error);
     padding: 10px 0 0;
     display: none;
+    line-height: 1.5;
   }
 
   .error-msg.visible { display: block; }
@@ -228,73 +189,7 @@
     animation: indeterminate 1.8s ease-in-out infinite;
   }
 
-  /* Video info card */
-  .video-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    margin-bottom: 12px;
-    display: none;
-    animation: fadeInUp 0.4s ease;
-    transition: background 0.3s ease, border-color 0.3s ease;
-  }
-
-  .video-card.visible { display: block; }
-
-  .video-thumb-wrap {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: var(--bg);
-    overflow: hidden;
-  }
-
-  .video-thumb-wrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  .video-duration-badge {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    background: rgba(0,0,0,0.75);
-    color: #fff;
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 3px 8px;
-    border-radius: 4px;
-    letter-spacing: 0.5px;
-  }
-
-  .video-info-body {
-    padding: 18px 20px;
-  }
-
-  .video-title {
-    font-family: var(--serif);
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-primary);
-    line-height: 1.4;
-    margin-bottom: 6px;
-  }
-
-  .video-meta {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--text-muted);
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-
-  .video-meta span { white-space: nowrap; }
-
-  /* Format select area */
+  /* Format / options area */
   .format-area {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -318,13 +213,24 @@
     margin-bottom: 10px;
   }
 
-  .format-row {
-    display: flex;
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .option-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
   }
 
   .format-select {
-    flex: 1;
+    width: 100%;
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -358,9 +264,15 @@
     color: var(--text-secondary);
   }
 
+  .format-row {
+    display: flex;
+    gap: 10px;
+  }
+
   .btn-download {
     background: var(--success);
     color: #fff;
+    flex: 1;
   }
 
   .btn-download:hover {
@@ -379,7 +291,29 @@
     transform: none;
   }
 
-  /* Download progress card */
+  .btn-audio {
+    background: var(--fetching);
+    color: #fff;
+    flex: 1;
+  }
+
+  .btn-audio:hover {
+    background: #7a5aae;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px var(--fetching-glow);
+  }
+
+  .btn-audio:active { transform: translateY(0); }
+
+  .btn-audio:disabled {
+    background: var(--border);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* Result card (replaces progress card) */
   .dl-progress-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -388,71 +322,28 @@
     display: none;
     animation: fadeInUp 0.4s ease;
     transition: background 0.3s ease, border-color 0.3s ease;
+    text-align: center;
   }
 
   .dl-progress-card.visible { display: block; }
 
-  .dl-progress-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 14px;
+  .result-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
   }
 
-  .dl-progress-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-  }
-
-  .dl-progress-pct {
+  .result-msg {
     font-family: var(--mono);
     font-size: 13px;
-    font-weight: 500;
-    color: var(--fetching);
-  }
-
-  .dl-progress-pct.done { color: var(--success); }
-  .dl-progress-pct.error { color: var(--error); }
-
-  .dl-progress-track {
-    height: 4px;
-    background: var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 12px;
-  }
-
-  .dl-progress-fill {
-    height: 100%;
-    border-radius: 4px;
-    background: var(--fetching);
-    transition: width 0.4s ease, background 0.3s;
-    width: 0%;
-  }
-
-  .dl-progress-fill.done { background: var(--success); }
-  .dl-progress-fill.error { background: var(--error); }
-
-  .dl-progress-fill.indeterminate {
-    width: 40%;
-    animation: indeterminate 1.8s ease-in-out infinite;
-  }
-
-  .dl-progress-stats {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--text-muted);
-    display: flex;
-    gap: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    line-height: 1.5;
   }
 
   .dl-progress-actions {
-    margin-top: 16px;
     display: flex;
     gap: 10px;
+    justify-content: center;
   }
 
   .btn-save {
@@ -492,6 +383,13 @@
     line-height: 1.6;
   }
 
+  .empty-state a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .empty-state a:hover { text-decoration: underline; }
+
   /* Animations */
   @keyframes indeterminate {
     0% { transform: translateX(-100%); }
@@ -506,7 +404,7 @@
   @media (max-width: 600px) {
     .container { padding: 32px 16px 60px; }
     .input-row, .format-row { flex-direction: column; }
-    .video-meta { flex-direction: column; gap: 4px; }
+    .options-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -530,78 +428,61 @@
 
 <div class="container">
 
+  <!-- Instance status -->
+  <div class="instance-status" id="instanceStatus">
+    <span class="dot loading"></span> Finding download servers…
+  </div>
+
   <!-- Step 1: URL Input -->
   <div class="input-area" id="inputArea">
     <label for="urlInput">Video link</label>
     <div class="input-row">
       <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" spellcheck="false">
-      <button class="btn btn-fetch" id="fetchBtn" onclick="fetchInfo()">Fetch</button>
+      <button class="btn btn-fetch" id="fetchBtn" onclick="handleDownload('video')">Fetch</button>
     </div>
     <div class="loading-bar" id="fetchLoading"><div class="loading-bar-fill"></div></div>
     <div class="error-msg" id="fetchError"></div>
-
-    <!-- Cookie upload (collapsible) -->
-    <button class="cookie-toggle" id="cookieToggle" onclick="toggleCookies()">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="9 18 15 12 9 6"/>
-      </svg>
-      YouTube cookies (required)
-    </button>
-    <div class="cookie-section" id="cookieSection">
-      <p>
-        YouTube requires authentication from cloud servers. Export your cookies using
-        <a href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank" rel="noopener">Get cookies.txt LOCALLY</a>
-        (Chrome) or a similar extension. Visit youtube.com while signed in, export, then upload the file here.
-        Your cookies are sent with each request and never stored.
-      </p>
-      <div class="cookie-drop-zone" id="cookieDropZone" onclick="document.getElementById('cookieFileInput').click()">
-        Drop cookies.txt here or click to browse
-      </div>
-      <input type="file" class="cookie-file-input" id="cookieFileInput" accept=".txt">
-    </div>
   </div>
 
-  <!-- Step 2: Video Info -->
-  <div class="video-card" id="videoCard">
-    <div class="video-thumb-wrap">
-      <img id="videoThumb" src="" alt="Video thumbnail">
-      <span class="video-duration-badge" id="videoDuration"></span>
-    </div>
-    <div class="video-info-body">
-      <div class="video-title" id="videoTitle"></div>
-      <div class="video-meta">
-        <span id="videoUploader"></span>
-        <span id="videoViews"></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Step 3: Format Selection -->
+  <!-- Step 2: Download Options -->
   <div class="format-area" id="formatArea">
-    <label for="formatSelect">Select format</label>
+    <label>Download options</label>
+    <div class="options-grid">
+      <div>
+        <div class="option-label">Video quality</div>
+        <select class="format-select" id="qualitySelect">
+          <option value="max">Best available</option>
+          <option value="2160">4K (2160p)</option>
+          <option value="1080" selected>1080p</option>
+          <option value="720">720p</option>
+          <option value="480">480p</option>
+          <option value="360">360p</option>
+          <option value="144">144p</option>
+        </select>
+      </div>
+      <div>
+        <div class="option-label">Audio format</div>
+        <select class="format-select" id="audioFormatSelect">
+          <option value="mp3">MP3</option>
+          <option value="best" selected>Best</option>
+          <option value="ogg">OGG</option>
+          <option value="wav">WAV</option>
+          <option value="opus">Opus</option>
+        </select>
+      </div>
+    </div>
     <div class="format-row">
-      <select class="format-select" id="formatSelect"></select>
-      <button class="btn btn-download" id="downloadBtn" onclick="startDownload()">
-        ⬇ Download
-      </button>
+      <button class="btn btn-download" id="dlVideoBtn" onclick="handleDownload('video')">⬇ Download Video</button>
+      <button class="btn btn-audio" id="dlAudioBtn" onclick="handleDownload('audio')">♫ Audio Only</button>
     </div>
   </div>
 
-  <!-- Step 4: Download Progress -->
+  <!-- Step 3: Result -->
   <div class="dl-progress-card" id="progressCard">
-    <div class="dl-progress-header">
-      <span class="dl-progress-label" id="progressLabel">Downloading</span>
-      <span class="dl-progress-pct" id="progressPct">0%</span>
-    </div>
-    <div class="dl-progress-track">
-      <div class="dl-progress-fill" id="progressFill"></div>
-    </div>
-    <div class="dl-progress-stats">
-      <span id="progressSpeed"></span>
-      <span id="progressEta"></span>
-    </div>
-    <div class="dl-progress-actions" id="progressActions" style="display:none;">
-      <a class="btn btn-save" id="saveLink" href="#" download>Save File</a>
+    <div class="result-icon" id="resultIcon"></div>
+    <div class="result-msg" id="resultMsg"></div>
+    <div class="dl-progress-actions" id="progressActions">
+      <a class="btn btn-save" id="saveLink" href="#" target="_blank" rel="noopener" style="display:none;">Save File</a>
       <button class="btn btn-new" onclick="resetAll()">New Download</button>
     </div>
   </div>
@@ -613,7 +494,7 @@
       <polygon points="20,17 20,29 31,23" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/>
       <path d="M14 38h20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </svg>
-    <p>Paste a video link above to get started.</p>
+    <p>Paste a video link above to get started.<br>Supports YouTube, TikTok, Instagram, Twitter &amp; more.<br>Powered by <a href="https://cobalt.tools" target="_blank" rel="noopener">cobalt</a>.</p>
   </div>
 </div>
 
@@ -635,104 +516,62 @@
     });
   })();
 
-  // ── Configuration ──
-  const API_BASE = 'https://dl.nialfernandes.com';
-
   // ── State ──
-  let videoData = null;
-  let currentJobId = null;
-  let pollTimer = null;
-  let cookiesText = '';  // holds the raw cookies.txt content
+  let instances = [];
+  let working = false;
 
   const urlInput     = document.getElementById('urlInput');
   const fetchBtn     = document.getElementById('fetchBtn');
   const fetchLoading = document.getElementById('fetchLoading');
   const fetchError   = document.getElementById('fetchError');
-  const videoCard    = document.getElementById('videoCard');
   const formatArea   = document.getElementById('formatArea');
-  const formatSelect = document.getElementById('formatSelect');
-  const downloadBtn  = document.getElementById('downloadBtn');
   const progressCard = document.getElementById('progressCard');
   const emptyState   = document.getElementById('emptyState');
+  const statusEl     = document.getElementById('instanceStatus');
 
   urlInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') fetchInfo();
+    if (e.key === 'Enter') handleDownload('video');
   });
 
-  // ── Cookie handling ──
-  function toggleCookies() {
-    const section = document.getElementById('cookieSection');
-    const toggle = document.getElementById('cookieToggle');
-    const isOpen = section.classList.contains('visible');
-    section.classList.toggle('visible');
-    toggle.classList.toggle('open');
+  // Show options when URL is entered
+  urlInput.addEventListener('input', () => {
+    const url = urlInput.value.trim();
+    if (url && url.includes('http')) {
+      formatArea.classList.add('visible');
+    }
+  });
+
+  // ── Fetch cobalt instances ──
+  async function loadInstances() {
+    try {
+      const res = await fetch('https://instances.cobalt.best/api/instances.json', {
+        headers: { 'User-Agent': 'dev-nialfernandes/1.0 (+https://dev.nialfernandes.com)' }
+      });
+      const data = await res.json();
+
+      // Filter: online, no auth required, CORS enabled, supports YouTube
+      instances = data.filter(inst =>
+        inst.online &&
+        inst.info && inst.info.auth === false &&
+        inst.info.cors === true &&
+        inst.services && inst.services.youtube === true &&
+        inst.protocol === 'https'
+      ).map(inst => `${inst.protocol}://${inst.api}`);
+
+      if (instances.length > 0) {
+        statusEl.innerHTML = `<span class="dot ok"></span> ${instances.length} download server${instances.length > 1 ? 's' : ''} available`;
+      } else {
+        statusEl.innerHTML = `<span class="dot error"></span> No servers found — try <a href="https://cobalt.tools" target="_blank">cobalt.tools</a> directly`;
+      }
+    } catch (err) {
+      instances = [];
+      statusEl.innerHTML = `<span class="dot error"></span> Could not load servers — try <a href="https://cobalt.tools" target="_blank">cobalt.tools</a> directly`;
+    }
   }
 
-  // File input handler
-  document.getElementById('cookieFileInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) loadCookieFile(file);
-  });
-
-  // Drag and drop
-  const dropZone = document.getElementById('cookieDropZone');
-  dropZone.addEventListener('dragover', function(e) {
-    e.preventDefault();
-    dropZone.classList.add('dragover');
-  });
-  dropZone.addEventListener('dragleave', function() {
-    dropZone.classList.remove('dragover');
-  });
-  dropZone.addEventListener('drop', function(e) {
-    e.preventDefault();
-    dropZone.classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
-    if (file) loadCookieFile(file);
-  });
-
-  function loadCookieFile(file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      cookiesText = e.target.result;
-      dropZone.classList.add('loaded');
-      dropZone.textContent = '✓ ' + file.name + ' loaded';
-    };
-    reader.readAsText(file);
-  }
+  loadInstances();
 
   // ── Helpers ──
-  function formatDuration(sec) {
-    if (!sec) return '';
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = sec % 60;
-    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    return `${m}:${String(s).padStart(2,'0')}`;
-  }
-
-  function formatViews(n) {
-    if (!n) return '';
-    if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B views';
-    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M views';
-    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K views';
-    return n.toLocaleString('en-AU') + ' views';
-  }
-
-  function formatBytes(b) {
-    if (!b) return '';
-    if (b >= 1e9) return (b / 1e9).toFixed(1) + ' GB';
-    if (b >= 1e6) return (b / 1e6).toFixed(1) + ' MB';
-    if (b >= 1e3) return (b / 1e3).toFixed(1) + ' KB';
-    return b + ' B';
-  }
-
-  function formatSpeed(bps) {
-    if (!bps) return '';
-    if (bps >= 1e6) return (bps / 1e6).toFixed(1) + ' MB/s';
-    if (bps >= 1e3) return (bps / 1e3).toFixed(1) + ' KB/s';
-    return Math.round(bps) + ' B/s';
-  }
-
   function showError(msg) {
     fetchError.textContent = msg;
     fetchError.classList.add('visible');
@@ -742,222 +581,149 @@
     fetchError.classList.remove('visible');
   }
 
-  // ── Fetch video info ──
-  async function fetchInfo() {
+  function setButtonsDisabled(state) {
+    fetchBtn.disabled = state;
+    document.getElementById('dlVideoBtn').disabled = state;
+    document.getElementById('dlAudioBtn').disabled = state;
+  }
+
+  // ── Download via cobalt ──
+  async function handleDownload(mode) {
     const url = urlInput.value.trim();
     if (!url) return;
+    if (instances.length === 0) {
+      showError('No cobalt servers available. Try cobalt.tools directly.');
+      return;
+    }
 
     hideError();
-    videoCard.classList.remove('visible');
-    formatArea.classList.remove('visible');
     progressCard.classList.remove('visible');
     emptyState.style.display = 'none';
-    fetchLoading.classList.add('visible');
-    fetchBtn.disabled = true;
-
-    try {
-      const res = await fetch(`${API_BASE}/api/info`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, cookies: cookiesText }),
-      });
-      const data = await res.json();
-
-      if (!res.ok || data.error) {
-        showError(data.error || 'Failed to fetch video info.');
-        emptyState.style.display = 'block';
-        return;
-      }
-
-      videoData = data;
-      renderVideoInfo(data);
-      renderFormats(data.formats);
-
-    } catch (err) {
-      showError('Network error — is the server running?');
-      emptyState.style.display = 'block';
-    } finally {
-      fetchLoading.classList.remove('visible');
-      fetchBtn.disabled = false;
-    }
-  }
-
-  function renderVideoInfo(data) {
-    document.getElementById('videoThumb').src = data.thumbnail || '';
-    document.getElementById('videoDuration').textContent = formatDuration(data.duration);
-    document.getElementById('videoTitle').textContent = data.title || 'Untitled';
-    document.getElementById('videoUploader').textContent = data.uploader || '';
-    document.getElementById('videoViews').textContent = formatViews(data.view_count);
-    videoCard.classList.add('visible');
-  }
-
-  function renderFormats(formats) {
-    formatSelect.innerHTML = '';
-
-    const presets = formats.filter(f => f.format_id.startsWith('__'));
-    const videoAudio = formats.filter(f => !f.format_id.startsWith('__') && f.has_video && f.has_audio);
-    const videoOnly  = formats.filter(f => !f.format_id.startsWith('__') && f.has_video && !f.has_audio);
-    const audioOnly  = formats.filter(f => !f.format_id.startsWith('__') && !f.has_video && f.has_audio);
-
-    function addGroup(label, items) {
-      if (items.length === 0) return;
-      const grp = document.createElement('optgroup');
-      grp.label = label;
-      items.forEach(f => {
-        const opt = document.createElement('option');
-        opt.value = f.format_id;
-        let text = f.label;
-        if (f.filesize) text += ` (${formatBytes(f.filesize)})`;
-        text += ` [.${f.ext}]`;
-        opt.textContent = text;
-        grp.appendChild(opt);
-      });
-      formatSelect.appendChild(grp);
-    }
-
-    addGroup('Recommended', presets);
-    addGroup('Video + Audio', videoAudio);
-    addGroup('Video Only', videoOnly);
-    addGroup('Audio Only', audioOnly);
-
     formatArea.classList.add('visible');
-  }
+    fetchLoading.classList.add('visible');
+    setButtonsDisabled(true);
+    working = true;
 
-  // ── Start download ──
-  async function startDownload() {
-    if (!videoData) return;
+    const quality = document.getElementById('qualitySelect').value;
+    const audioFormat = document.getElementById('audioFormatSelect').value;
 
-    const formatId = formatSelect.value;
-    downloadBtn.disabled = true;
+    const body = {
+      url: url,
+      videoQuality: quality,
+      audioFormat: audioFormat,
+      filenameStyle: 'pretty',
+    };
 
-    progressCard.classList.add('visible');
-    const fillEl = document.getElementById('progressFill');
-    const pctEl  = document.getElementById('progressPct');
-    const labelEl = document.getElementById('progressLabel');
-    const speedEl = document.getElementById('progressSpeed');
-    const etaEl   = document.getElementById('progressEta');
-    const actionsEl = document.getElementById('progressActions');
-
-    fillEl.className = 'dl-progress-fill indeterminate';
-    fillEl.style.width = '40%';
-    pctEl.textContent = 'Starting…';
-    pctEl.className = 'dl-progress-pct';
-    labelEl.textContent = 'Downloading';
-    speedEl.textContent = '';
-    etaEl.textContent = '';
-    actionsEl.style.display = 'none';
-
-    try {
-      const res = await fetch(`${API_BASE}/api/download`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: videoData.url,
-          format_id: formatId,
-          title: videoData.title,
-          cookies: cookiesText,
-        }),
-      });
-      const data = await res.json();
-
-      if (!res.ok || data.error) {
-        fillEl.className = 'dl-progress-fill error';
-        fillEl.style.width = '100%';
-        pctEl.textContent = 'Error';
-        pctEl.className = 'dl-progress-pct error';
-        labelEl.textContent = data.error || 'Download failed';
-        actionsEl.style.display = 'flex';
-        document.getElementById('saveLink').style.display = 'none';
-        downloadBtn.disabled = false;
-        return;
-      }
-
-      currentJobId = data.job_id;
-      pollProgress();
-
-    } catch (err) {
-      fillEl.className = 'dl-progress-fill error';
-      fillEl.style.width = '100%';
-      pctEl.textContent = 'Error';
-      pctEl.className = 'dl-progress-pct error';
-      labelEl.textContent = 'Network error';
-      downloadBtn.disabled = false;
+    if (mode === 'audio') {
+      body.downloadMode = 'audio';
     }
-  }
 
-  function pollProgress() {
-    if (!currentJobId) return;
+    // Try instances in order until one works
+    let lastError = 'All servers failed. Try again later.';
 
-    pollTimer = setInterval(async () => {
+    for (const instance of instances) {
+      if (!working) break;
+
       try {
-        const res = await fetch(`${API_BASE}/api/status/${currentJobId}`);
-        const job = await res.json();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
 
-        const fillEl = document.getElementById('progressFill');
-        const pctEl  = document.getElementById('progressPct');
-        const labelEl = document.getElementById('progressLabel');
-        const speedEl = document.getElementById('progressSpeed');
-        const etaEl   = document.getElementById('progressEta');
-        const actionsEl = document.getElementById('progressActions');
+        const res = await fetch(instance, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
 
-        if (job.status === 'downloading') {
-          fillEl.className = 'dl-progress-fill';
-          fillEl.style.width = Math.max(job.progress || 0, 2) + '%';
-          pctEl.textContent = (job.progress || 0).toFixed(1) + '%';
-          speedEl.textContent = job.speed ? formatSpeed(job.speed) : '';
-          etaEl.textContent = job.eta ? `${job.eta}s remaining` : '';
-        } else if (job.status === 'processing') {
-          fillEl.className = 'dl-progress-fill';
-          fillEl.style.width = '100%';
-          pctEl.textContent = 'Processing…';
-          labelEl.textContent = 'Merging / converting';
-          speedEl.textContent = '';
-          etaEl.textContent = '';
-        } else if (job.status === 'complete') {
-          clearInterval(pollTimer);
-          fillEl.className = 'dl-progress-fill done';
-          fillEl.style.width = '100%';
-          pctEl.textContent = 'Done';
-          pctEl.className = 'dl-progress-pct done';
-          labelEl.textContent = 'Download complete';
-          speedEl.textContent = '';
-          etaEl.textContent = '';
-          actionsEl.style.display = 'flex';
-          const saveLink = document.getElementById('saveLink');
-          saveLink.style.display = '';
-          saveLink.href = `${API_BASE}/api/file/${currentJobId}`;
-          downloadBtn.disabled = false;
-        } else if (job.status === 'error') {
-          clearInterval(pollTimer);
-          fillEl.className = 'dl-progress-fill error';
-          fillEl.style.width = '100%';
-          pctEl.textContent = 'Failed';
-          pctEl.className = 'dl-progress-pct error';
-          labelEl.textContent = job.error || 'Download failed';
-          speedEl.textContent = '';
-          etaEl.textContent = '';
-          actionsEl.style.display = 'flex';
-          document.getElementById('saveLink').style.display = 'none';
-          downloadBtn.disabled = false;
+        clearTimeout(timeout);
+        const data = await res.json();
+
+        if (data.status === 'tunnel' || data.status === 'redirect') {
+          fetchLoading.classList.remove('visible');
+          setButtonsDisabled(false);
+          working = false;
+
+          progressCard.classList.add('visible');
+          document.getElementById('resultIcon').textContent = '✓';
+          document.getElementById('resultMsg').textContent = data.filename
+            ? `Ready: ${data.filename}`
+            : 'Your download is ready.';
+
+          const link = document.getElementById('saveLink');
+          link.href = data.url;
+          link.style.display = '';
+          if (data.filename) link.download = data.filename;
+
+          // Auto-start download
+          window.open(data.url, '_blank');
+          return;
+
+        } else if (data.status === 'picker') {
+          fetchLoading.classList.remove('visible');
+          setButtonsDisabled(false);
+          working = false;
+
+          const firstItem = data.picker && data.picker[0];
+          if (firstItem && firstItem.url) {
+            progressCard.classList.add('visible');
+            document.getElementById('resultIcon').textContent = '✓';
+            document.getElementById('resultMsg').textContent = 'Your download is ready.';
+            const link = document.getElementById('saveLink');
+            link.href = firstItem.url;
+            link.style.display = '';
+            window.open(firstItem.url, '_blank');
+          } else {
+            showError('Multiple items found but none could be downloaded.');
+          }
+          return;
+
+        } else if (data.status === 'error') {
+          lastError = data.error?.code || 'Unknown error from server';
+          continue;
         }
-      } catch {}
-    }, 800);
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          lastError = 'Server timed out';
+        } else {
+          lastError = err.message || 'Connection failed';
+        }
+        continue;
+      }
+    }
+
+    // All instances failed
+    fetchLoading.classList.remove('visible');
+    setButtonsDisabled(false);
+    working = false;
+
+    let friendlyError = lastError;
+    if (lastError.includes('content.video.unavailable')) {
+      friendlyError = 'This video is unavailable or private.';
+    } else if (lastError.includes('content.video.live')) {
+      friendlyError = "Can't download live streams.";
+    } else if (lastError.includes('content.video.age')) {
+      friendlyError = 'Age-restricted content — server needs authentication.';
+    } else if (lastError.includes('rate')) {
+      friendlyError = 'Rate limited — try again in a moment.';
+    } else if (lastError.includes('link')) {
+      friendlyError = "Couldn't process this URL. Check the link and try again.";
+    }
+
+    showError(friendlyError);
+    emptyState.style.display = 'block';
   }
 
   function resetAll() {
-    if (pollTimer) clearInterval(pollTimer);
-    currentJobId = null;
-    videoData = null;
+    working = false;
     urlInput.value = '';
-
-    videoCard.classList.remove('visible');
     formatArea.classList.remove('visible');
     progressCard.classList.remove('visible');
     emptyState.style.display = 'block';
-    downloadBtn.disabled = false;
-    fetchBtn.disabled = false;
+    setButtonsDisabled(false);
     hideError();
-
     urlInput.focus();
   }
 </script>
