@@ -22,10 +22,12 @@
  */
 
 const AUTHORISED_HASHES = [
-
-    "77b2764121f8c7b8070ec081191e7ca3e9e30f7d7bad68a7896703a48464325d", // demo (remove this once you've added real users)
     
     // Paste new user hashes below this line:
+    "77b2764121f8c7b8070ec081191e7ca3e9e30f7d7bad68a7896703a48464325d", // nialfernandes
+
+    
+    // Paste new user hashes above this line:
 
 ];
 
