@@ -331,7 +331,7 @@
   .waveform-container {
     padding: 16px 20px 8px; cursor: crosshair; position: relative;
   }
-  #waveform { width: 100%; min-height: 100px; }
+  #waveform { width: 100%; min-height: 50px; }
 
   /* Cut region overlays on the waveform */
   .segment-overlay {
@@ -1422,7 +1422,7 @@
       cursorColor: s.getPropertyValue('--waveform-cursor').trim(),
       cursorWidth: 1,
       barWidth: 2, barGap: 1, barRadius: 2,
-      height: 100, normalize: true
+      height: 50, normalize: true
     });
 
     wavesurfer.load(blobUrl);
