@@ -994,7 +994,7 @@
 
         const sizeInfo = data.size ? ' · ' + data.size : '';
         const downloadAttr = data.filename ? 'download="' + data.filename.replace(/"/g, '&quot;') + '"' : '';
-        const linkHtml = `✓ ${displayName}${sizeInfo} — Downloaded <a href="${fileUrl}" target="_blank" rel="noopener" ${downloadAttr} style="margin-left:8px;font-size:11px;opacity:0.7;">Download again</a>`;
+        const linkHtml = `${displayName}${sizeInfo} — Downloaded <a href="${fileUrl}" target="_blank" rel="noopener" ${downloadAttr} style="margin-left:8px;font-size:11px;opacity:0.7;">Download again</a>`;
 
         setStatus('done', linkHtml, true, true, 'done');
 
