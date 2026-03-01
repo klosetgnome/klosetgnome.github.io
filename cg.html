@@ -19,15 +19,7 @@
 <link rel="stylesheet" href="astyle.css">
 <style>
   /* ── Page-specific: Content Grabber ── */
-  :root {
-    --fetching: #8b6abf;
-    --fetching-glow: rgba(139, 106, 191, 0.12);
-  }
-
-  [data-theme="dark"] {
-    --fetching: #a688d4;
-    --fetching-glow: rgba(166, 136, 212, 0.15);
-  }
+  /* status colours use --accent from astyle.css */
 
   .container {
     position: relative;
@@ -180,7 +172,7 @@
   }
 
   .server-status .dot.ok { background: var(--success); }
-  .server-status .dot.loading { background: var(--fetching); animation: pulse 1.2s ease infinite; }
+  .server-status .dot.loading { background: var(--accent); animation: pulse 1.2s ease infinite; }
   .server-status .dot.error { background: var(--error); }
 
   @keyframes pulse {
@@ -201,7 +193,7 @@
     transition: background 0.3s, opacity 0.3s;
   }
   .gear-dot.ok { background: var(--success); opacity: 0; }
-  .gear-dot.loading { background: var(--fetching); opacity: 1; animation: pulse 1.2s ease infinite; }
+  .gear-dot.loading { background: var(--accent); opacity: 1; animation: pulse 1.2s ease infinite; }
   .gear-dot.error { background: var(--error); opacity: 1; }
 
   /* ── Toggle switches ── */
@@ -379,7 +371,7 @@
   }
 
   .status-bar .status-dot.working {
-    background: var(--fetching);
+    background: var(--accent);
     animation: pulse 1.2s ease infinite;
   }
 
@@ -437,8 +429,8 @@
   .status-track-fill {
     height: 100%;
     border-radius: 3px;
-    width: 40%;
-    background: var(--fetching);
+    width: 100%;
+    background: var(--accent);
     animation: indeterminate 1.8s ease-in-out infinite;
   }
 
@@ -490,8 +482,9 @@
 
   /* Animations */
   @keyframes indeterminate {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(350%); }
+    0%   { transform: translateX(-100%) scaleX(0.4); }
+    50%  { transform: translateX(60%)   scaleX(0.6); }
+    100% { transform: translateX(200%)  scaleX(0.4); }
   }
 
   @keyframes spin {
@@ -570,7 +563,7 @@
             <div>
               <div class="settings-field-label">Video quality</div>
               <select class="format-select" id="qualitySelect">
-                <option value="max" selected>Best</option>
+                <option value="max" selected>Best available</option>
                 <option value="2160">4K (2160p)</option>
                 <option value="1080">1080p</option>
                 <option value="720">720p</option>
@@ -621,7 +614,7 @@
     <!-- Inline status bar — appears inside the input card -->
     <div class="status-bar" id="statusBar">
       <span class="status-dot working" id="statusDot"></span>
-      <span class="status-text" id="statusText">Retrieving content from server…</span>
+      <span class="status-text" id="statusText">Processing content on server…</span>
       <button class="status-action" id="statusAction" onclick="resetAll()" style="display:none;">Clear</button>
     </div>
     <div class="status-track" id="statusTrack">
@@ -786,9 +779,9 @@
 
   // ── Messages that cycle while downloading ──
   const progressMessages = [
-    'Retrieving…',
-    'Processing…',
-    'Preparing for download…',
+    'Processing content on server…',
+    'Fetching source data…',
+    'Preparing content for download…',
     'Almost there — packaging file…',
   ];
   let msgIndex = 0;
