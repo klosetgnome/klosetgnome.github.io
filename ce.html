@@ -891,6 +891,7 @@
   let serverFilePath = null;  // server-side file reference for export
   let localFile = null;       // local File object for upload-on-export
   let mediaBlobUrl = null;
+  let proxyBlobUrl = null;
   let previewMode = false;
   let previewSegIdx = 0;
   let animFrameId = null;
@@ -1186,6 +1187,8 @@
                 setImportProgress(null, 'Extracting audio…');
               } else if (event.stage === 'processing') {
                 setImportProgress(null, 'Processing…');
+              } else if (event.stage === 'generating_proxy') {
+                setImportProgress(null, 'Generating edit proxy…');
               }
             } else if (event.type === 'complete') {
               completed = event;
@@ -1204,14 +1207,19 @@
         return;
       }
 
-      // Phase 2: Fetch the file into the browser with progress
-      const fileUrl = `${SERVER_URL}${completed.url}`;
-      serverFilePath = completed.url;
+      // Phase 2: Fetch the proxy (or full-res fallback) into the browser
+      serverFilePath = completed.url;  // Full-res reference for export
 
-      setImportProgress(0, 'Loading into editor… 0%');
+      const useProxy = !!completed.proxyUrl;
+      const fetchUrl = useProxy
+        ? `${SERVER_URL}${completed.proxyUrl}`
+        : `${SERVER_URL}${completed.url}`;
+      const fetchLabel = useProxy ? 'Loading proxy into editor' : 'Loading into editor';
 
-      const mediaRes = await fetch(fileUrl);
-      const contentLength = parseInt(mediaRes.headers.get('Content-Length'), 10) || completed.bytes || 0;
+      setImportProgress(0, fetchLabel + '… 0%');
+
+      const mediaRes = await fetch(fetchUrl);
+      const contentLength = parseInt(mediaRes.headers.get('Content-Length'), 10) || (useProxy ? 0 : completed.bytes) || 0;
 
       let blob;
       if (contentLength && mediaRes.body) {
@@ -1225,20 +1233,24 @@
           chunks.push(value);
           received += value.length;
           const pct = Math.round((received / contentLength) * 100);
-          setImportProgress(pct, 'Loading into editor… ' + pct + '%');
+          setImportProgress(pct, fetchLabel + '… ' + pct + '%');
         }
 
         blob = new Blob(chunks);
       } else {
-        setImportProgress(null, 'Loading into editor…');
+        setImportProgress(null, fetchLabel + '…');
         blob = await mediaRes.blob();
       }
 
       const blobUrl = URL.createObjectURL(blob);
-      const isVid = blob.type.startsWith('video/') ||
-        /\.(mp4|mov|mkv|webm)/.test(completed.filename || '');
+      const isVid = completed.isVideo !== undefined
+        ? completed.isVideo
+        : (blob.type.startsWith('video/') || /\.(mp4|mov|mkv|webm)/.test(completed.filename || ''));
 
-      setImportStatus('done', 'Ready — ' + (completed.filename || 'file loaded'), false, '');
+      const sizeLabel = useProxy
+        ? 'Proxy ready — ' + (completed.proxySize || 'loaded') + ' (full-res: ' + (completed.size || '?') + ')'
+        : 'Ready — ' + (completed.filename || 'file loaded');
+      setImportStatus('done', sizeLabel, false, '');
       setTimeout(hideImportStatus, 3000);
 
       loadMediaIntoEditor(blobUrl, completed.filename || 'downloaded', blob.size, isVid);
@@ -1279,15 +1291,98 @@
     this.value = '';
   });
 
-  function handleLocalFile(file) {
+  async function handleLocalFile(file) {
     if (!isMediaFile(file)) {
       showToast('Unsupported file type');
       return;
     }
-    localFile = file;
-    serverFilePath = null;
-    const blobUrl = URL.createObjectURL(file);
-    loadMediaIntoEditor(blobUrl, file.name, file.size, isVideoFile(file));
+
+    // If server is online, upload for proxy generation
+    if (!serverOnline) {
+      await checkHealth();
+    }
+
+    if (serverOnline) {
+      // Upload to /api/proxy — server keeps original, returns lightweight proxy
+      localFile = null;   // Server has the file now
+      serverFilePath = null;
+
+      setImportProgress(null, 'Uploading to server…');
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const headers = {};
+        if (API_KEY) headers['X-API-Key'] = API_KEY;
+
+        const res = await fetch(`${SERVER_URL}/api/proxy`, {
+          method: 'POST',
+          headers,
+          body: formData,
+          signal: AbortSignal.timeout(600000)
+        });
+
+        const data = await res.json();
+
+        if (data.status !== 'ok') {
+          setImportStatus('error', data.error || 'Proxy generation failed', true, 'error');
+          return;
+        }
+
+        // Server has the original — store reference for export
+        serverFilePath = data.originalUrl;
+
+        // Fetch the proxy into browser
+        setImportProgress(0, 'Loading proxy into editor… 0%');
+
+        const proxyRes = await fetch(`${SERVER_URL}${data.proxyUrl}`);
+        const contentLength = data.proxyBytes || parseInt(proxyRes.headers.get('Content-Length'), 10) || 0;
+
+        let blob;
+        if (contentLength && proxyRes.body) {
+          const reader = proxyRes.body.getReader();
+          const chunks = [];
+          let received = 0;
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+            received += value.length;
+            const pct = Math.round((received / contentLength) * 100);
+            setImportProgress(pct, 'Loading proxy into editor… ' + pct + '%');
+          }
+
+          blob = new Blob(chunks);
+        } else {
+          setImportProgress(null, 'Loading proxy into editor…');
+          blob = await proxyRes.blob();
+        }
+
+        const blobUrl = URL.createObjectURL(blob);
+        const isVid = data.isVideo !== undefined ? data.isVideo : isVideoFile(file);
+
+        setImportStatus('done', 'Proxy ready — ' + (data.proxySize || '') + ' (full-res: ' + (data.originalSize || '?') + ')', false, '');
+        setTimeout(hideImportStatus, 3000);
+
+        loadMediaIntoEditor(blobUrl, data.originalFilename || file.name, data.originalBytes || file.size, isVid);
+
+      } catch (err) {
+        let msg = 'Proxy generation failed';
+        if (err.name === 'AbortError') msg = 'Upload timed out';
+        setImportStatus('error', msg, true, 'error');
+        checkHealth();
+      }
+
+    } else {
+      // Fallback: server offline — load directly (export won't work)
+      localFile = file;
+      serverFilePath = null;
+      const blobUrl = URL.createObjectURL(file);
+      showToast('Server offline — editing locally (export unavailable)');
+      loadMediaIntoEditor(blobUrl, file.name, file.size, isVideoFile(file));
+    }
   }
 
   // ╔═══════════════════════════════════════════════════════════╗
@@ -1751,9 +1846,33 @@
       if (data.status === 'redirect' || data.url) {
         const fileUrl = `${SERVER_URL}${data.url}`;
         const name = data.filename || 'edited_output';
-        exportStatus.innerHTML = `<span class="dot" style="background:var(--success);width:7px;height:7px;border-radius:50%;"></span> Exported: ${escapeHtml(name)}`;
-        window.open(fileUrl, '_blank');
+
+        // Start 3-second countdown then auto-download
+        let countdown = 3;
+        const updateStatus = (n) => {
+          exportStatus.innerHTML = `<span class="dot" style="background:var(--success);width:7px;height:7px;border-radius:50%;"></span> Exported: ${escapeHtml(name)} — downloading in ${n}s…`;
+        };
+        updateStatus(countdown);
         showToast('Export complete');
+
+        const timer = setInterval(() => {
+          countdown--;
+          if (countdown <= 0) {
+            clearInterval(timer);
+            exportStatus.innerHTML = `<span class="dot" style="background:var(--success);width:7px;height:7px;border-radius:50%;"></span> Downloaded: ${escapeHtml(name)}`;
+
+            // Trigger browser download via hidden link
+            const a = document.createElement('a');
+            a.href = fileUrl;
+            a.download = name;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => document.body.removeChild(a), 100);
+          } else {
+            updateStatus(countdown);
+          }
+        }, 1000);
       } else {
         exportStatus.innerHTML = `<span class="dot" style="background:var(--error);width:7px;height:7px;border-radius:50%;"></span> ${escapeHtml(data.error || 'Export failed')}`;
       }
@@ -1787,6 +1906,7 @@
     previewMode = false;
     stopPlaybackLoop();
     if (mediaBlobUrl) { URL.revokeObjectURL(mediaBlobUrl); mediaBlobUrl = null; }
+    if (proxyBlobUrl) { URL.revokeObjectURL(proxyBlobUrl); proxyBlobUrl = null; }
 
     editorCard.classList.remove('visible');
     videoPreview.classList.remove('visible');
