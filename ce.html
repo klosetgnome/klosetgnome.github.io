@@ -23,10 +23,6 @@
     --success: #4a8c3f;
     --success-light: rgba(74, 140, 63, 0.08);
     --success-border: rgba(74, 140, 63, 0.35);
-    --waveform-wave: #d9d4cb;
-    --waveform-progress: #c0512d;
-    --waveform-cursor: #2c2a26;
-    --loading-overlay: rgba(255, 255, 255, 0.92);
     --cut-overlay: rgba(44, 42, 38, 0.45);
     --segment-highlight: rgba(192, 81, 45, 0.12);
   }
@@ -34,10 +30,6 @@
   [data-theme="dark"] {
     --success-light: rgba(94, 168, 82, 0.08);
     --success-border: rgba(94, 168, 82, 0.35);
-    --waveform-wave: #564f47;
-    --waveform-progress: #d4774a;
-    --waveform-cursor: #e7e0d8;
-    --loading-overlay: rgba(28, 25, 23, 0.92);
     --cut-overlay: rgba(0, 0, 0, 0.55);
     --segment-highlight: rgba(212, 119, 74, 0.12);
   }
@@ -327,11 +319,9 @@
     display: block; width: 100%; max-height: 220px; object-fit: contain;
   }
 
-  .waveform-area { position: relative; }
-  .waveform-container {
-    padding: 16px 20px 8px; cursor: crosshair; position: relative;
-  }
-  #waveform { width: 100%; min-height: 50px; }
+  /* ── Page-specific waveform overrides ── */
+  .waveform-container { position: relative; }
+  .transport { border-bottom: 1px solid var(--border); }
 
   /* Cut region overlays on the waveform */
   .segment-overlay {
@@ -359,63 +349,6 @@
     content: '✂'; position: absolute; top: -2px; left: 50%;
     transform: translateX(-50%); font-size: 12px; color: var(--accent);
   }
-
-  .waveform-loading {
-    position: absolute; inset: 0; z-index: 5;
-    background: var(--loading-overlay);
-    display: none; flex-direction: column; align-items: center; justify-content: center;
-    gap: 14px; border-radius: var(--radius); transition: background 0.3s ease;
-  }
-  .waveform-loading.visible { display: flex; }
-  .waveform-loading-label {
-    font-family: var(--mono); font-size: 11px; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--text-secondary);
-  }
-  .waveform-loading-track {
-    width: 200px; height: 3px; background: var(--border);
-    border-radius: 3px; overflow: hidden;
-  }
-  .waveform-loading-bar {
-    height: 100%; width: 100%; background: var(--accent);
-    animation: indeterminate 1.8s ease-in-out infinite;
-  }
-
-  .transport {
-    display: flex; align-items: center; gap: 10px; padding: 8px 20px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .transport-btn {
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: var(--radius); width: 36px; height: 36px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; color: var(--text-primary); transition: all 0.2s;
-    flex-shrink: 0;
-  }
-  .transport-btn:hover {
-    border-color: var(--accent); color: var(--accent); background: var(--accent-light);
-  }
-  .transport-btn.active {
-    background: var(--accent); color: #fff; border-color: var(--accent);
-  }
-  .transport-btn svg { width: 16px; height: 16px; }
-  .transport-time {
-    font-family: var(--mono); font-size: 14px; font-weight: 500;
-    color: var(--text-primary); letter-spacing: 1px; min-width: 80px;
-  }
-  .transport-duration {
-    font-family: var(--mono); font-size: 12px; color: var(--text-muted);
-  }
-  .transport-spacer { flex: 1; }
-
-  .speed-badge {
-    font-family: var(--mono); font-size: 11px; font-weight: 500;
-    letter-spacing: 0.5px; color: var(--text-secondary);
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 4px 10px; cursor: pointer;
-    transition: all 0.2s; user-select: none; white-space: nowrap; flex-shrink: 0;
-  }
-  .speed-badge:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
-  .speed-badge.modified { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
 
   /* ── Edit Toolbar ── */
   .edit-toolbar {
@@ -586,11 +519,6 @@
   @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.3; }
-  }
-  @keyframes indeterminate {
-    0%   { transform: translateX(-100%) scaleX(0.4); }
-    50%  { transform: translateX(60%)   scaleX(0.6); }
-    100% { transform: translateX(200%)  scaleX(0.4); }
   }
 
   /* ── Responsive ── */
@@ -1157,7 +1085,6 @@
         return;
       }
 
-      // Read SSE stream for download progress
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -1207,8 +1134,7 @@
         return;
       }
 
-      // Phase 2: Fetch the proxy (or full-res fallback) into the browser
-      serverFilePath = completed.url;  // Full-res reference for export
+      serverFilePath = completed.url;
 
       const useProxy = !!completed.proxyUrl;
       const fetchUrl = useProxy
@@ -1297,14 +1223,12 @@
       return;
     }
 
-    // If server is online, upload for proxy generation
     if (!serverOnline) {
       await checkHealth();
     }
 
     if (serverOnline) {
-      // Upload to /api/proxy — server keeps original, returns lightweight proxy
-      localFile = null;   // Server has the file now
+      localFile = null;
       serverFilePath = null;
 
       setImportProgress(null, 'Uploading to server…');
@@ -1330,10 +1254,8 @@
           return;
         }
 
-        // Server has the original — store reference for export
         serverFilePath = data.originalUrl;
 
-        // Fetch the proxy into browser
         setImportProgress(0, 'Loading proxy into editor… 0%');
 
         const proxyRes = await fetch(`${SERVER_URL}${data.proxyUrl}`);
@@ -1376,7 +1298,6 @@
       }
 
     } else {
-      // Fallback: server offline — load directly (export won't work)
       localFile = file;
       serverFilePath = null;
       const blobUrl = URL.createObjectURL(file);
@@ -1393,27 +1314,22 @@
     mediaBlobUrl = blobUrl;
     isVideo = videoFlag;
 
-    // Collapse the import card so the editor takes focus
     collapseImportCard();
 
-    // Show cards
     editorCard.classList.add('visible');
     waveformLoading.classList.add('visible');
 
-    // Video preview
     if (isVideo) {
       videoPreview.classList.add('visible');
       videoEl.src = blobUrl;
-      videoEl.muted = true; // we use WaveSurfer for audio
+      videoEl.muted = true;
       videoEl.load();
     }
 
-    // File info
     $('fileName').textContent = name;
     $('fileMeta').textContent = formatBytes(size) + (isVideo ? ' · video' : ' · audio');
     fileBar.classList.add('visible');
 
-    // Init WaveSurfer
     const s = getComputedStyle(document.documentElement);
     wavesurfer = WaveSurfer.create({
       container: '#waveform',
@@ -1434,7 +1350,6 @@
       wavesurfer.setPlaybackRate(SPEED_STEPS[speedIndex]);
       waveformLoading.classList.remove('visible');
 
-      // Init segments: one segment covering full duration
       segments = [{ id: nextSegmentId++, start: 0, end: mediaDuration }];
       selectedSegmentId = segments[0].id;
       undoStack = [];
@@ -1486,23 +1401,19 @@
       if (!wavesurfer || !wavesurfer.isPlaying()) return;
       const t = wavesurfer.getCurrentTime();
 
-      // Check if current time is inside a cut region
       const inSeg = segments.find(s => t >= s.start - 0.05 && t <= s.end + 0.05);
       if (!inSeg && segments.length > 0) {
-        // Find next segment after current time
         const sorted = [...segments].sort((a, b) => a.start - b.start);
         const next = sorted.find(s => s.start > t);
         if (next) {
           wavesurfer.seekTo(next.start / mediaDuration);
           if (isVideo) videoEl.currentTime = next.start;
         } else {
-          // Past last segment — stop
           wavesurfer.pause();
           return;
         }
       }
 
-      // Check if we've gone past the end of the current segment
       if (inSeg && t > inSeg.end + 0.05) {
         const sorted = [...segments].sort((a, b) => a.start - b.start);
         const idx = sorted.indexOf(inSeg);
@@ -1562,7 +1473,6 @@
     if (!undoStack.length) return;
     segments = undoStack.pop();
     if (!undoStack.length) $('btnUndo').disabled = true;
-    // Ensure selectedSegmentId still valid
     if (!segments.find(s => s.id === selectedSegmentId)) {
       selectedSegmentId = segments.length ? segments[0].id : null;
     }
@@ -1574,7 +1484,6 @@
     if (!wavesurfer || !mediaLoaded || !segments.length) return;
     const t = wavesurfer.getCurrentTime();
 
-    // Find which segment contains the playhead
     const seg = segments.find(s => t > s.start + 0.1 && t < s.end - 0.1);
     if (!seg) {
       showToast('Playhead is not inside a segment (or too close to an edge)');
@@ -1605,7 +1514,6 @@
     saveUndo();
     segments = segments.filter(s => s.id !== id);
 
-    // Select adjacent
     if (selectedSegmentId === id) {
       selectedSegmentId = segments.length ? segments[0].id : null;
     }
@@ -1617,7 +1525,6 @@
   function selectSegment(id) {
     selectedSegmentId = id;
     renderAll();
-    // Seek to segment start
     const seg = segments.find(s => s.id === id);
     if (seg && wavesurfer) {
       wavesurfer.seekTo(seg.start / mediaDuration);
@@ -1627,11 +1534,9 @@
   function highlightCurrentSegment(t) {
     const seg = segments.find(s => t >= s.start && t <= s.end);
     if (seg && seg.id !== selectedSegmentId) {
-      // Don't auto-change selection during playback
     }
   }
 
-  // Button handlers
   $('btnSplit').addEventListener('click', splitAtPlayhead);
   $('btnDelete').addEventListener('click', () => deleteSegment());
   $('btnUndo').addEventListener('click', undo);
@@ -1648,7 +1553,6 @@
     $('btnDelete').disabled = segments.length <= 1;
   }
 
-  // Waveform cut region overlays
   function renderOverlays() {
     segmentOverlay.innerHTML = '';
     if (!mediaDuration || !segments.length) return;
@@ -1656,19 +1560,16 @@
     const sorted = [...segments].sort((a, b) => a.start - b.start);
     const cuts = [];
 
-    // Gap before first segment
     if (sorted[0].start > 0.01) {
       cuts.push({ start: 0, end: sorted[0].start });
     }
 
-    // Gaps between segments
     for (let i = 0; i < sorted.length - 1; i++) {
       if (sorted[i + 1].start > sorted[i].end + 0.01) {
         cuts.push({ start: sorted[i].end, end: sorted[i + 1].start });
       }
     }
 
-    // Gap after last segment
     if (sorted[sorted.length - 1].end < mediaDuration - 0.01) {
       cuts.push({ start: sorted[sorted.length - 1].end, end: mediaDuration });
     }
@@ -1684,7 +1585,6 @@
     });
   }
 
-  // Mini timeline overview
   function renderMiniTimeline() {
     miniTimeline.innerHTML = '';
     if (!mediaDuration || !segments.length) return;
@@ -1692,7 +1592,6 @@
     const sorted = [...segments].sort((a, b) => a.start - b.start);
 
     sorted.forEach((seg, i) => {
-      // Gap before this segment
       const gapStart = i === 0 ? 0 : sorted[i - 1].end;
       if (seg.start > gapStart + 0.01) {
         const gap = document.createElement('div');
@@ -1709,7 +1608,6 @@
       miniTimeline.appendChild(el);
     });
 
-    // Trailing gap
     const last = sorted[sorted.length - 1];
     if (last.end < mediaDuration - 0.01) {
       const gap = document.createElement('div');
@@ -1719,7 +1617,6 @@
     }
   }
 
-  // Segment list
   const TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
 
   function renderSegmentList() {
@@ -1807,7 +1704,6 @@
       sourceType: isVideo ? 'video' : 'audio'
     };
 
-    // Add server file reference if available
     if (serverFilePath) {
       manifest.source = serverFilePath;
     }
@@ -1823,7 +1719,6 @@
       let res;
 
       if (localFile && !serverFilePath) {
-        // Upload local file with manifest
         const formData = new FormData();
         formData.append('file', localFile);
         formData.append('manifest', JSON.stringify(manifest));
@@ -1833,7 +1728,6 @@
           signal: AbortSignal.timeout(600000)
         });
       } else {
-        // Server already has the file
         headers['Content-Type'] = 'application/json';
         res = await fetch(`${SERVER_URL}/api/edit`, {
           method: 'POST', headers, body: JSON.stringify(manifest),
@@ -1847,7 +1741,6 @@
         const fileUrl = `${SERVER_URL}${data.url}`;
         const name = data.filename || 'edited_output';
 
-        // Start 3-second countdown then auto-download
         let countdown = 3;
         const updateStatus = (n) => {
           exportStatus.innerHTML = `<span class="dot" style="background:var(--success);width:7px;height:7px;border-radius:50%;"></span> Exported: ${escapeHtml(name)} — downloading in ${n}s…`;
@@ -1861,7 +1754,6 @@
             clearInterval(timer);
             exportStatus.innerHTML = `<span class="dot" style="background:var(--success);width:7px;height:7px;border-radius:50%;"></span> Downloaded: ${escapeHtml(name)}`;
 
-            // Trigger browser download via hidden link
             const a = document.createElement('a');
             a.href = fileUrl;
             a.download = name;
@@ -1929,7 +1821,7 @@
     $('iconPause').style.display = 'none';
     $('btnPlay').classList.remove('active');
 
-    setSpeed(2); // reset to 1x
+    setSpeed(2);
   }
 
   function fullReset() {
@@ -1950,13 +1842,11 @@
     const tag = e.target.tagName.toLowerCase();
     const isInput = tag === 'input' || tag === 'textarea' || tag === 'select';
 
-    // Space: play/pause (when not in input)
     if (e.code === 'Space' && !isInput) {
       e.preventDefault();
       if (wavesurfer && mediaLoaded) wavesurfer.playPause();
     }
 
-    // Arrow keys: skip
     if (!isInput) {
       if (e.key === 'ArrowLeft' && wavesurfer && mediaLoaded) {
         e.preventDefault();
@@ -1969,25 +1859,21 @@
     }
 
     if (!isInput) {
-      // S: split
       if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         splitAtPlayhead();
       }
 
-      // Delete/Backspace: delete selected
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         deleteSegment();
       }
 
-      // Ctrl+Z / Cmd+Z: undo
       if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         undo();
       }
 
-      // D: speed up, F: speed down, R: reset
       if (e.key === 'd' || e.key === 'D') { e.preventDefault(); setSpeed(speedIndex + 1); }
       if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setSpeed(speedIndex - 1); }
       if (e.key === 'r' || e.key === 'R') { e.preventDefault(); setSpeed(SPEED_STEPS.indexOf(1)); }
