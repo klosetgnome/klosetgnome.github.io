@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Video Grabber</title>
+<title>Content Grabber</title>
 <!-- Prevent flash of wrong theme -->
 <script>
   (function() {
@@ -18,7 +18,7 @@
 </script>
 <link rel="stylesheet" href="astyle.css">
 <style>
-  /* ── Page-specific: Video Grabber ── */
+  /* ── Page-specific: Content Grabber ── */
   :root {
     --fetching: #8b6abf;
     --fetching-glow: rgba(139, 106, 191, 0.12);
@@ -39,7 +39,7 @@
     width: 100%;
   }
 
-  /* ── Gear settings toggle (mirrors Description Helper) ── */
+  /* ── Gear settings toggle ── */
   .header-actions {
     display: flex;
     align-items: center;
@@ -188,7 +188,7 @@
     50% { opacity: 0.3; }
   }
 
-  /* Gear dot indicator — shows server state at a glance */
+  /* Gear dot indicator */
   .gear-dot {
     position: absolute;
     top: 4px;
@@ -204,13 +204,17 @@
   .gear-dot.loading { background: var(--fetching); animation: pulse 1.2s ease infinite; }
   .gear-dot.error { background: var(--error); }
 
-  /* ── Default mode toggle ── */
+  /* ── Toggle switches ── */
   .toggle-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
     padding: 2px 0;
+  }
+
+  .toggle-row + .toggle-row {
+    margin-top: 10px;
   }
 
   .toggle-row-label {
@@ -353,6 +357,103 @@
     transform: none;
   }
 
+  /* ── Inline status bar (replaces action-area + progress card) ── */
+  .status-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    animation: fadeIn 0.25s ease;
+  }
+
+  .status-bar.visible { display: flex; }
+
+  .status-bar .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-bar .status-dot.working {
+    background: var(--fetching);
+    animation: pulse 1.2s ease infinite;
+  }
+
+  .status-bar .status-dot.done {
+    background: var(--success);
+  }
+
+  .status-bar .status-dot.error {
+    background: var(--error);
+  }
+
+  .status-bar .status-text {
+    flex: 1;
+    line-height: 1.4;
+  }
+
+  .status-bar .status-text a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .status-bar .status-text a:hover { text-decoration: underline; }
+
+  .status-bar .status-action {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .status-bar .status-action:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-light);
+  }
+
+  /* Thin progress track below status text */
+  .status-track {
+    height: 3px;
+    background: var(--border);
+    border-radius: 3px;
+    margin-top: 10px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .status-track.visible { display: block; }
+
+  .status-track-fill {
+    height: 100%;
+    border-radius: 3px;
+    width: 40%;
+    background: var(--fetching);
+    animation: indeterminate 1.8s ease-in-out infinite;
+  }
+
+  .status-track-fill.done {
+    animation: none;
+    width: 100%;
+    background: var(--success);
+  }
+
+  .status-track-fill.error {
+    animation: none;
+    width: 100%;
+    background: var(--error);
+  }
+
   /* Error message */
   .error-msg {
     font-family: var(--mono);
@@ -364,207 +465,6 @@
   }
 
   .error-msg.visible { display: block; }
-
-  /* Loading state */
-  .loading-bar {
-    height: 3px;
-    background: var(--border);
-    border-radius: 3px;
-    margin-top: 14px;
-    overflow: hidden;
-    display: none;
-  }
-
-  .loading-bar.visible { display: block; }
-
-  .loading-bar-fill {
-    height: 100%;
-    background: var(--fetching);
-    border-radius: 3px;
-    width: 40%;
-    animation: indeterminate 1.8s ease-in-out infinite;
-  }
-
-  /* Download buttons area */
-  .action-area {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    margin-bottom: 12px;
-    display: none;
-    animation: fadeInUp 0.4s ease 0.05s both;
-    transition: background 0.3s ease, border-color 0.3s ease;
-  }
-
-  .action-area.visible { display: block; }
-
-  .action-area label {
-    display: block;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-secondary);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-bottom: 12px;
-  }
-
-  .action-row {
-    display: flex;
-    gap: 10px;
-  }
-
-  .btn-download {
-    background: var(--success);
-    color: #fff;
-    flex: 1;
-  }
-
-  .btn-download:hover {
-    background: #5a9e4f;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px var(--success-glow);
-  }
-
-  .btn-download:active { transform: translateY(0); }
-
-  .btn-download:disabled {
-    background: var(--border);
-    color: var(--text-muted);
-    cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
-  }
-
-  .btn-audio {
-    background: var(--fetching);
-    color: #fff;
-    flex: 1;
-  }
-
-  .btn-audio:hover {
-    background: #7a5aae;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px var(--fetching-glow);
-  }
-
-  .btn-audio:active { transform: translateY(0); }
-
-  .btn-audio:disabled {
-    background: var(--border);
-    color: var(--text-muted);
-    cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
-  }
-
-  /* Active settings summary — shown below the label */
-  .settings-summary {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: -4px;
-    margin-bottom: 12px;
-    letter-spacing: 0.5px;
-  }
-
-  /* Download progress / result card */
-  .dl-progress-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    display: none;
-    animation: fadeInUp 0.4s ease;
-    transition: background 0.3s ease, border-color 0.3s ease;
-  }
-
-  .dl-progress-card.visible { display: block; }
-
-  .dl-progress-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 14px;
-  }
-
-  .dl-progress-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-  }
-
-  .dl-progress-pct {
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--fetching);
-  }
-
-  .dl-progress-pct.done { color: var(--success); }
-  .dl-progress-pct.error { color: var(--error); }
-
-  .dl-progress-track {
-    height: 4px;
-    background: var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 12px;
-  }
-
-  .dl-progress-fill {
-    height: 100%;
-    border-radius: 4px;
-    background: var(--fetching);
-    transition: width 0.4s ease, background 0.3s;
-    width: 0%;
-  }
-
-  .dl-progress-fill.done { background: var(--success); }
-  .dl-progress-fill.error { background: var(--error); }
-
-  .dl-progress-fill.indeterminate {
-    width: 40%;
-    animation: indeterminate 1.8s ease-in-out infinite;
-  }
-
-  .dl-progress-stats {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--text-muted);
-    display: flex;
-    gap: 16px;
-  }
-
-  .dl-progress-actions {
-    margin-top: 16px;
-    display: flex;
-    gap: 10px;
-  }
-
-  .btn-save {
-    background: var(--success);
-    color: #fff;
-  }
-
-  .btn-save:hover {
-    background: #5a9e4f;
-    box-shadow: 0 4px 16px var(--success-glow);
-  }
-
-  .btn-new {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-  }
-
-  .btn-new:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--accent-light);
-  }
 
   /* Empty state */
   .empty-state {
@@ -598,6 +498,11 @@
     to { transform: rotate(360deg); }
   }
 
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
   @keyframes fadeInDown {
     from { opacity: 0; transform: translateY(-8px); }
     to { opacity: 1; transform: translateY(0); }
@@ -606,7 +511,7 @@
   /* Responsive */
   @media (max-width: 600px) {
     .container { padding: 32px 16px 60px; }
-    .input-row, .action-row { flex-direction: column; }
+    .input-row { flex-direction: column; }
     .settings-panel { min-width: 260px; right: -40px; }
     .settings-row { grid-template-columns: 1fr; }
   }
@@ -615,7 +520,7 @@
 <body>
 
 <header class="site-header">
-  <h1><span>VIDEO</span> GRABBER</h1>
+  <h1><span>CONTENT</span> GRABBER</h1>
   <div class="header-actions">
     <div class="settings-wrap">
       <button class="settings-toggle" id="settingsToggle" aria-label="Settings" title="Settings">
@@ -639,11 +544,18 @@
 
         <!-- Download defaults -->
         <div class="settings-section">
-          <div class="settings-section-label">Defaults</div>
+          <div class="settings-section-label">Behaviour</div>
           <div class="toggle-row">
             <span class="toggle-row-label">Audio only by default</span>
             <label class="toggle-switch">
-              <input type="checkbox" id="defaultAudioOnly">
+              <input type="checkbox" id="defaultAudioOnly" checked>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-row-label">Auto-save when ready</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="autoSave" checked>
               <span class="toggle-track"></span>
             </label>
           </div>
@@ -698,43 +610,25 @@
 
 <div class="container">
 
-  <!-- Step 1: URL Input -->
+  <!-- URL Input + inline status -->
   <div class="input-area" id="inputArea">
-    <label for="urlInput">Video link</label>
+    <label for="urlInput">Content link</label>
     <div class="input-row">
       <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" spellcheck="false">
-      <button class="btn btn-fetch" id="fetchBtn" onclick="handleDownload()">Grab</button>
+      <button class="btn btn-fetch" id="fetchBtn" onclick="handleGrab()">Grab</button>
     </div>
-    <div class="loading-bar" id="fetchLoading"><div class="loading-bar-fill"></div></div>
+
+    <!-- Inline status bar — appears inside the input card -->
+    <div class="status-bar" id="statusBar">
+      <span class="status-dot working" id="statusDot"></span>
+      <span class="status-text" id="statusText">Processing content on server…</span>
+      <button class="status-action" id="statusAction" onclick="resetAll()" style="display:none;">Clear</button>
+    </div>
+    <div class="status-track" id="statusTrack">
+      <div class="status-track-fill" id="statusTrackFill"></div>
+    </div>
+
     <div class="error-msg" id="fetchError"></div>
-  </div>
-
-  <!-- Step 2: Download Actions -->
-  <div class="action-area" id="actionArea">
-    <label>Download</label>
-    <div class="settings-summary" id="settingsSummary">1080p · Best audio</div>
-    <div class="action-row">
-      <button class="btn btn-download" id="dlVideoBtn" onclick="handleDownload('video')">⬇ Download Video</button>
-      <button class="btn btn-audio" id="dlAudioBtn" onclick="handleDownload('audio')">♫ Audio Only</button>
-    </div>
-  </div>
-
-  <!-- Step 3: Result -->
-  <div class="dl-progress-card" id="progressCard">
-    <div class="dl-progress-header">
-      <span class="dl-progress-label" id="progressLabel">Downloading</span>
-      <span class="dl-progress-pct" id="progressPct"></span>
-    </div>
-    <div class="dl-progress-track">
-      <div class="dl-progress-fill" id="progressFill"></div>
-    </div>
-    <div class="dl-progress-stats">
-      <span id="progressInfo"></span>
-    </div>
-    <div class="dl-progress-actions" id="progressActions" style="display:none;">
-      <a class="btn btn-save" id="saveLink" href="#" target="_blank" rel="noopener">Save File</a>
-      <button class="btn btn-new" onclick="resetAll()">New Download</button>
-    </div>
   </div>
 
   <!-- Empty state -->
@@ -744,7 +638,7 @@
       <polygon points="20,17 20,29 31,23" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/>
       <path d="M14 38h20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </svg>
-    <p>Paste a video link above to get started.<br>
+    <p>Paste a link above and hit <strong>Grab</strong>.<br>
     Supports YouTube, TikTok, Instagram, Twitter &amp; more.</p>
   </div>
 </div>
@@ -797,40 +691,24 @@
   let working = false;
   let healthTimer = null;
 
-  const urlInput      = document.getElementById('urlInput');
-  const fetchBtn      = document.getElementById('fetchBtn');
-  const fetchLoading  = document.getElementById('fetchLoading');
-  const fetchError    = document.getElementById('fetchError');
-  const actionArea    = document.getElementById('actionArea');
-  const progressCard  = document.getElementById('progressCard');
-  const emptyState    = document.getElementById('emptyState');
-  const statusEl      = document.getElementById('instanceStatus');
-  const gearDot       = document.getElementById('gearDot');
-  const settingsSummary = document.getElementById('settingsSummary');
+  const urlInput     = document.getElementById('urlInput');
+  const fetchBtn     = document.getElementById('fetchBtn');
+  const fetchError   = document.getElementById('fetchError');
+  const emptyState   = document.getElementById('emptyState');
+  const statusEl     = document.getElementById('instanceStatus');
+  const gearDot      = document.getElementById('gearDot');
+
+  // Status bar elements
+  const statusBar       = document.getElementById('statusBar');
+  const statusDot       = document.getElementById('statusDot');
+  const statusText      = document.getElementById('statusText');
+  const statusAction    = document.getElementById('statusAction');
+  const statusTrack     = document.getElementById('statusTrack');
+  const statusTrackFill = document.getElementById('statusTrackFill');
 
   urlInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') handleDownload();
+    if (e.key === 'Enter') handleGrab();
   });
-
-  urlInput.addEventListener('input', () => {
-    const url = urlInput.value.trim();
-    if (url && url.includes('http')) {
-      actionArea.classList.add('visible');
-      updateSettingsSummary();
-    }
-  });
-
-  // ── Settings summary text ──
-  function updateSettingsSummary() {
-    const quality = document.getElementById('qualitySelect');
-    const audioFmt = document.getElementById('audioFormatSelect');
-    const qText = quality.options[quality.selectedIndex].text;
-    const aText = audioFmt.options[audioFmt.selectedIndex].text;
-    settingsSummary.textContent = qText + ' · ' + aText + ' audio';
-  }
-
-  document.getElementById('qualitySelect').addEventListener('change', updateSettingsSummary);
-  document.getElementById('audioFormatSelect').addEventListener('change', updateSettingsSummary);
 
   // ── Server health check ──
   function setGearDotState(state) {
@@ -880,66 +758,81 @@
     fetchError.classList.remove('visible');
   }
 
-  function setButtonsDisabled(state) {
-    fetchBtn.disabled = state;
-    document.getElementById('dlVideoBtn').disabled = state;
-    document.getElementById('dlAudioBtn').disabled = state;
+  function setStatus(dotClass, text, showAction, showTrack, trackClass) {
+    statusBar.classList.add('visible');
+    statusDot.className = 'status-dot ' + dotClass;
+    statusText.innerHTML = text;
+    statusAction.style.display = showAction ? '' : 'none';
+
+    if (showTrack) {
+      statusTrack.classList.add('visible');
+      statusTrackFill.className = 'status-track-fill' + (trackClass ? ' ' + trackClass : '');
+    } else {
+      statusTrack.classList.remove('visible');
+    }
+  }
+
+  function hideStatus() {
+    statusBar.classList.remove('visible');
+    statusTrack.classList.remove('visible');
   }
 
   // ── Resolve download mode ──
-  function resolveMode(explicit) {
-    if (explicit) return explicit;
-    // Use default from settings toggle
+  function resolveMode() {
     return document.getElementById('defaultAudioOnly').checked ? 'audio' : 'video';
   }
 
-  // ── Download via self-hosted yt-dlp ──
-  async function handleDownload(explicitMode) {
+  // ── Messages that cycle while downloading ──
+  const progressMessages = [
+    'Processing content on server…',
+    'Fetching source data…',
+    'Preparing content for download…',
+    'Almost there — packaging file…',
+  ];
+  let msgIndex = 0;
+  let msgTimer = null;
+
+  function startMessageCycle() {
+    msgIndex = 0;
+    statusText.textContent = progressMessages[0];
+    msgTimer = setInterval(() => {
+      msgIndex = Math.min(msgIndex + 1, progressMessages.length - 1);
+      statusText.textContent = progressMessages[msgIndex];
+    }, 4000);
+  }
+
+  function stopMessageCycle() {
+    if (msgTimer) { clearInterval(msgTimer); msgTimer = null; }
+  }
+
+  // ── Main grab handler ──
+  async function handleGrab() {
     const url = urlInput.value.trim();
     if (!url) return;
 
-    const mode = resolveMode(explicitMode);
+    const mode = resolveMode();
 
     // Quick health check if server was offline
     if (!serverOnline) {
       hideError();
-      fetchLoading.classList.add('visible');
-      setButtonsDisabled(true);
+      setStatus('working', 'Checking server…', false, true, '');
+      fetchBtn.disabled = true;
       await checkHealth();
       if (!serverOnline) {
-        fetchLoading.classList.remove('visible');
-        setButtonsDisabled(false);
-        showError('Download server is offline. Check that the Mac Mini is running.');
+        setStatus('error', 'Download server is offline. Check that the Mac Mini is running.', true, true, 'error');
+        fetchBtn.disabled = false;
         return;
       }
     }
 
     hideError();
-    progressCard.classList.remove('visible');
     emptyState.style.display = 'none';
-    actionArea.classList.add('visible');
-    updateSettingsSummary();
-    fetchLoading.classList.add('visible');
-    setButtonsDisabled(true);
+    fetchBtn.disabled = true;
     working = true;
 
-    // Show indeterminate progress
-    const fillEl    = document.getElementById('progressFill');
-    const pctEl     = document.getElementById('progressPct');
-    const labelEl   = document.getElementById('progressLabel');
-    const infoEl    = document.getElementById('progressInfo');
-    const actionsEl = document.getElementById('progressActions');
-    const saveLink  = document.getElementById('saveLink');
-
-    progressCard.classList.add('visible');
-    fillEl.className = 'dl-progress-fill indeterminate';
-    fillEl.style.width = '40%';
-    pctEl.textContent = '';
-    pctEl.className = 'dl-progress-pct';
-    labelEl.textContent = 'Downloading — this may take a moment…';
-    infoEl.textContent = '';
-    actionsEl.style.display = 'none';
-    saveLink.style.display = '';
+    // Show working status
+    setStatus('working', '', false, true, '');
+    startMessageCycle();
 
     const quality     = document.getElementById('qualitySelect').value;
     const audioFormat = document.getElementById('audioFormatSelect').value;
@@ -974,69 +867,49 @@
       clearTimeout(timeout);
       const data = await res.json();
 
-      fetchLoading.classList.remove('visible');
-      setButtonsDisabled(false);
+      stopMessageCycle();
+      fetchBtn.disabled = false;
       working = false;
 
       if (data.status === 'redirect') {
         const fileUrl = `${SERVER_URL}${data.url}`;
+        const info = [data.filename, data.size].filter(Boolean).join(' · ');
+        const linkHtml = `${info ? info + ' — ' : ''}<a href="${fileUrl}" target="_blank" rel="noopener" ${data.filename ? 'download="' + data.filename.replace(/"/g, '&quot;') + '"' : ''}>Save file</a>`;
 
-        fillEl.className = 'dl-progress-fill done';
-        fillEl.style.width = '100%';
-        pctEl.textContent = 'Done';
-        pctEl.className = 'dl-progress-pct done';
-        labelEl.textContent = 'Download ready';
-        infoEl.textContent = [data.filename, data.size].filter(Boolean).join(' · ');
-        actionsEl.style.display = 'flex';
+        setStatus('done', linkHtml, true, true, 'done');
 
-        saveLink.href = fileUrl;
-        if (data.filename) saveLink.download = data.filename;
-
-        window.open(fileUrl, '_blank');
+        // Auto-open if setting is on
+        if (document.getElementById('autoSave').checked) {
+          window.open(fileUrl, '_blank');
+        }
 
       } else if (data.status === 'error') {
-        fillEl.className = 'dl-progress-fill error';
-        fillEl.style.width = '100%';
-        pctEl.textContent = 'Failed';
-        pctEl.className = 'dl-progress-pct error';
-        labelEl.textContent = data.error || 'Download failed';
-        infoEl.textContent = '';
-        actionsEl.style.display = 'flex';
-        saveLink.style.display = 'none';
+        setStatus('error', data.error || 'Download failed', true, true, 'error');
       }
 
     } catch (err) {
-      fetchLoading.classList.remove('visible');
-      setButtonsDisabled(false);
+      stopMessageCycle();
+      fetchBtn.disabled = false;
       working = false;
 
       let errorMsg = 'Connection failed';
       if (err.name === 'AbortError') {
-        errorMsg = 'Request timed out — the video may be too long.';
+        errorMsg = 'Request timed out — the content may be too long.';
       }
 
-      fillEl.className = 'dl-progress-fill error';
-      fillEl.style.width = '100%';
-      pctEl.textContent = 'Failed';
-      pctEl.className = 'dl-progress-pct error';
-      labelEl.textContent = errorMsg;
-      infoEl.textContent = '';
-      actionsEl.style.display = 'flex';
-      saveLink.style.display = 'none';
-
+      setStatus('error', errorMsg, true, true, 'error');
       checkHealth();
     }
   }
 
   function resetAll() {
     working = false;
+    stopMessageCycle();
     urlInput.value = '';
-    actionArea.classList.remove('visible');
-    progressCard.classList.remove('visible');
-    emptyState.style.display = 'block';
-    setButtonsDisabled(false);
+    hideStatus();
     hideError();
-    document.getElementById('saveLink').style.display = '';
+    emptyState.style.display = 'block';
+    fetchBtn.disabled = false;
     urlInput.focus();
   }
 </script>
