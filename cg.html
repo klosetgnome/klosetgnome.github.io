@@ -349,6 +349,44 @@
     transform: none;
   }
 
+  /* ── Countdown ring (auto-grab) ── */
+  .countdown-ring {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .countdown-ring svg {
+    width: 22px;
+    height: 22px;
+    transform: rotate(-90deg);
+  }
+  .countdown-ring .ring-bg {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 2.5;
+  }
+  .countdown-ring .ring-fg {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-dasharray: 50.27;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1s linear;
+  }
+  .countdown-number {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--accent);
+    font-family: var(--mono);
+  }
+
   /* ── Inline status bar (replaces action-area + progress card) ── */
   .status-bar {
     display: none;
@@ -545,13 +583,6 @@
               <span class="toggle-track"></span>
             </label>
           </div>
-          <div class="toggle-row">
-            <span class="toggle-row-label">Auto-download</span>
-            <label class="toggle-switch">
-              <input type="checkbox" id="autoSave" checked>
-              <span class="toggle-track"></span>
-            </label>
-          </div>
         </div>
 
         <div class="settings-divider"></div>
@@ -614,6 +645,13 @@
     <!-- Inline status bar — appears inside the input card -->
     <div class="status-bar" id="statusBar">
       <span class="status-dot working" id="statusDot"></span>
+      <div class="countdown-ring" id="countdownRing" style="display:none;">
+        <svg viewBox="0 0 20 20">
+          <circle class="ring-bg" cx="10" cy="10" r="8"/>
+          <circle class="ring-fg" id="ringFg" cx="10" cy="10" r="8"/>
+        </svg>
+        <span class="countdown-number" id="countdownNumber">3</span>
+      </div>
       <span class="status-text" id="statusText">Processing content on server…</span>
       <button class="status-action" id="statusAction" onclick="resetAll()" style="display:none;">Clear</button>
     </div>
@@ -631,7 +669,7 @@
       <polygon points="20,17 20,29 31,23" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/>
       <path d="M14 38h20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </svg>
-    <p>Paste a link above and hit <strong>Grab</strong>.<br>
+    <p>Paste a link above to get started.<br>
     Supports YouTube, TikTok, Instagram, Twitter &amp; more.</p>
   </div>
 </div>
@@ -701,6 +739,79 @@
 
   urlInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') handleGrab();
+  });
+
+  // ── URL detection & auto-grab countdown ──
+  const URL_REGEX = /^https?:\/\/[^\s]+$/i;
+  const countdownRing   = document.getElementById('countdownRing');
+  const countdownNumber = document.getElementById('countdownNumber');
+  const ringFg          = document.getElementById('ringFg');
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 8; // r=8 → ≈50.27
+  let countdownTimer = null;
+
+  function isUrl(text) { return URL_REGEX.test(text.trim()); }
+
+  function cancelCountdown() {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+    countdownRing.style.display = 'none';
+    statusDot.style.display = '';
+  }
+
+  function startAutoGrabCountdown() {
+    cancelCountdown();
+    let remaining = 3;
+
+    // Show countdown ring, hide the normal status dot
+    statusDot.style.display = 'none';
+    countdownRing.style.display = '';
+    countdownNumber.textContent = remaining;
+
+    // Reset ring to full
+    ringFg.style.transition = 'none';
+    ringFg.style.strokeDashoffset = '0';
+
+    requestAnimationFrame(() => {
+      ringFg.style.transition = 'stroke-dashoffset 1s linear';
+      ringFg.style.strokeDashoffset = (RING_CIRCUMFERENCE / 3).toFixed(2);
+    });
+
+    // Show countdown in status bar with Cancel action
+    statusBar.classList.add('visible');
+    statusText.textContent = 'Grabbing in ' + remaining + 's…';
+    statusAction.textContent = 'Cancel';
+    statusAction.style.display = '';
+    statusAction.onclick = function () {
+      cancelCountdown();
+      hideStatus();
+    };
+
+    emptyState.style.display = 'none';
+
+    countdownTimer = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        cancelCountdown();
+        handleGrab();
+        return;
+      }
+      countdownNumber.textContent = remaining;
+      statusText.textContent = 'Grabbing in ' + remaining + 's…';
+
+      const offset = RING_CIRCUMFERENCE * ((3 - remaining) / 3);
+      ringFg.style.strokeDashoffset = offset.toFixed(2);
+    }, 1000);
+  }
+
+  urlInput.addEventListener('paste', () => {
+    setTimeout(() => {
+      const val = urlInput.value.trim();
+      if (isUrl(val) && !working) {
+        startAutoGrabCountdown();
+      }
+    }, 150);
   });
 
   // ── Server health check ──
@@ -805,6 +916,11 @@
     const url = urlInput.value.trim();
     if (!url) return;
 
+    // Cancel any running countdown
+    cancelCountdown();
+    statusAction.textContent = 'Clear';
+    statusAction.onclick = function () { resetAll(); };
+
     const mode = resolveMode();
 
     // Quick health check if server was offline
@@ -868,15 +984,22 @@
 
       if (data.status === 'redirect') {
         const fileUrl = `${SERVER_URL}${data.url}`;
-        const info = [data.filename, data.size].filter(Boolean).join(' · ');
-        const linkHtml = `${info ? info + ' — ' : ''}<a href="${fileUrl}" target="_blank" rel="noopener" ${data.filename ? 'download="' + data.filename.replace(/"/g, '&quot;') + '"' : ''}>Save file</a>`;
+
+        // Truncate filename for display
+        let displayName = data.filename || 'File';
+        if (displayName.length > 35) {
+          const ext = displayName.lastIndexOf('.') > -1 ? displayName.substring(displayName.lastIndexOf('.')) : '';
+          displayName = displayName.substring(0, 30).trimEnd() + '…' + ext;
+        }
+
+        const sizeInfo = data.size ? ' · ' + data.size : '';
+        const downloadAttr = data.filename ? 'download="' + data.filename.replace(/"/g, '&quot;') + '"' : '';
+        const linkHtml = `✓ ${displayName}${sizeInfo} — Downloaded <a href="${fileUrl}" target="_blank" rel="noopener" ${downloadAttr} style="margin-left:8px;font-size:11px;opacity:0.7;">Download again</a>`;
 
         setStatus('done', linkHtml, true, true, 'done');
 
-        // Auto-open if setting is on
-        if (document.getElementById('autoSave').checked) {
-          window.open(fileUrl, '_blank');
-        }
+        // Always auto-download
+        window.open(fileUrl, '_blank');
 
       } else if (data.status === 'error') {
         setStatus('error', data.error || 'Download failed', true, true, 'error');
@@ -900,11 +1023,13 @@
   function resetAll() {
     working = false;
     stopMessageCycle();
+    cancelCountdown();
     urlInput.value = '';
     hideStatus();
     hideError();
     emptyState.style.display = 'block';
     fetchBtn.disabled = false;
+    statusAction.onclick = function () { resetAll(); };
     urlInput.focus();
   }
 </script>
