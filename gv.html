@@ -189,7 +189,7 @@
     animation: indeterminate 1.8s ease-in-out infinite;
   }
 
-  /* Format / options area */
+  /* Format select area */
   .format-area {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -313,7 +313,7 @@
     transform: none;
   }
 
-  /* Result card (replaces progress card) */
+  /* Download progress / result card */
   .dl-progress-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -322,28 +322,71 @@
     display: none;
     animation: fadeInUp 0.4s ease;
     transition: background 0.3s ease, border-color 0.3s ease;
-    text-align: center;
   }
 
   .dl-progress-card.visible { display: block; }
 
-  .result-icon {
-    font-size: 32px;
-    margin-bottom: 10px;
+  .dl-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
   }
 
-  .result-msg {
+  .dl-progress-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .dl-progress-pct {
     font-family: var(--mono);
     font-size: 13px;
-    color: var(--text-secondary);
-    margin-bottom: 16px;
-    line-height: 1.5;
+    font-weight: 500;
+    color: var(--fetching);
+  }
+
+  .dl-progress-pct.done { color: var(--success); }
+  .dl-progress-pct.error { color: var(--error); }
+
+  .dl-progress-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .dl-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: var(--fetching);
+    transition: width 0.4s ease, background 0.3s;
+    width: 0%;
+  }
+
+  .dl-progress-fill.done { background: var(--success); }
+  .dl-progress-fill.error { background: var(--error); }
+
+  .dl-progress-fill.indeterminate {
+    width: 40%;
+    animation: indeterminate 1.8s ease-in-out infinite;
+  }
+
+  .dl-progress-stats {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 16px;
   }
 
   .dl-progress-actions {
+    margin-top: 16px;
     display: flex;
     gap: 10px;
-    justify-content: center;
   }
 
   .btn-save {
@@ -479,10 +522,18 @@
 
   <!-- Step 3: Result -->
   <div class="dl-progress-card" id="progressCard">
-    <div class="result-icon" id="resultIcon"></div>
-    <div class="result-msg" id="resultMsg"></div>
-    <div class="dl-progress-actions" id="progressActions">
-      <a class="btn btn-save" id="saveLink" href="#" target="_blank" rel="noopener" style="display:none;">Save File</a>
+    <div class="dl-progress-header">
+      <span class="dl-progress-label" id="progressLabel">Downloading</span>
+      <span class="dl-progress-pct" id="progressPct"></span>
+    </div>
+    <div class="dl-progress-track">
+      <div class="dl-progress-fill" id="progressFill"></div>
+    </div>
+    <div class="dl-progress-stats">
+      <span id="progressInfo"></span>
+    </div>
+    <div class="dl-progress-actions" id="progressActions" style="display:none;">
+      <a class="btn btn-save" id="saveLink" href="#" target="_blank" rel="noopener">Save File</a>
       <button class="btn btn-new" onclick="resetAll()">New Download</button>
     </div>
   </div>
@@ -494,7 +545,9 @@
       <polygon points="20,17 20,29 31,23" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/>
       <path d="M14 38h20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </svg>
-    <p>Paste a video link above to get started.<br>Supports YouTube, TikTok, Instagram, Twitter &amp; more.<br>Powered by <a href="https://cobalt.tools" target="_blank" rel="noopener">cobalt</a>.</p>
+    <p>Paste a video link above to get started.<br>
+    Supports YouTube, TikTok, Instagram, Twitter &amp; more.<br>
+    Powered by <a href="https://cobalt.tools" target="_blank" rel="noopener">cobalt</a>.</p>
   </div>
 </div>
 
@@ -533,7 +586,7 @@
     if (e.key === 'Enter') handleDownload('video');
   });
 
-  // Show options when URL is entered
+  // Show options when URL looks valid
   urlInput.addEventListener('input', () => {
     const url = urlInput.value.trim();
     if (url && url.includes('http')) {
@@ -604,6 +657,22 @@
     setButtonsDisabled(true);
     working = true;
 
+    // Show indeterminate progress
+    const fillEl  = document.getElementById('progressFill');
+    const pctEl   = document.getElementById('progressPct');
+    const labelEl = document.getElementById('progressLabel');
+    const infoEl  = document.getElementById('progressInfo');
+    const actionsEl = document.getElementById('progressActions');
+
+    progressCard.classList.add('visible');
+    fillEl.className = 'dl-progress-fill indeterminate';
+    fillEl.style.width = '40%';
+    pctEl.textContent = '';
+    pctEl.className = 'dl-progress-pct';
+    labelEl.textContent = 'Connecting to server…';
+    infoEl.textContent = '';
+    actionsEl.style.display = 'none';
+
     const quality = document.getElementById('qualitySelect').value;
     const audioFormat = document.getElementById('audioFormatSelect').value;
 
@@ -620,9 +689,12 @@
 
     // Try instances in order until one works
     let lastError = 'All servers failed. Try again later.';
+    let tried = 0;
 
     for (const instance of instances) {
       if (!working) break;
+      tried++;
+      labelEl.textContent = `Trying server ${tried} of ${instances.length}…`;
 
       try {
         const controller = new AbortController();
@@ -642,41 +714,50 @@
         const data = await res.json();
 
         if (data.status === 'tunnel' || data.status === 'redirect') {
+          // Success
           fetchLoading.classList.remove('visible');
           setButtonsDisabled(false);
           working = false;
 
-          progressCard.classList.add('visible');
-          document.getElementById('resultIcon').textContent = '✓';
-          document.getElementById('resultMsg').textContent = data.filename
-            ? `Ready: ${data.filename}`
-            : 'Your download is ready.';
+          fillEl.className = 'dl-progress-fill done';
+          fillEl.style.width = '100%';
+          pctEl.textContent = 'Done';
+          pctEl.className = 'dl-progress-pct done';
+          labelEl.textContent = 'Download ready';
+          infoEl.textContent = data.filename || '';
+          actionsEl.style.display = 'flex';
 
           const link = document.getElementById('saveLink');
           link.href = data.url;
-          link.style.display = '';
           if (data.filename) link.download = data.filename;
 
-          // Auto-start download
+          // Auto-open download
           window.open(data.url, '_blank');
           return;
 
         } else if (data.status === 'picker') {
+          // Multiple items (carousel, etc.) — take the first
           fetchLoading.classList.remove('visible');
           setButtonsDisabled(false);
           working = false;
 
           const firstItem = data.picker && data.picker[0];
           if (firstItem && firstItem.url) {
-            progressCard.classList.add('visible');
-            document.getElementById('resultIcon').textContent = '✓';
-            document.getElementById('resultMsg').textContent = 'Your download is ready.';
+            fillEl.className = 'dl-progress-fill done';
+            fillEl.style.width = '100%';
+            pctEl.textContent = 'Done';
+            pctEl.className = 'dl-progress-pct done';
+            labelEl.textContent = 'Download ready';
+            infoEl.textContent = '';
+            actionsEl.style.display = 'flex';
+
             const link = document.getElementById('saveLink');
             link.href = firstItem.url;
-            link.style.display = '';
             window.open(firstItem.url, '_blank');
           } else {
             showError('Multiple items found but none could be downloaded.');
+            progressCard.classList.remove('visible');
+            emptyState.style.display = 'block';
           }
           return;
 
@@ -699,6 +780,7 @@
     setButtonsDisabled(false);
     working = false;
 
+    // Friendly error messages
     let friendlyError = lastError;
     if (lastError.includes('content.video.unavailable')) {
       friendlyError = 'This video is unavailable or private.';
@@ -712,8 +794,14 @@
       friendlyError = "Couldn't process this URL. Check the link and try again.";
     }
 
-    showError(friendlyError);
-    emptyState.style.display = 'block';
+    fillEl.className = 'dl-progress-fill error';
+    fillEl.style.width = '100%';
+    pctEl.textContent = 'Failed';
+    pctEl.className = 'dl-progress-pct error';
+    labelEl.textContent = friendlyError;
+    infoEl.textContent = '';
+    actionsEl.style.display = 'flex';
+    document.getElementById('saveLink').style.display = 'none';
   }
 
   function resetAll() {
@@ -724,6 +812,7 @@
     emptyState.style.display = 'block';
     setButtonsDisabled(false);
     hideError();
+    document.getElementById('saveLink').style.display = '';
     urlInput.focus();
   }
 </script>
