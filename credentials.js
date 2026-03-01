@@ -23,8 +23,8 @@
 
 const AUTHORISED_HASHES = [
 
-    "692658bf14f9eff2e256b44ba4cdae5c569ae45ecfb802a875a352b8edc8546a", // demo (remove this once you've added real users)
-
+    "77b2764121f8c7b8070ec081191e7ca3e9e30f7d7bad68a7896703a48464325d", // demo (remove this once you've added real users)
+    
     // Paste new user hashes below this line:
 
 ];
