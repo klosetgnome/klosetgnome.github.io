@@ -28,6 +28,10 @@
   --error-glow: rgba(181, 57, 46, 0.10);
   --shadow: rgba(44, 42, 38, 0.06);
   --shadow-sm: rgba(44, 42, 38, 0.05);
+  --waveform-wave: #d9d4cb;
+  --waveform-progress: #c0512d;
+  --waveform-cursor: #2c2a26;
+  --loading-overlay: rgba(255, 255, 255, 0.92);
   --serif: 'Source Serif 4', Georgia, serif;
   --mono: 'DM Mono', 'Courier New', monospace;
   --radius: 8px;
@@ -55,6 +59,10 @@
   --error-glow: rgba(212, 86, 74, 0.12);
   --shadow: rgba(0, 0, 0, 0.2);
   --shadow-sm: rgba(0, 0, 0, 0.15);
+  --waveform-wave: #564f47;
+  --waveform-progress: #d4774a;
+  --waveform-cursor: #e7e0d8;
+  --loading-overlay: rgba(28, 25, 23, 0.92);
 }
 
 /* ── Body ── */
@@ -425,6 +433,81 @@ button.submit:disabled {
   animation: fadeInUp 0.3s ease;
 }
 .error-box.visible { display: block; }
+
+/* ══════════════════════════════════════════════════════
+   WAVEFORM & TRANSPORT · shared across audio pages
+   ══════════════════════════════════════════════════════ */
+
+.waveform-area { position: relative; }
+.waveform-container { padding: 16px 20px 8px; cursor: crosshair; }
+#waveform { width: 100%; min-height: 50px; }
+
+.waveform-loading {
+  position: absolute; inset: 0; z-index: 5;
+  background: var(--loading-overlay);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; border-radius: var(--radius); transition: background 0.3s ease;
+}
+.waveform-loading.visible { display: flex; }
+.waveform-loading-label {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--text-secondary);
+}
+.waveform-loading-track {
+  width: 200px; height: 3px; background: var(--border);
+  border-radius: 3px; overflow: hidden;
+}
+.waveform-loading-bar {
+  height: 100%; width: 100%; background: var(--accent);
+  animation: indeterminate 1.8s ease-in-out infinite;
+}
+.waveform-loading-detail {
+  font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.transport {
+  display: flex; align-items: center; gap: 10px; padding: 8px 20px 16px;
+}
+.transport-btn {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-primary); transition: all 0.2s;
+  flex-shrink: 0;
+}
+.transport-btn:hover {
+  border-color: var(--accent); color: var(--accent);
+  background: var(--accent-light);
+}
+.transport-btn.active {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+}
+.transport-btn svg { width: 16px; height: 16px; }
+.transport-time {
+  font-family: var(--mono); font-size: 14px; font-weight: 500;
+  color: var(--text-primary); letter-spacing: 1px; min-width: 80px;
+}
+.transport-duration {
+  font-family: var(--mono); font-size: 12px; color: var(--text-muted);
+}
+.transport-spacer { flex: 1; }
+
+.speed-badge {
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  letter-spacing: 0.5px; color: var(--text-secondary);
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 4px 10px; cursor: pointer;
+  transition: all 0.2s; user-select: none; white-space: nowrap; flex-shrink: 0;
+}
+.speed-badge:hover {
+  border-color: var(--accent); color: var(--accent);
+  background: var(--accent-light);
+}
+.speed-badge.modified {
+  color: var(--accent); border-color: var(--accent);
+  background: var(--accent-light);
+}
 
 /* ══════════════════════════════════════════════════════
    SELECTIVE · pages with header dropdowns (ch, dh, th)
