@@ -24,19 +24,11 @@
     :root {
       --success-light: rgba(74, 140, 63, 0.08);
       --success-border: rgba(74, 140, 63, 0.35);
-      --waveform-wave: #d9d4cb;
-      --waveform-progress: #c0512d;
-      --waveform-cursor: #2c2a26;
-      --loading-overlay: rgba(255, 255, 255, 0.92);
     }
 
     [data-theme="dark"] {
       --success-light: rgba(94, 168, 82, 0.08);
       --success-border: rgba(94, 168, 82, 0.35);
-      --waveform-wave: #564f47;
-      --waveform-progress: #d4774a;
-      --waveform-cursor: #e7e0d8;
-      --loading-overlay: rgba(28, 25, 23, 0.92);
     }
 
     /* ── Header overrides for 3-column layout ── */
@@ -182,33 +174,6 @@
       width: 100%;
     }
 
-    .card {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      animation: fadeInUp 0.5s ease 0.15s both;
-      transition: background 0.3s ease, border-color 0.3s ease;
-    }
-    .card-label {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-      padding: 16px 20px 0;
-      display: block;
-    }
-    .card-hint {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      padding: 3px 20px 0;
-      display: block;
-    }
-
     .audio-drop-zone { position: relative; width: 100%; }
     .audio-drop-overlay {
       display: none; position: absolute; inset: 0; z-index: 10;
@@ -275,104 +240,9 @@
     }
     .stems-add-btn.disabled { opacity: 0.3; pointer-events: none; }
 
-    .waveform-area { display: none; flex-direction: column; gap: 0; position: relative; }
+    /* ── Page-specific waveform overrides ── */
+    .waveform-area { display: none; flex-direction: column; gap: 0; }
     .waveform-area.visible { display: flex; }
-    .waveform-container { padding: 16px 20px 8px; cursor: crosshair; }
-    #waveform { width: 100%; min-height: 100px; }
-
-    .waveform-loading {
-      position: absolute;
-      inset: 0;
-      z-index: 5;
-      background: var(--loading-overlay);
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      border-radius: var(--radius);
-      transition: background 0.3s ease;
-    }
-    .waveform-loading.visible { display: flex; }
-    .waveform-loading-label {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-    }
-    .waveform-loading-track {
-      width: 200px;
-      height: 3px;
-      background: var(--border);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .waveform-loading-bar {
-      height: 100%;
-      width: 100%;
-      background: var(--accent);
-      animation: indeterminate 1.8s ease-in-out infinite;
-    }
-    .waveform-loading-detail {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--text-muted);
-      letter-spacing: 0.5px;
-    }
-
-    .transport {
-      display: flex; align-items: center; gap: 10px; padding: 8px 20px 16px;
-    }
-    .transport-btn {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius); width: 36px; height: 36px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; color: var(--text-primary); transition: all 0.2s;
-    }
-    .transport-btn:hover {
-      border-color: var(--accent); color: var(--accent);
-      background: var(--accent-light);
-    }
-    .transport-btn.active {
-      background: var(--accent); color: #fff; border-color: var(--accent);
-    }
-    .transport-btn svg { width: 16px; height: 16px; }
-    .transport-time {
-      font-family: var(--mono); font-size: 14px; font-weight: 500;
-      color: var(--text-primary); letter-spacing: 1px; min-width: 80px;
-    }
-    .transport-duration {
-      font-family: var(--mono); font-size: 12px; color: var(--text-muted);
-    }
-    .transport-spacer { flex: 1; }
-
-    .speed-badge {
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.5px;
-      color: var(--text-secondary);
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 4px 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-      user-select: none;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .speed-badge:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-      background: var(--accent-light);
-    }
-    .speed-badge.modified {
-      color: var(--accent);
-      border-color: var(--accent);
-      background: var(--accent-light);
-    }
 
     .audio-file-bar {
       display: none; align-items: center; gap: 12px; padding: 12px 20px;
@@ -661,15 +531,6 @@
       background: var(--accent-light); box-shadow: none;
     }
 
-    .error-box {
-      width: 100%; background: var(--error-glow);
-      border: 1px solid rgba(181, 57, 46, 0.3); border-radius: var(--radius);
-      padding: 14px 18px; font-family: var(--mono); font-size: 12px;
-      color: var(--error); display: none; white-space: pre-wrap;
-      line-height: 1.7; animation: fadeInUp 0.3s ease;
-    }
-    .error-box.visible { display: block; }
-
     .toast {
       position: fixed; bottom: 32px; left: 50%;
       transform: translateX(-50%) translateY(80px);
@@ -680,12 +541,6 @@
       pointer-events: none;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-    @keyframes indeterminate {
-      0%   { transform: translateX(-100%) scaleX(0.4); }
-      50%  { transform: translateX(60%)   scaleX(0.6); }
-      100% { transform: translateX(200%)  scaleX(0.4); }
-    }
 
     @media (max-width: 700px) {
       .site-header { padding: 20px 16px; gap: 8px; }
@@ -1425,7 +1280,7 @@
         cursorColor: colors.cursor,
         cursorWidth: 1,
         barWidth: 2, barGap: 1, barRadius: 2,
-        height: 100, normalize: true
+        height: 50, normalize: true
       });
 
       wavesurfer.load(URL.createObjectURL(mixedBlob));
