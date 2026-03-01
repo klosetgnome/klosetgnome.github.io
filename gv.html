@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Video Downloader</title>
+<title>Video Grabber</title>
 <!-- Prevent flash of wrong theme -->
 <script>
   (function() {
@@ -18,7 +18,7 @@
 </script>
 <link rel="stylesheet" href="astyle.css">
 <style>
-  /* ── Page-specific: Video Downloader ── */
+  /* ── Page-specific: Video Grabber ── */
   :root {
     --fetching: #8b6abf;
     --fetching-glow: rgba(139, 106, 191, 0.12);
@@ -454,7 +454,7 @@
 <body>
 
 <header class="site-header">
-  <h1><span>VIDEO</span> DOWNLOADER</h1>
+  <h1><span>VIDEO</span> GRABBER</h1>
   <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
     <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
@@ -546,8 +546,7 @@
       <path d="M14 38h20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </svg>
     <p>Paste a video link above to get started.<br>
-    Supports YouTube, TikTok, Instagram, Twitter &amp; more.<br>
-    Powered by <a href="https://cobalt.tools" target="_blank" rel="noopener">cobalt</a>.</p>
+    Supports YouTube, TikTok, Instagram, Twitter &amp; more.</p>
   </div>
 </div>
 
@@ -572,6 +571,7 @@
   // ── State ──
   let instances = [];
   let working = false;
+  let instanceRetryTimer = null;
 
   const urlInput     = document.getElementById('urlInput');
   const fetchBtn     = document.getElementById('fetchBtn');
@@ -594,7 +594,7 @@
     }
   });
 
-  // ── Fetch cobalt instances ──
+  // ── Fetch cobalt instances with automatic retry ──
   async function loadInstances() {
     try {
       const res = await fetch('https://instances.cobalt.best/api/instances.json', {
@@ -613,13 +613,31 @@
 
       if (instances.length > 0) {
         statusEl.innerHTML = `<span class="dot ok"></span> ${instances.length} download server${instances.length > 1 ? 's' : ''} available`;
+        // Clear any pending retry
+        if (instanceRetryTimer) {
+          clearTimeout(instanceRetryTimer);
+          instanceRetryTimer = null;
+        }
       } else {
-        statusEl.innerHTML = `<span class="dot error"></span> No servers found — try <a href="https://cobalt.tools" target="_blank">cobalt.tools</a> directly`;
+        statusEl.innerHTML = `<span class="dot loading"></span> Searching for servers — please wait…`;
+        scheduleRetry();
       }
     } catch (err) {
       instances = [];
-      statusEl.innerHTML = `<span class="dot error"></span> Could not load servers — try <a href="https://cobalt.tools" target="_blank">cobalt.tools</a> directly`;
+      statusEl.innerHTML = `<span class="dot loading"></span> Connecting to servers — please wait…`;
+      scheduleRetry();
     }
+  }
+
+  // Retry loading instances with exponential backoff (max 30s)
+  let retryAttempt = 0;
+  function scheduleRetry() {
+    retryAttempt++;
+    const delay = Math.min(3000 * Math.pow(1.5, retryAttempt - 1), 30000);
+    instanceRetryTimer = setTimeout(() => {
+      statusEl.innerHTML = `<span class="dot loading"></span> Retrying connection (attempt ${retryAttempt + 1})…`;
+      loadInstances();
+    }, delay);
   }
 
   loadInstances();
@@ -644,9 +662,22 @@
   async function handleDownload(mode) {
     const url = urlInput.value.trim();
     if (!url) return;
+
+    // If no instances yet, try a fresh load before giving up
     if (instances.length === 0) {
-      showError('No cobalt servers available. Try cobalt.tools directly.');
-      return;
+      hideError();
+      fetchLoading.classList.add('visible');
+      setButtonsDisabled(true);
+      statusEl.innerHTML = `<span class="dot loading"></span> Connecting to servers…`;
+
+      await loadInstances();
+
+      if (instances.length === 0) {
+        fetchLoading.classList.remove('visible');
+        setButtonsDisabled(false);
+        showError('Download servers are temporarily unavailable. Please try again shortly.');
+        return;
+      }
     }
 
     hideError();
@@ -787,11 +818,13 @@
     } else if (lastError.includes('content.video.live')) {
       friendlyError = "Can't download live streams.";
     } else if (lastError.includes('content.video.age')) {
-      friendlyError = 'Age-restricted content — server needs authentication.';
+      friendlyError = 'Age-restricted content — unable to process this video.';
     } else if (lastError.includes('rate')) {
       friendlyError = 'Rate limited — try again in a moment.';
     } else if (lastError.includes('link')) {
       friendlyError = "Couldn't process this URL. Check the link and try again.";
+    } else if (lastError.includes('All servers failed')) {
+      friendlyError = 'All servers are busy. Please try again shortly.';
     }
 
     fillEl.className = 'dl-progress-fill error';
@@ -802,6 +835,9 @@
     infoEl.textContent = '';
     actionsEl.style.display = 'flex';
     document.getElementById('saveLink').style.display = 'none';
+
+    // Silently refresh instances in the background for next attempt
+    loadInstances();
   }
 
   function resetAll() {
