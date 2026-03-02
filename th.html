@@ -549,6 +549,12 @@
     }
     .content-area.visible { display: flex; }
 
+    /* When all predefined segments are stamped, move pickups/notes above the segment grid */
+    .content-area.all-stamped .columns-wrap { order: 10; }
+    .content-area.all-stamped #pickupsContainer { order: 1; }
+    .content-area.all-stamped .add-pickup-row { order: 2; }
+    .content-area.all-stamped .notes-actions-row { order: 3; }
+
     @media (max-width: 860px) {
       .columns-wrap { grid-template-columns: 1fr; }
       .notes-actions-row { flex-direction: column; }
@@ -1692,6 +1698,19 @@
       if (newsPendingCard) {
         newsPendingCard.classList.add('pending-out');
       }
+    }
+
+    // Check if all predefined segments are stamped — move pickups/notes to top
+    var contentArea = document.getElementById('contentArea');
+    if (sportSegmentOrder.length > 0) {
+      var allStamped = true;
+      for (var si = 0; si < sportSegmentOrder.length; si++) {
+        var sCard = document.getElementById('card-' + sportSegmentOrder[si]);
+        if (sCard && !sCard.classList.contains('tc-done')) { allStamped = false; break; }
+      }
+      contentArea.classList.toggle('all-stamped', allStamped);
+    } else {
+      contentArea.classList.remove('all-stamped');
     }
   }
 
