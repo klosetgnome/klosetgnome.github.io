@@ -562,7 +562,7 @@
       border-radius: var(--radius-lg);
       overflow: hidden;
       animation: fadeInUp 0.4s ease both;
-      transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+      transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease, order 0.4s ease;
     }
     .segment-card.complete {
       border-color: var(--success-border);
@@ -571,6 +571,26 @@
     }
     .segment-card.complete .segment-header { color: var(--success); }
     .segment-card.complete .complete-tick { display: inline-block; }
+
+    /* ── Active segment highlight ── */
+    .segment-card.active-segment {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow), 0 4px 20px var(--accent-glow);
+    }
+    .segment-card.active-segment .segment-header {
+      color: var(--accent);
+    }
+
+    /* ── Pending OUT pulse ── */
+    .segment-card.pending-out {
+      border-color: #e6a817;
+      box-shadow: 0 0 0 2px rgba(230, 168, 23, 0.25);
+      animation: pendingPulse 2s ease-in-out infinite;
+    }
+    @keyframes pendingPulse {
+      0%, 100% { box-shadow: 0 0 0 2px rgba(230, 168, 23, 0.15); }
+      50% { box-shadow: 0 0 0 4px rgba(230, 168, 23, 0.35); }
+    }
 
     .segment-header {
       font-family: var(--mono); font-size: 11px; letter-spacing: 2.5px;
@@ -682,7 +702,6 @@
     }
 
     /* ── Editor Notes ── */
-    /* ── Editor Notes + Action Buttons Row ── */
     .notes-actions-row {
       width: 100%;
       display: flex;
@@ -758,6 +777,117 @@
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+    /* ══════════════════════════════════════════════════════════════
+       SEGMENT PENDING OVERLAY — blur + prompt
+       ══════════════════════════════════════════════════════════════ */
+    .segment-pending-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      background: rgba(0,0,0,0.35);
+      align-items: center;
+      justify-content: center;
+      animation: overlayFadeIn 0.25s ease;
+    }
+    .segment-pending-overlay.visible { display: flex; }
+
+    @keyframes overlayFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .segment-pending-dialog {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 16px 64px rgba(0,0,0,0.4);
+      padding: 32px 40px;
+      max-width: 420px;
+      width: 90%;
+      text-align: center;
+      animation: dialogPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes dialogPop {
+      from { opacity: 0; transform: scale(0.9) translateY(12px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .segment-pending-dialog .dialog-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 16px;
+      color: #e6a817;
+    }
+    .segment-pending-dialog .dialog-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .segment-pending-dialog .dialog-title {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+    }
+
+    .segment-pending-dialog .dialog-message {
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+
+    .segment-pending-dialog .dialog-segment-name {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .segment-pending-dialog .dialog-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .segment-pending-dialog .dialog-btn {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 10px 22px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .segment-pending-dialog .dialog-btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+    }
+    .segment-pending-dialog .dialog-btn-primary:hover {
+      background: #d4623e;
+      transform: translateY(-1px);
+    }
+
+    .segment-pending-dialog .dialog-btn-secondary {
+      background: var(--surface);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .segment-pending-dialog .dialog-btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
     @media (max-width: 700px) {
       main { padding: 32px 16px 60px; }
       .segment-row { padding: 10px 12px; gap: 6px; }
@@ -779,7 +909,7 @@
 </select>
   </div>
   <div class="header-actions">
-    <!-- Settings gear (auto-transcribe toggle) -->
+    <!-- Settings gear -->
     <div class="settings-wrap">
       <button class="settings-toggle" id="settingsToggle" aria-label="Settings" title="Settings">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -831,13 +961,21 @@
           </div>
           <div class="shortcut-row">
             <span class="shortcut-desc">Play / Cycle Speed</span>
-            <span class="shortcut-keys"><kbd>F4</kbd></span>
+            <span class="shortcut-keys"><kbd>F3</kbd></span>
           </div>
           <div class="shortcut-row">
-            <span class="shortcut-desc">Pause / Reset Speed</span>
+            <span class="shortcut-desc">Pause</span>
             <span class="shortcut-keys"><kbd>F5</kbd></span>
           </div>
           <div class="shortcuts-divider"></div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Skip back 1s</span>
+            <span class="shortcut-keys"><kbd>F2</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Skip fwd 1s</span>
+            <span class="shortcut-keys"><kbd>F4</kbd></span>
+          </div>
           <div class="shortcut-row">
             <span class="shortcut-desc">Skip ±5s</span>
             <span class="shortcut-keys"><kbd>←</kbd> <kbd>→</kbd></span>
@@ -848,12 +986,12 @@
           </div>
           <div class="shortcuts-divider"></div>
           <div class="shortcut-row">
-            <span class="shortcut-desc">Grab IN</span>
-            <span class="shortcut-keys"><kbd>F2</kbd></span>
+            <span class="shortcut-desc">Mark IN</span>
+            <span class="shortcut-keys"><kbd>F6</kbd></span>
           </div>
           <div class="shortcut-row">
-            <span class="shortcut-desc">Grab OUT</span>
-            <span class="shortcut-keys"><kbd>F3</kbd></span>
+            <span class="shortcut-desc">Mark OUT</span>
+            <span class="shortcut-keys"><kbd>F7</kbd></span>
           </div>
         </div>
       </div>
@@ -876,7 +1014,6 @@
 <main>
 
   <div class="card" id="audioCard">
-    <!-- Dynamic top bar: AUDIO → STEMS with chips when loaded -->
     <div class="audio-top-bar" id="audioTopBar">
       <span class="audio-top-bar-label" id="audioTopLabel">Audio</span>
       <div class="audio-top-bar-chips" id="audioTopChips"></div>
@@ -921,16 +1058,14 @@
         </button>
         <span class="transport-time" id="transportTime">00.00.00</span>
         <span class="transport-duration" id="transportDuration">/ 00.00.00</span>
-        <span class="speed-badge" id="speedBadge" title="Click to cycle speed (F4)">1&times;</span>
+        <span class="speed-badge" id="speedBadge" title="Click to cycle speed (F3)">1&times;</span>
         <span class="transport-spacer"></span>
-        <!-- Transcription status (inline, right-aligned — hidden when search appears) -->
         <div class="transport-status" id="transportStatus">
           <span class="transport-status-text" id="transcribeStatus"></span>
           <div class="transport-status-progress" id="transcribeProgress">
             <div class="transport-status-progress-bar" id="transcribeProgressBar"></div>
           </div>
         </div>
-        <!-- Transcript search (appears after transcription, replaces status) -->
         <div class="transport-search" id="transportSearch">
           <span class="transport-search-count" id="searchCount"></span>
           <div class="transport-search-nav" id="searchNav">
@@ -973,6 +1108,27 @@
   <div class="error-box" id="errorBox"></div>
 </main>
 
+<!-- Pending-OUT overlay -->
+<div class="segment-pending-overlay" id="segmentPendingOverlay">
+  <div class="segment-pending-dialog">
+    <div class="dialog-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </div>
+    <div class="dialog-title">End Time Required</div>
+    <div class="dialog-message">
+      <span class="dialog-segment-name" id="pendingSegmentName">Segment 1</span> has a start time but no end time.<br>
+      Press <kbd style="display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-family:var(--mono);font-size:11px;">F7</kbd> to mark the OUT point before moving on.
+    </div>
+    <div class="dialog-actions">
+      <button class="dialog-btn dialog-btn-primary" id="pendingDismissBtn">Got it</button>
+    </div>
+  </div>
+</div>
+
 <footer>
       <a href="index.html"><span style="color: var(--accent);">dev.</span>nialfernandes.com</a>
       <span style="color: var(--text-muted); margin: 0 8px;">|</span>
@@ -1010,7 +1166,6 @@
     e.stopPropagation();
     settingsPanel.classList.toggle('visible');
     settingsToggle.classList.toggle('active');
-    // Close shortcuts if open
     shortcutsPanel.classList.remove('visible');
     shortcutsToggleBtn.classList.remove('active');
   });
@@ -1023,7 +1178,6 @@
     e.stopPropagation();
     shortcutsPanel.classList.toggle('visible');
     shortcutsToggleBtn.classList.toggle('active');
-    // Close settings if open
     settingsPanel.classList.remove('visible');
     settingsToggle.classList.remove('active');
   });
@@ -1070,7 +1224,17 @@
   var autoTranscribeEnabled = true;
   var autoTranscribeTimer = null;
   var transcriptionWorker = null;
-  var mixGeneration = 0; // incremented each mix to detect stale transcriptions
+  var mixGeneration = 0;
+
+  // ═══════════════════════════════════════════════════════════════
+  // SPORT SEQUENTIAL STAMPING STATE
+  // ═══════════════════════════════════════════════════════════════
+  // Ordered list of all segment IDs (left + right) for Sport mode.
+  // sportStampQueue tracks which segments still need stamping.
+  // sportPendingSegment = id of segment that has IN but not OUT.
+  var sportSegmentOrder = [];
+  var sportStampIndex = 0;        // index into sportSegmentOrder for next IN
+  var sportPendingSegment = null;  // segment id waiting for OUT
 
   // ═══════════════════════════════════════════════════════════════
   // AUTOPLAY KEYWORD TOGGLE
@@ -1098,7 +1262,6 @@
   sentenceTimestampsToggle.addEventListener('change', function () {
     sentenceTimestampsEnabled = this.checked;
     localStorage.setItem('sentenceTimestamps', sentenceTimestampsEnabled ? '1' : '0');
-    // Re-render transcript if we have one
     if (transcriptChunks && transcriptChunks.length) displayTranscript();
   });
 
@@ -1285,6 +1448,29 @@
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // PENDING-OUT OVERLAY
+  // ═══════════════════════════════════════════════════════════════
+  var pendingOverlay = document.getElementById('segmentPendingOverlay');
+  var pendingSegNameEl = document.getElementById('pendingSegmentName');
+  var pendingDismissBtn = document.getElementById('pendingDismissBtn');
+
+  function showPendingOverlay(segmentLabel) {
+    pendingSegNameEl.textContent = segmentLabel;
+    pendingOverlay.classList.add('visible');
+  }
+
+  function hidePendingOverlay() {
+    pendingOverlay.classList.remove('visible');
+  }
+
+  pendingDismissBtn.addEventListener('click', hidePendingOverlay);
+
+  // Close on Escape or clicking backdrop
+  pendingOverlay.addEventListener('click', function (e) {
+    if (e.target === pendingOverlay) hidePendingOverlay();
+  });
+
+  // ═══════════════════════════════════════════════════════════════
   // PLAYBACK SPEED
   // ═══════════════════════════════════════════════════════════════
   function setSpeed(idx) {
@@ -1341,6 +1527,9 @@
     });
     if (complete) card.classList.add('complete');
     else card.classList.remove('complete');
+
+    // Update sport segment ordering after completion changes
+    if (activeCategory === 'sport') updateSportSegmentVisuals();
   }
 
   function autoPopulateQuote(tcInput) {
@@ -1369,9 +1558,6 @@
     }
   }
 
-  // Back-fill quotes for any timecode inputs that were stamped before
-  // transcription finished. Finds tc-inputs with values whose paired
-  // quote-input is still empty, and runs autoPopulateQuote on them.
   function backfillQuotes() {
     document.querySelectorAll('.tc-input').forEach(function (tcInput) {
       if (!tcInput.value || !isValidTimecode(tcInput.value)) return;
@@ -1394,6 +1580,7 @@
     var card = document.createElement('div');
     card.className = 'segment-card';
     card.id = 'card-' + seg.id;
+    card.dataset.segId = seg.id;
     var header = '<div class="segment-header"><div class="header-left"><span>' + seg.label + '</span><span class="complete-tick">' + TICK_SVG + '</span></div></div>';
     var rows = '';
 
@@ -1428,6 +1615,58 @@
     return card;
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // SPORT SEGMENT VISUAL ORDERING
+  // ═══════════════════════════════════════════════════════════════
+  function updateSportSegmentVisuals() {
+    if (activeCategory !== 'sport') return;
+
+    // Remove all visual states
+    document.querySelectorAll('.segment-card').forEach(function (card) {
+      card.classList.remove('active-segment', 'pending-out');
+      card.style.order = '';
+    });
+
+    // For left-column segments, reorder: incomplete first, complete last
+    var colLeft = document.getElementById('colLeft');
+    var leftCards = Array.from(colLeft.querySelectorAll('.segment-card'));
+    var orderIdx = 0;
+
+    // Find first incomplete segment and highlight it
+    var foundActive = false;
+    leftCards.forEach(function (card) {
+      if (card.classList.contains('complete')) {
+        card.style.order = 100 + orderIdx;
+      } else {
+        card.style.order = orderIdx;
+        if (!foundActive) {
+          card.classList.add('active-segment');
+          foundActive = true;
+        }
+      }
+      orderIdx++;
+    });
+
+    // Mark pending-out segment
+    if (sportPendingSegment) {
+      var pendingCard = document.getElementById('card-' + sportPendingSegment);
+      if (pendingCard) {
+        pendingCard.classList.remove('active-segment');
+        pendingCard.classList.add('pending-out');
+      }
+    }
+  }
+
+  function getSegmentLabel(segId) {
+    var card = document.getElementById('card-' + segId);
+    if (!card) return segId;
+    var span = card.querySelector('.segment-header .header-left span');
+    return span ? span.textContent : segId;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // LOAD CATEGORY
+  // ═══════════════════════════════════════════════════════════════
   function loadCategory(catId) {
     activeCategory = catId;
     var colLeft = document.getElementById('colLeft');
@@ -1437,19 +1676,34 @@
     colLeft.innerHTML = ''; rightFixed.innerHTML = '';
     document.getElementById('pickupsContainer').innerHTML = '';
     pickupCount = 0;
+
+    // Reset sport stamping state
+    sportSegmentOrder = [];
+    sportStampIndex = 0;
+    sportPendingSegment = null;
+
     var cat = CATEGORIES[catId];
     if (!cat) return;
-    (cat.left || []).forEach(function (seg) { colLeft.appendChild(buildSegmentCard(seg)); });
+    (cat.left || []).forEach(function (seg) {
+      colLeft.appendChild(buildSegmentCard(seg));
+      if (catId === 'sport') sportSegmentOrder.push(seg.id);
+    });
     (cat.right || []).forEach(function (seg) { rightFixed.appendChild(buildSegmentCard(seg)); });
 
     document.getElementById('addPickupBtn').textContent = cat.addLabel || '+ Add Pickup Point';
 
-    // Hide columns grid if both columns are empty (e.g. News)
     var hasContent = (cat.left && cat.left.length) || (cat.right && cat.right.length);
     columnsWrap.style.display = hasContent ? '' : 'none';
     colRight.style.display = (cat.right && cat.right.length) ? '' : 'none';
 
+    // Enable flex ordering for left column in sport mode
+    if (catId === 'sport') {
+      colLeft.style.display = 'flex';
+      colLeft.style.flexDirection = 'column';
+    }
+
     updateStampButtons();
+    updateSportSegmentVisuals();
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1548,7 +1802,6 @@
     var label = document.getElementById('audioTopLabel');
     var clearBtn = document.getElementById('audioTopClear');
 
-    // Build chips + add button into the top bar
     audioTopChips.innerHTML = '';
 
     if (stemFiles.length === 1) {
@@ -1564,7 +1817,6 @@
       audioTopChips.appendChild(chip);
     });
 
-    // Add button (if room)
     if (stemFiles.length < 5) {
       var addBtn = document.createElement('button');
       addBtn.className = 'stems-add-btn';
@@ -1612,7 +1864,6 @@
   async function mixAndLoadStems() {
     if (!stemFiles.length) return;
 
-    // Cancel any in-progress transcription (cancel-and-restart)
     cancelTranscription();
     mixGeneration++;
     var thisMix = mixGeneration;
@@ -1629,7 +1880,6 @@
         buffers.push(await audioCtx.decodeAudioData(ab));
       }
 
-      // Bail if a newer mix has started
       if (thisMix !== mixGeneration) { audioCtx.close(); return; }
 
       updateWaveformLoading('Mixing stems…');
@@ -1676,7 +1926,6 @@
       mixedBlob = audioBufferToWav(mixedBuffer);
       audioCtx.close();
 
-      // Bail if a newer mix has started
       if (thisMix !== mixGeneration) return;
 
       updateWaveformLoading('Rendering waveform…');
@@ -1696,7 +1945,6 @@
       wavesurfer.load(URL.createObjectURL(mixedBlob));
 
       wavesurfer.on('ready', function () {
-        // Bail if a newer mix has started
         if (thisMix !== mixGeneration) return;
 
         audioLoaded = true;
@@ -1706,7 +1954,6 @@
         wavesurfer.setPlaybackRate(SPEED_STEPS[speedIndex]);
         hideWaveformLoading();
 
-        // Auto-transcribe after 0.3s delay
         if (autoTranscribeEnabled && mixedBuffer) {
           autoTranscribeTimer = setTimeout(function () {
             if (thisMix === mixGeneration) startTranscription(thisMix);
@@ -1791,12 +2038,8 @@
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // F2/F3 GRAB HOTKEYS (News mode only)
+  // F6/F7 MARK IN/OUT — SPORT: sequential segments; NEWS: grabs
   // ═══════════════════════════════════════════════════════════════
-  // F2 = Mark IN: finds the last grab card — if it has no IN yet,
-  //   stamp IN there; otherwise create a new grab and stamp IN.
-  // F3 = Mark OUT: finds the most recent grab with an IN but no OUT,
-  //   and stamps OUT there.
 
   function createGrabCard() {
     var cat = CATEGORIES[activeCategory];
@@ -1815,20 +2058,92 @@
     return card;
   }
 
-  function stampGrabIn() {
+  // ── Sport mode: stamp IN sequentially across segments ──
+  function sportStampIn() {
+    if (!wavesurfer || !audioLoaded) return;
+
+    // If there's a pending segment waiting for OUT, show the overlay
+    if (sportPendingSegment) {
+      showPendingOverlay(getSegmentLabel(sportPendingSegment));
+      return;
+    }
+
+    // Find next segment that needs an IN
+    if (sportStampIndex >= sportSegmentOrder.length) {
+      showToast('All segments have been stamped');
+      return;
+    }
+
+    var segId = sportSegmentOrder[sportStampIndex];
+    var card = document.getElementById('card-' + segId);
+    if (!card) return;
+
+    var tc = secondsToTimecode(wavesurfer.getCurrentTime());
+    var startInput = card.querySelector('.tc-input[data-tc-id$="-start"]');
+    if (startInput) {
+      startInput.value = tc;
+      startInput.classList.remove('invalid');
+      autoPopulateQuote(startInput);
+      checkCardCompletion(startInput);
+      sportPendingSegment = segId;
+      showToast(getSegmentLabel(segId) + ' IN: ' + tc);
+      updateSportSegmentVisuals();
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  // ── Sport mode: stamp OUT for the pending segment ──
+  function sportStampOut() {
+    if (!wavesurfer || !audioLoaded) return;
+
+    if (!sportPendingSegment) {
+      showToast('No segment waiting for an OUT — press F6 first');
+      return;
+    }
+
+    var segId = sportPendingSegment;
+    var card = document.getElementById('card-' + segId);
+    if (!card) return;
+
+    var tc = secondsToTimecode(wavesurfer.getCurrentTime());
+    var endInput = card.querySelector('.tc-input[data-tc-id$="-end"]');
+    if (endInput) {
+      endInput.value = tc;
+      endInput.classList.remove('invalid');
+      autoPopulateQuote(endInput);
+      checkCardCompletion(endInput);
+      showToast(getSegmentLabel(segId) + ' OUT: ' + tc);
+
+      // Clear pending, advance index
+      sportPendingSegment = null;
+      sportStampIndex++;
+      updateSportSegmentVisuals();
+
+      // Scroll to next segment if available
+      if (sportStampIndex < sportSegmentOrder.length) {
+        var nextCard = document.getElementById('card-' + sportSegmentOrder[sportStampIndex]);
+        if (nextCard) {
+          setTimeout(function () {
+            nextCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+        }
+      }
+    }
+  }
+
+  // ── News mode: grab IN/OUT (same as before but on F6/F7) ──
+  function newsStampIn() {
     if (!wavesurfer || !audioLoaded) return;
     var tc = secondsToTimecode(wavesurfer.getCurrentTime());
     var cards = document.querySelectorAll('#pickupsContainer .segment-card');
     var lastCard = cards.length ? cards[cards.length - 1] : null;
 
-    // If no cards yet, or the last card already has an IN, create a new one
     var targetCard;
     if (!lastCard) {
       targetCard = createGrabCard();
     } else {
       var startInput = lastCard.querySelector('.tc-input[data-tc-id$="-start"]');
       if (startInput && startInput.value) {
-        // Last card already has IN — create new grab
         targetCard = createGrabCard();
       } else {
         targetCard = lastCard;
@@ -1845,10 +2160,9 @@
     }
   }
 
-  function stampGrabOut() {
+  function newsStampOut() {
     if (!wavesurfer || !audioLoaded) return;
     var tc = secondsToTimecode(wavesurfer.getCurrentTime());
-    // Find the most recent grab with an IN but no OUT
     var cards = Array.from(document.querySelectorAll('#pickupsContainer .segment-card'));
     for (var i = cards.length - 1; i >= 0; i--) {
       var startInput = cards[i].querySelector('.tc-input[data-tc-id$="-start"]');
@@ -1862,30 +2176,81 @@
         return;
       }
     }
-    showToast('No open grab to mark OUT — press F2 first');
+    showToast('No open grab to mark OUT — press F6 first');
   }
 
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'F2') {
-      e.preventDefault();
-      stampGrabIn();
-    }
-    if (e.key === 'F3') {
-      e.preventDefault();
-      stampGrabOut();
-    }
-  });
+  // ── Unified F6/F7 dispatchers ──
+  function handleMarkIn() {
+    if (activeCategory === 'sport') sportStampIn();
+    else newsStampIn();
+  }
+
+  function handleMarkOut() {
+    hidePendingOverlay(); // close overlay if open
+    if (activeCategory === 'sport') sportStampOut();
+    else newsStampOut();
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // KEYBOARD SHORTCUTS
   // ═══════════════════════════════════════════════════════════════
   document.addEventListener('keydown', function (e) {
-    // Let browser shortcuts (Cmd+R, Ctrl+S, etc.) pass through
     if (e.metaKey || e.ctrlKey) return;
 
     var tag = e.target.tagName.toLowerCase();
     var isInput = (tag === 'input' || tag === 'textarea' || tag === 'select');
     var isTcInput = e.target.classList && e.target.classList.contains('tc-input');
+
+    // ── F2 = Skip back 1s ──
+    if (e.key === 'F2') {
+      e.preventDefault();
+      if (wavesurfer && audioLoaded) wavesurfer.skip(-1);
+      return;
+    }
+
+    // ── F3 = Play & cycle speed ──
+    if (e.key === 'F3') {
+      e.preventDefault();
+      if (wavesurfer && audioLoaded) {
+        if (wavesurfer.isPlaying()) {
+          setSpeed((speedIndex + 1) % SPEED_STEPS.length);
+        } else {
+          wavesurfer.play();
+        }
+      }
+      return;
+    }
+
+    // ── F4 = Skip fwd 1s ──
+    if (e.key === 'F4') {
+      e.preventDefault();
+      if (wavesurfer && audioLoaded) wavesurfer.skip(1);
+      return;
+    }
+
+    // ── F5 = Pause ──
+    if (e.key === 'F5') {
+      e.preventDefault();
+      if (wavesurfer && audioLoaded) {
+        if (wavesurfer.isPlaying()) wavesurfer.pause();
+        speedReset();
+      }
+      return;
+    }
+
+    // ── F6 = Mark IN ──
+    if (e.key === 'F6') {
+      e.preventDefault();
+      handleMarkIn();
+      return;
+    }
+
+    // ── F7 = Mark OUT ──
+    if (e.key === 'F7') {
+      e.preventDefault();
+      handleMarkOut();
+      return;
+    }
 
     // Space = Play / Pause (only when not in a text input)
     if (e.code === 'Space' && !isInput) {
@@ -1893,28 +2258,7 @@
       if (wavesurfer && audioLoaded) wavesurfer.playPause();
     }
 
-    // F4 = Play & cycle speed (1x → 1.5x → 2x → 2.5x → 1x)
-    if (e.key === 'F4') {
-      e.preventDefault();
-      if (wavesurfer && audioLoaded) {
-        if (wavesurfer.isPlaying()) {
-          // Cycle to next speed
-          setSpeed((speedIndex + 1) % SPEED_STEPS.length);
-        } else {
-          wavesurfer.play();
-        }
-      }
-    }
-
-    // F5 = Pause & reset speed to 1x
-    if (e.key === 'F5') {
-      e.preventDefault();
-      if (wavesurfer && audioLoaded) {
-        if (wavesurfer.isPlaying()) wavesurfer.pause();
-        speedReset();
-      }
-    }
-
+    // Arrow keys for skip
     if (!isInput || isTcInput) {
       if (e.key === 'ArrowLeft' && wavesurfer && audioLoaded && (!isInput || e.shiftKey)) {
         e.preventDefault(); wavesurfer.skip(e.shiftKey ? -1 : -5);
@@ -1947,7 +2291,6 @@
     try {
       var audioData = await getMixedAudio16k();
 
-      // Bail if mix changed during resample
       if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) {
         isTranscribing = false;
         return;
@@ -1958,7 +2301,6 @@
       transcriptionWorker.onmessage = function (e) {
         var msg = e.data;
 
-        // Bail if mix changed
         if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) {
           transcriptionWorker.terminate();
           transcriptionWorker = null;
@@ -2040,7 +2382,6 @@
     container.classList.add('visible');
     document.getElementById('transportStatus').classList.remove('visible');
     document.getElementById('transportSearch').classList.add('visible');
-    // Click on a chunk → seek
     container.querySelectorAll('.ts-word').forEach(function (el) {
       el.addEventListener('click', function () {
         if (wavesurfer && audioLoaded) {
@@ -2049,7 +2390,6 @@
         }
       });
     });
-    // Click on a timecode marker → seek
     container.querySelectorAll('.ts-marker').forEach(function (el) {
       el.addEventListener('click', function () {
         if (wavesurfer && audioLoaded) {
@@ -2087,9 +2427,6 @@
   var searchMatches = [];
   var searchIdx     = -1;
 
-  // ── Seek pre-roll: milliseconds to back up before a chunk start ──
-  // Increase this value (1–9) if the first word of sentences gets clipped.
-  // Decrease it if you're hearing too much of the previous sentence.
   var SEEK_HANDLE_MS = 3;
 
   function seekToWord(el, query) {
@@ -2101,7 +2438,6 @@
 
     var seekTime = start;
 
-    // Interpolate only when Seek to Word is enabled
     if (seekToWordEnabled && query && !isNaN(end) && end > start) {
       var text = el.textContent.toLowerCase();
       var matchPos = text.indexOf(query.toLowerCase());
@@ -2111,7 +2447,6 @@
       }
     }
 
-    // Pre-roll: back up by seek handle (ms) to catch clipped onsets
     seekTime = Math.max(0, seekTime - (SEEK_HANDLE_MS / 1000));
 
     wavesurfer.seekTo(seekTime / d);
@@ -2123,7 +2458,6 @@
   function doTranscriptSearch() {
     var query = searchInput.value.trim().toLowerCase();
 
-    // Clear previous highlights
     document.querySelectorAll('.ts-word.search-match, .ts-word.search-active').forEach(function (el) {
       el.classList.remove('search-match', 'search-active');
     });
@@ -2181,7 +2515,6 @@
       e.preventDefault();
       searchNavigate(e.shiftKey ? -1 : 1);
     }
-    // Let F-keys bubble up for global hotkeys (F2/F3 grabs)
     if (!e.key.startsWith('F')) e.stopPropagation();
   });
 
@@ -2196,7 +2529,7 @@
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // COPY ALL / CLEAR ALL
+  // COPY ALL
   // ═══════════════════════════════════════════════════════════════
   document.getElementById('copyAllBtn').addEventListener('click', function () {
     var plainLines = [], htmlLines = [], valid = true;
