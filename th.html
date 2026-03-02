@@ -392,26 +392,35 @@
       background: var(--error-glow);
     }
 
-    /* ── Transcription status (below top bar) ── */
-    .transcribe-status-bar {
-      display: none; align-items: center; gap: 12px; padding: 0 20px 10px;
+    /* ── Transcription status (inline in transport row) ── */
+    .transport-status {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      flex-shrink: 1;
+      min-width: 0;
+      overflow: hidden;
     }
-    .transcribe-status-bar.visible { display: flex; }
-    .transcribe-status-text {
+    .transport-status.visible { display: flex; }
+    .transport-status-text {
       font-family: var(--mono); font-size: 10px;
       color: var(--text-muted); letter-spacing: 0.5px;
-      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .transcribe-progress {
-      flex: 1; height: 3px; background: var(--border);
-      border-radius: 3px; overflow: hidden; display: none;
+    .transport-status-progress {
+      width: 60px; height: 3px; background: var(--border);
+      border-radius: 3px; overflow: hidden; flex-shrink: 0;
+      display: none;
     }
-    .transcribe-progress.visible { display: block; }
-    .transcribe-progress-bar {
+    .transport-status-progress.visible { display: block; }
+    .transport-status-progress-bar {
       height: 100%; width: 0%; background: var(--accent);
       transition: width 0.3s ease;
     }
-    .transcribe-progress-bar.indeterminate {
+    .transport-status-progress-bar.indeterminate {
       width: 100%; animation: indeterminate 1.8s ease-in-out infinite;
     }
 
@@ -772,13 +781,6 @@
       <div class="settings-panel" id="settingsPanel">
         <div class="settings-panel-label">Settings</div>
         <div class="setting-row">
-          <span class="setting-label">Auto Transcribe</span>
-          <label class="toggle-switch">
-            <input type="checkbox" id="autoTranscribeToggle" checked />
-            <span class="toggle-track"></span>
-          </label>
-        </div>
-        <div class="setting-row" style="margin-top:10px;">
           <span class="setting-label">Autoplay Keyword</span>
           <label class="toggle-switch">
             <input type="checkbox" id="autoplayKeywordToggle" checked />
@@ -803,7 +805,7 @@
           <span class="setting-label">Seek Handle</span>
           <div style="display:flex;align-items:center;gap:6px;">
             <input type="number" id="seekHandleInput" min="1" max="9" value="5" style="width:36px;padding:4px 6px;text-align:center;font-family:var(--mono);font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);outline:none;" />
-            <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted);">ms</span>
+            <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted);">sec</span>
           </div>
         </div>
       </div>
@@ -880,14 +882,6 @@
       <button class="audio-top-bar-clear" id="audioTopClear">Clear</button>
     </div>
 
-    <!-- Transcription status (just below top bar) -->
-    <div class="transcribe-status-bar" id="transcribeStatusBar">
-      <span class="transcribe-status-text" id="transcribeStatus"></span>
-      <div class="transcribe-progress" id="transcribeProgress">
-        <div class="transcribe-progress-bar" id="transcribeProgressBar"></div>
-      </div>
-    </div>
-
     <div class="audio-drop-zone" id="audioDropZone">
       <div class="audio-drop-overlay" id="audioDropOverlay">
         <span>Drop audio file(s) here</span>
@@ -927,7 +921,14 @@
         <span class="transport-duration" id="transportDuration">/ 00.00.00</span>
         <span class="speed-badge" id="speedBadge" title="Click to cycle speed (D faster, S slower, R reset)">1&times;</span>
         <span class="transport-spacer"></span>
-        <!-- Transcript search (appears after transcription) -->
+        <!-- Transcription status (inline, right-aligned — hidden when search appears) -->
+        <div class="transport-status" id="transportStatus">
+          <span class="transport-status-text" id="transcribeStatus"></span>
+          <div class="transport-status-progress" id="transcribeProgress">
+            <div class="transport-status-progress-bar" id="transcribeProgressBar"></div>
+          </div>
+        </div>
+        <!-- Transcript search (appears after transcription, replaces status) -->
         <div class="transport-search" id="transportSearch">
           <span class="transport-search-count" id="searchCount"></span>
           <div class="transport-search-nav" id="searchNav">
@@ -1069,24 +1070,6 @@
   var autoTranscribeTimer = null;
   var transcriptionWorker = null;
   var mixGeneration = 0; // incremented each mix to detect stale transcriptions
-
-  // ═══════════════════════════════════════════════════════════════
-  // AUTO-TRANSCRIBE TOGGLE
-  // ═══════════════════════════════════════════════════════════════
-  var autoTranscribeToggle = document.getElementById('autoTranscribeToggle');
-  autoTranscribeToggle.addEventListener('change', function () {
-    autoTranscribeEnabled = this.checked;
-    localStorage.setItem('autoTranscribe', autoTranscribeEnabled ? '1' : '0');
-  });
-
-  // Restore from localStorage
-  (function () {
-    var saved = localStorage.getItem('autoTranscribe');
-    if (saved !== null) {
-      autoTranscribeEnabled = saved === '1';
-      autoTranscribeToggle.checked = autoTranscribeEnabled;
-    }
-  })();
 
   // ═══════════════════════════════════════════════════════════════
   // AUTOPLAY KEYWORD TOGGLE
@@ -1603,7 +1586,7 @@
     }
     isTranscribing = false;
     transcriptChunks = null;
-    document.getElementById('transcribeStatusBar').classList.remove('visible');
+    document.getElementById('transportStatus').classList.remove('visible');
     document.getElementById('transcribeProgress').classList.remove('visible');
     document.getElementById('transcribeStatus').textContent = '';
     document.getElementById('transcribeProgressBar').style.width = '0%';
@@ -1832,12 +1815,13 @@
     if (isTranscribing || !mixedBuffer) return;
     if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) return;
 
-    var statusBar = document.getElementById('transcribeStatusBar');
+    var statusBar = document.getElementById('transportStatus');
     var status    = document.getElementById('transcribeStatus');
     var prog      = document.getElementById('transcribeProgress');
     var progBar   = document.getElementById('transcribeProgressBar');
 
     isTranscribing = true;
+    document.getElementById('transportSearch').classList.remove('visible');
     statusBar.classList.add('visible');
     status.textContent = 'Starting transcription…';
     prog.classList.add('visible');
@@ -1880,7 +1864,6 @@
             transcriptChunks = [{ start: 0, end: mixedBuffer.duration, text: result.text }];
           }
           displayTranscript();
-          status.textContent = 'Transcribed \u2014 quotes auto-populate when you stamp timecodes';
           isTranscribing = false;
           setTimeout(function () { prog.classList.remove('visible'); }, 1000);
           transcriptionWorker.terminate();
@@ -1937,6 +1920,7 @@
     }
     container.innerHTML = html;
     container.classList.add('visible');
+    document.getElementById('transportStatus').classList.remove('visible');
     document.getElementById('transportSearch').classList.add('visible');
     // Click on a chunk → seek
     container.querySelectorAll('.ts-word').forEach(function (el) {
@@ -1985,12 +1969,12 @@
   var searchMatches = [];
   var searchIdx     = -1;
 
-  var seekHandleMs = 5;
+  var seekHandleSec = 5;
   var seekHandleInput = document.getElementById('seekHandleInput');
   seekHandleInput.addEventListener('input', function () {
     var val = parseInt(this.value, 10);
     if (val >= 1 && val <= 9) {
-      seekHandleMs = val;
+      seekHandleSec = val;
       localStorage.setItem('seekHandle', String(val));
     }
   });
@@ -2002,7 +1986,7 @@
     if (saved !== null) {
       var val = parseInt(saved, 10);
       if (val >= 1 && val <= 9) {
-        seekHandleMs = val;
+        seekHandleSec = val;
         seekHandleInput.value = val;
       }
     }
@@ -2027,8 +2011,8 @@
       }
     }
 
-    // Pre-roll: back up by seek handle to catch clipped onsets
-    seekTime = Math.max(0, seekTime - (seekHandleMs / 1000));
+    // Pre-roll: back up by seek handle (in seconds) to catch sentence start
+    seekTime = Math.max(0, seekTime - seekHandleSec);
 
     wavesurfer.seekTo(seekTime / d);
     if (autoplayKeywordEnabled && !wavesurfer.isPlaying()) {
