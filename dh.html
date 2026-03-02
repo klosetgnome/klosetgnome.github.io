@@ -357,6 +357,22 @@
       justify-content: flex-end;
     }
 
+    /* ── NEW: Collapsible input section ── */
+    .input-section {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      transition: opacity 0.35s ease, max-height 0.45s ease;
+      max-height: 800px;
+      overflow: hidden;
+    }
+    .input-section.collapsed {
+      opacity: 0;
+      max-height: 0 !important;
+      pointer-events: none;
+    }
+
     /* ── Responsive (page-specific) ── */
     @media (max-width: 600px) {
       .row-meta { width: 90px; padding: 12px 10px; }
@@ -437,44 +453,47 @@
     Then open <code>http://localhost:8080/index.html</code> in your browser.
   </div>
 
-  <div class="card">
-    <span class="card-label">Title</span>
-    <input type="text" id="titleInput" class="title-input" placeholder="Add a title to guide the headlines (optional)" />
-  </div>
+  <!-- CHANGED: wrapped Title + Transcript cards in collapsible container -->
+  <div class="input-section" id="inputSection">
+    <div class="card">
+      <span class="card-label">Title</span>
+      <input type="text" id="titleInput" class="title-input" placeholder="Add a title to guide the headlines (optional)" />
+    </div>
 
-  <div class="card" id="transcriptCard">
-    <span class="card-label">Transcript</span>
-    <div class="drop-zone" id="dropZone">
-      <div class="drop-overlay" id="dropOverlay">
-        <span class="drop-overlay-label">Drop .txt file here</span>
-      </div>
-      <div class="drop-prompt" id="dropPrompt">
-        <div class="drop-prompt-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    <div class="card" id="transcriptCard">
+      <span class="card-label">Transcript</span>
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-overlay" id="dropOverlay">
+          <span class="drop-overlay-label">Drop .txt file here</span>
         </div>
-        <div class="drop-prompt-text">
-          Drag &amp; drop a .txt transcript file here<br>
-          or <span class="browse" id="browseLink">browse to select one</span>
+        <div class="drop-prompt" id="dropPrompt">
+          <div class="drop-prompt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+          <div class="drop-prompt-text">
+            Drag &amp; drop a .txt transcript file here<br>
+            or <span class="browse" id="browseLink">browse to select one</span>
+          </div>
         </div>
+        <input type="file" id="fileInput" accept=".txt,text/plain" style="display:none;" />
+        <textarea id="transcript" placeholder="…or paste the full episode transcript here"></textarea>
       </div>
-      <input type="file" id="fileInput" accept=".txt,text/plain" style="display:none;" />
-      <textarea id="transcript" placeholder="…or paste the full episode transcript here"></textarea>
-    </div>
-    <div class="file-loaded-bar" id="fileBar">
-      <span class="file-name" id="fileName"></span>
-      <span class="file-size" id="fileSize"></span>
-      <button class="file-remove" id="fileRemove">Clear</button>
-    </div>
-    <div class="countdown-bar" id="countdownBar">
-      <div class="countdown-ring" id="countdownRing">
-        <svg viewBox="0 0 20 20">
-          <circle class="ring-bg" cx="10" cy="10" r="8"/>
-          <circle class="ring-fg" id="ringFg" cx="10" cy="10" r="8"/>
-        </svg>
-        <span class="countdown-number" id="countdownNumber">3</span>
+      <div class="file-loaded-bar" id="fileBar">
+        <span class="file-name" id="fileName"></span>
+        <span class="file-size" id="fileSize"></span>
+        <button class="file-remove" id="fileRemove">Clear</button>
       </div>
-      <span class="countdown-label" id="countdownLabel">Creating in 3s…</span>
-      <button class="countdown-cancel" id="countdownCancel">Cancel</button>
+      <div class="countdown-bar" id="countdownBar">
+        <div class="countdown-ring" id="countdownRing">
+          <svg viewBox="0 0 20 20">
+            <circle class="ring-bg" cx="10" cy="10" r="8"/>
+            <circle class="ring-fg" id="ringFg" cx="10" cy="10" r="8"/>
+          </svg>
+          <span class="countdown-number" id="countdownNumber">3</span>
+        </div>
+        <span class="countdown-label" id="countdownLabel">Creating in 3s…</span>
+        <button class="countdown-cancel" id="countdownCancel">Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -483,7 +502,8 @@
       <label>Model <span id="modelStatusLegacy" style="display:none;"></span></label>
       <select id="modelLegacy" class="minimal-select" style="display:none;"></select>
     </div>
-    <button class="submit" id="submitBtn">Create</button>
+    <!-- CHANGED: hidden by default, shown by JS when transcript has content -->
+    <button class="submit" id="submitBtn" style="display:none;">Create</button>
   </div>
 
   <div class="progress-wrap" id="progressWrap">
@@ -547,6 +567,26 @@
   var fileRemoveBtn = document.getElementById('fileRemove');
   var loadedFileText = null;
 
+  // ── NEW: Submit button + input collapse state ──
+  var btn          = document.getElementById('submitBtn');
+  var inputSection = document.getElementById('inputSection');
+  var hasGenerated = false;
+
+  function updateSubmitVisibility() {
+    var hasContent = !!(loadedFileText || transcriptEl.value.trim());
+    btn.style.display = hasContent ? '' : 'none';
+  }
+
+  function collapseInputs() {
+    inputSection.classList.add('collapsed');
+    hasGenerated = true;
+    btn.textContent = 'Recreate';
+  }
+
+  function expandInputs() {
+    inputSection.classList.remove('collapsed');
+  }
+
   // ── Countdown elements ──
   var countdownBar    = document.getElementById('countdownBar');
   var countdownLabel  = document.getElementById('countdownLabel');
@@ -574,16 +614,13 @@
     cancelCountdown();
     var remaining = 3;
 
-    // Show countdown bar
     countdownBar.classList.add('visible');
     countdownNumber.textContent = remaining;
     countdownLabel.textContent = 'Creating in ' + remaining + 's…';
 
-    // Reset ring to full
     ringFg.style.transition = 'none';
     ringFg.style.strokeDashoffset = '0';
 
-    // Kick off the first ring animation after a frame
     requestAnimationFrame(function () {
       ringFg.style.transition = 'stroke-dashoffset 1s linear';
       ringFg.style.strokeDashoffset = (RING_CIRCUMFERENCE / 3).toFixed(2);
@@ -628,8 +665,8 @@
       fileBar.classList.add('visible');
       dropPrompt.classList.add('hidden');
       transcriptEl.style.display = 'none';
+      updateSubmitVisibility(); // CHANGED: show button now file is loaded
 
-      // Start auto-submit countdown after a short delay (0.3s)
       setTimeout(function () {
         startAutoSubmitCountdown();
       }, 300);
@@ -647,6 +684,7 @@
     transcriptEl.value = '';
     transcriptEl.focus();
     cancelCountdown();
+    updateSubmitVisibility(); // CHANGED: hide button now content is cleared
   }
 
   var dragCounter = 0;
@@ -658,7 +696,11 @@
   document.getElementById('browseLink').addEventListener('click', function () { fileInput.click(); });
   fileInput.addEventListener('change', function () { if (fileInput.files && fileInput.files.length > 0) handleFile(fileInput.files[0]); });
   fileRemoveBtn.addEventListener('click', clearFile);
-  transcriptEl.addEventListener('input', function () { if (loadedFileText) { loadedFileText = null; fileBar.classList.remove('visible'); } });
+  // CHANGED: merged updateSubmitVisibility into the input listener
+  transcriptEl.addEventListener('input', function () {
+    if (loadedFileText) { loadedFileText = null; fileBar.classList.remove('visible'); }
+    updateSubmitVisibility();
+  });
 
   var FALLBACK_MODELS = [
     ['arcee-ai/trinity-mini:free','Arcee AI: Trinity Mini (free)'],
@@ -736,7 +778,12 @@
     document.getElementById('results').classList.remove('visible');
     document.getElementById('errorBox').classList.remove('visible');
 
-    // Re-select the preferred model for the new category
+    // CHANGED: reset to fresh state on category switch
+    expandInputs();
+    hasGenerated = false;
+    btn.textContent = 'Create';
+    updateSubmitVisibility();
+
     selectPreferredModel();
   });
 
@@ -772,7 +819,6 @@
     var errorBox   = document.getElementById('errorBox');
     var progress   = document.getElementById('progressWrap');
     var results    = document.getElementById('results');
-    var btn        = document.getElementById('submitBtn');
 
     errorBox.classList.remove('visible');
     results.classList.remove('visible');
@@ -809,7 +855,6 @@
       if (!text) throw new Error('Model returned an empty response. Try a different model.');
 
       var clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      // Merge adjacent JSON objects into one (e.g. {"a":"1"} {"b":"2"} → {"a":"1","b":"2"})
       clean = clean.replace(/\}\s*\{/g, ',');
       var parsed;
       try { parsed = JSON.parse(clean); }
@@ -834,6 +879,9 @@
 
       results.classList.add('visible');
       results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // CHANGED: collapse inputs and switch to Recreate after success
+      collapseInputs();
     } catch (err) {
       var msg = err.message || String(err);
       if (/failed to fetch|networkerror|load failed/i.test(msg))
