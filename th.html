@@ -363,35 +363,65 @@
     .waveform-area { display: none; flex-direction: column; gap: 0; }
     .waveform-area.visible { display: flex; }
 
-    .audio-file-bar {
-      display: none; align-items: center; gap: 12px; padding: 12px 20px;
-      border-top: 1px solid var(--border); font-family: var(--mono);
-      font-size: 12px; color: var(--text-secondary);
+    /* ── Audio top bar (dynamic label + clear) ── */
+    .audio-top-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      min-height: 46px;
     }
-    .audio-file-bar.visible { display: flex; }
-    .audio-file-bar .file-name {
-      flex: 1; overflow: hidden; text-overflow: ellipsis;
-      white-space: nowrap; color: var(--text-primary); font-weight: 500;
+    .audio-top-bar-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      flex-shrink: 0;
     }
-    .audio-file-bar .file-size { color: var(--text-muted); flex-shrink: 0; }
-    .audio-file-bar .file-remove {
-      flex-shrink: 0; background: none; border: 1px solid var(--border);
-      border-radius: var(--radius); font-family: var(--mono); font-size: 11px;
-      letter-spacing: 1px; text-transform: uppercase; color: var(--text-secondary);
-      padding: 5px 12px; cursor: pointer; transition: all 0.2s;
+    .audio-top-bar-files {
+      flex: 1;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    .audio-file-bar .file-remove:hover {
-      border-color: var(--error); color: var(--error);
+    .audio-top-bar-files .file-sep {
+      color: var(--border);
+      margin: 0 1px;
+    }
+    .audio-top-bar-clear {
+      display: none;
+      flex-shrink: 0;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .audio-top-bar-clear.visible { display: inline-flex; }
+    .audio-top-bar-clear:hover {
+      border-color: var(--error);
+      color: var(--error);
       background: var(--error-glow);
     }
 
+    /* ── Transcription status (below top bar) ── */
     .transcribe-status-bar {
-      display: none; align-items: center; gap: 12px; padding: 10px 20px;
-      border-top: 1px solid var(--border);
+      display: none; align-items: center; gap: 12px; padding: 0 20px 10px;
     }
     .transcribe-status-bar.visible { display: flex; }
     .transcribe-status-text {
-      font-family: var(--mono); font-size: 11px;
+      font-family: var(--mono); font-size: 10px;
       color: var(--text-muted); letter-spacing: 0.5px;
       flex: 1;
     }
@@ -406,6 +436,78 @@
     }
     .transcribe-progress-bar.indeterminate {
       width: 100%; animation: indeterminate 1.8s ease-in-out infinite;
+    }
+
+    /* ── Transcript search ── */
+    .transcript-search-bar {
+      display: none;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px 12px;
+      border-top: 1px solid var(--border);
+    }
+    .transcript-search-bar.visible { display: flex; }
+    .transcript-search-input {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      color: var(--text-primary);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 10px;
+      outline: none;
+      width: 220px;
+      max-width: 50%;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .transcript-search-input::placeholder { color: var(--text-muted); }
+    .transcript-search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .transcript-search-count {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .transcript-search-nav {
+      display: flex;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .transcript-search-nav button {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s;
+      padding: 0;
+    }
+    .transcript-search-nav button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+    .transcript-search-nav button svg { width: 12px; height: 12px; }
+    .ts-word.search-match {
+      background: rgba(160, 120, 40, 0.2);
+      border-radius: 2px;
+    }
+    .ts-word.search-active {
+      background: var(--accent-light);
+      color: var(--accent);
+      outline: 1px solid var(--accent);
+      border-radius: 2px;
     }
 
     .transcript-display {
@@ -760,7 +862,20 @@
 <main>
 
   <div class="card" id="audioCard">
-    <span class="card-label">Audio</span>
+    <!-- Dynamic top bar -->
+    <div class="audio-top-bar" id="audioTopBar">
+      <span class="audio-top-bar-label" id="audioTopLabel">Audio</span>
+      <span class="audio-top-bar-files" id="audioTopFiles"></span>
+      <button class="audio-top-bar-clear" id="audioTopClear">Clear</button>
+    </div>
+
+    <!-- Transcription status (just below top bar) -->
+    <div class="transcribe-status-bar" id="transcribeStatusBar">
+      <span class="transcribe-status-text" id="transcribeStatus"></span>
+      <div class="transcribe-progress" id="transcribeProgress">
+        <div class="transcribe-progress-bar" id="transcribeProgressBar"></div>
+      </div>
+    </div>
 
     <div class="audio-drop-zone" id="audioDropZone">
       <div class="audio-drop-overlay" id="audioDropOverlay">
@@ -810,20 +925,16 @@
       </div>
     </div>
 
-    <!-- Transcription status (no button — triggered automatically via settings) -->
-    <div class="transcribe-status-bar" id="transcribeStatusBar">
-      <span class="transcribe-status-text" id="transcribeStatus"></span>
-      <div class="transcribe-progress" id="transcribeProgress">
-        <div class="transcribe-progress-bar" id="transcribeProgressBar"></div>
-      </div>
-    </div>
-
     <div class="transcript-display" id="transcriptDisplay"></div>
 
-    <div class="audio-file-bar" id="audioFileBar">
-      <span class="file-name" id="audioFileName"></span>
-      <span class="file-size" id="audioFileSize"></span>
-      <button class="file-remove" id="audioFileRemove">Clear All Audio</button>
+    <!-- Transcript search -->
+    <div class="transcript-search-bar" id="transcriptSearchBar">
+      <span class="transcript-search-count" id="searchCount"></span>
+      <div class="transcript-search-nav" id="searchNav" style="display:none;">
+        <button id="searchPrev" title="Previous match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <button id="searchNext" title="Next match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></button>
+      </div>
+      <input type="text" class="transcript-search-input" id="transcriptSearchInput" placeholder="Search transcript…" />
     </div>
   </div>
 
@@ -1351,7 +1462,7 @@
   stemsAddInput.addEventListener('change', function () {
     if (this.files.length) addStemFiles(Array.from(this.files)); this.value = '';
   });
-  document.getElementById('audioFileRemove').addEventListener('click', clearAudio);
+  document.getElementById('audioTopClear').addEventListener('click', clearAudio);
 
   function isAudioFile(f) {
     return f.type.startsWith('audio/') || /\.(wav|mp3|m4a|ogg|flac)$/i.test(f.name);
@@ -1373,6 +1484,43 @@
     else { renderStems(); mixAndLoadStems(); }
   }
 
+  function truncateFilename(name, maxLen) {
+    if (name.length <= maxLen) return name;
+    var ext = '';
+    var dotIdx = name.lastIndexOf('.');
+    if (dotIdx > 0) { ext = name.substring(dotIdx); name = name.substring(0, dotIdx); }
+    var available = maxLen - ext.length - 1; // 1 for ellipsis
+    if (available < 4) return name.substring(0, maxLen - 1) + '…';
+    return name.substring(0, available) + '…' + ext;
+  }
+
+  function updateTopBar() {
+    var label = document.getElementById('audioTopLabel');
+    var files = document.getElementById('audioTopFiles');
+    var clearBtn = document.getElementById('audioTopClear');
+
+    if (!stemFiles.length) {
+      label.textContent = 'Audio';
+      files.textContent = '';
+      files.innerHTML = '';
+      clearBtn.classList.remove('visible');
+      return;
+    }
+
+    clearBtn.classList.add('visible');
+
+    if (stemFiles.length === 1) {
+      label.textContent = 'Audio';
+      var sep = ' \u2014 ';
+      files.textContent = sep + truncateFilename(stemFiles[0].name, 50);
+    } else {
+      label.textContent = 'Stems';
+      var sep = ' \u2014 ' + stemFiles.length + ' loaded \u2014 ';
+      var names = stemFiles.map(function (f) { return truncateFilename(f.name, 24); }).join(', ');
+      files.textContent = sep + names;
+    }
+  }
+
   function renderStems() {
     audioPrompt.classList.add('hidden');
     stemsBar.classList.add('visible');
@@ -1387,10 +1535,7 @@
       btn.addEventListener('click', function () { removeStem(parseInt(btn.dataset.idx, 10)); });
     });
     stemsAddBtn.classList.toggle('disabled', stemFiles.length >= 5);
-    var total = stemFiles.reduce(function (s, f) { return s + f.size; }, 0);
-    document.getElementById('audioFileName').textContent = stemFiles.length + ' stem' + (stemFiles.length > 1 ? 's' : '') + ' loaded';
-    document.getElementById('audioFileSize').textContent = formatBytes(total);
-    document.getElementById('audioFileBar').classList.add('visible');
+    updateTopBar();
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1414,6 +1559,8 @@
     document.getElementById('transcribeProgressBar').classList.remove('indeterminate');
     document.getElementById('transcriptDisplay').classList.remove('visible');
     document.getElementById('transcriptDisplay').innerHTML = '';
+    document.getElementById('transcriptSearchBar').classList.remove('visible');
+    document.getElementById('transcriptSearchInput').value = '';
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1573,11 +1720,13 @@
     mixedBlob = null; mixedBuffer = null;
     audioFileInput.value = '';
     stemsBar.classList.remove('visible'); stemsChips.innerHTML = '';
-    document.getElementById('audioFileBar').classList.remove('visible');
+    updateTopBar();
     audioPrompt.classList.remove('hidden');
     document.getElementById('waveformArea').classList.remove('visible');
     document.getElementById('transportTime').textContent = '00.00.00';
     document.getElementById('transportDuration').textContent = '/ 00.00.00';
+    document.getElementById('transcriptSearchBar').classList.remove('visible');
+    document.getElementById('transcriptSearchInput').value = '';
     hideWaveformLoading();
     hideContentArea();
     speedReset();
@@ -1733,6 +1882,7 @@
     }
     container.innerHTML = html;
     container.classList.add('visible');
+    document.getElementById('transcriptSearchBar').classList.add('visible');
     container.querySelectorAll('.ts-word').forEach(function (el) {
       el.addEventListener('click', function () {
         if (wavesurfer && audioLoaded) {
@@ -1760,6 +1910,81 @@
       }
     });
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // TRANSCRIPT SEARCH
+  // ═══════════════════════════════════════════════════════════════
+  var searchInput   = document.getElementById('transcriptSearchInput');
+  var searchCountEl = document.getElementById('searchCount');
+  var searchNavEl   = document.getElementById('searchNav');
+  var searchMatches = [];
+  var searchIdx     = -1;
+
+  function doTranscriptSearch() {
+    var query = searchInput.value.trim().toLowerCase();
+
+    // Clear previous highlights
+    document.querySelectorAll('.ts-word.search-match, .ts-word.search-active').forEach(function (el) {
+      el.classList.remove('search-match', 'search-active');
+    });
+    searchMatches = [];
+    searchIdx = -1;
+
+    if (!query) {
+      searchCountEl.textContent = '';
+      searchNavEl.style.display = 'none';
+      return;
+    }
+
+    document.querySelectorAll('.ts-word').forEach(function (el) {
+      var text = el.textContent.toLowerCase();
+      if (text.indexOf(query) !== -1) {
+        el.classList.add('search-match');
+        searchMatches.push(el);
+      }
+    });
+
+    if (searchMatches.length) {
+      searchIdx = 0;
+      searchMatches[0].classList.add('search-active');
+      scrollToSearchMatch(searchMatches[0]);
+      searchCountEl.textContent = '1 / ' + searchMatches.length;
+      searchNavEl.style.display = 'flex';
+    } else {
+      searchCountEl.textContent = '0 results';
+      searchNavEl.style.display = 'none';
+    }
+  }
+
+  function scrollToSearchMatch(el) {
+    var container = document.getElementById('transcriptDisplay');
+    if (!container.classList.contains('visible')) return;
+    var elTop = el.offsetTop - container.offsetTop;
+    var viewHeight = container.clientHeight;
+    container.scrollTop = elTop - viewHeight / 2;
+  }
+
+  function searchNavigate(dir) {
+    if (!searchMatches.length) return;
+    searchMatches[searchIdx].classList.remove('search-active');
+    searchIdx = (searchIdx + dir + searchMatches.length) % searchMatches.length;
+    searchMatches[searchIdx].classList.add('search-active');
+    scrollToSearchMatch(searchMatches[searchIdx]);
+    searchCountEl.textContent = (searchIdx + 1) + ' / ' + searchMatches.length;
+  }
+
+  searchInput.addEventListener('input', doTranscriptSearch);
+  searchInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      searchNavigate(e.shiftKey ? -1 : 1);
+    }
+    // Don't let search input trigger global shortcuts
+    e.stopPropagation();
+  });
+
+  document.getElementById('searchPrev').addEventListener('click', function () { searchNavigate(-1); });
+  document.getElementById('searchNext').addEventListener('click', function () { searchNavigate(1); });
 
   // ═══════════════════════════════════════════════════════════════
   // CATEGORY CHANGE
