@@ -810,13 +810,18 @@
       if (!text) throw new Error('Model returned an empty response. Try a different model.');
 
       var clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      // Merge adjacent JSON objects into one (e.g. {"a":"1"} {"b":"2"} → {"a":"1","b":"2"})
+      clean = clean.replace(/\}\s*\{/g, ',');
       var parsed;
       try { parsed = JSON.parse(clean); }
       catch (e) {
-        var match = clean.match(/\{[\s\S]*\}/);
-        if (match) { try { parsed = JSON.parse(match[0]); } catch (e2) { throw new Error('Could not parse JSON.\n\nRaw output:\n' + text); } }
-        else { throw new Error('Model did not return JSON. Try a different model.\n\nRaw output:\n' + text); }
-      }
+      var match = clean.match(/\{[\s\S]*\}/);
+      if (match) {
+      var fragment = match[0].replace(/\}\s*\{/g, ',');
+      try { parsed = JSON.parse(fragment); } catch (e2) { throw new Error('Could not parse JSON.\n\nRaw output:\n' + text); }
+    }
+  else { throw new Error('Model did not return JSON. Try a different model.\n\nRaw output:\n' + text); }
+}
 
       document.getElementById('h1').textContent = parsed.headline1 || '';
       document.getElementById('h2').textContent = parsed.headline2 || '';
