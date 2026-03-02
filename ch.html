@@ -607,8 +607,15 @@
       .then(function (t) { PROMPT = t; promptLoaded = true; })
       .catch(function () { showError('Failed to load prompt file "' + file + '".'); promptLoaded = false; });
   }
-  // Default is now Summarise
-  loadPrompt('zpmtchs.txt');
+  var initOpt = categorySelect.options[categorySelect.selectedIndex];
+  loadPrompt(initOpt.getAttribute('data-prompt'));
+
+  // ── Init UI strings from Worker-selected category ──
+  var initCat = categorySelect.value;
+  inputHint.textContent     = HINTS[initCat]          || HINTS.summarise;
+  inputTextEl.placeholder   = PLACEHOLDERS[initCat]    || PLACEHOLDERS.summarise;
+  progressLabel.textContent = PROGRESS_LABELS[initCat] || PROGRESS_LABELS.summarise;
+  resultsLabel.textContent  = RESULT_LABELS[initCat]   || RESULT_LABELS.summarise;
 
   categorySelect.addEventListener('change', function () {
     var opt = categorySelect.options[categorySelect.selectedIndex];
@@ -634,7 +641,8 @@
   // ── Deep-link via hash (e.g. #summarise or #review) ──────────────
   (function () {
     var hash = window.location.hash.replace('#', '').toLowerCase();
-    if (hash && categorySelect.querySelector('option[value="' + hash + '"]')) {
+            var hashOpt = categorySelect.querySelector('option[value="' + hash + '"]:not([hidden])');
+            if (hash && hashOpt) {
       categorySelect.value = hash;
       categorySelect.dispatchEvent(new Event('change'));
     }
