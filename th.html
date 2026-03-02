@@ -857,11 +857,11 @@
           </div>
           <div class="shortcuts-divider"></div>
           <div class="shortcut-row">
-            <span class="shortcut-desc">Grab IN (News)</span>
+            <span class="shortcut-desc">Grab IN</span>
             <span class="shortcut-keys"><kbd>F2</kbd></span>
           </div>
           <div class="shortcut-row">
-            <span class="shortcut-desc">Grab OUT (News)</span>
+            <span class="shortcut-desc">Grab OUT</span>
             <span class="shortcut-keys"><kbd>F3</kbd></span>
           </div>
         </div>
@@ -973,7 +973,6 @@
         <textarea class="editor-notes-textarea" id="editorNotes" placeholder="Additional notes for the editor…"></textarea>
       </div>
       <div class="actions-group">
-        <button class="export-btn secondary" id="clearAllBtn">Clear All</button>
         <button class="export-btn" id="copyAllBtn">Copy All</button>
       </div>
     </div>
@@ -1876,7 +1875,6 @@
   }
 
   document.addEventListener('keydown', function (e) {
-    if (activeCategory !== 'news') return;
     if (e.key === 'F2') {
       e.preventDefault();
       stampGrabIn();
@@ -2265,17 +2263,6 @@
         showToast('All timecodes copied to clipboard');
       });
     }
-  });
-
-  document.getElementById('clearAllBtn').addEventListener('click', function () {
-    if (!confirm('Clear all timecodes, quotes, notes and extra points?')) return;
-    document.querySelectorAll('.tc-input').forEach(function (el) { el.value = ''; el.classList.remove('invalid'); });
-    document.querySelectorAll('.quote-input').forEach(function (el) { el.value = ''; });
-    document.querySelectorAll('.segment-card').forEach(function (c) { c.classList.remove('complete'); });
-    document.getElementById('pickupsContainer').innerHTML = '';
-    document.getElementById('editorNotes').value = '';
-    pickupCount = 0;
-    showToast('All fields cleared');
   });
 
   // ═══════════════════════════════════════════════════════════════
