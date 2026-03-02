@@ -774,7 +774,9 @@
   <h1><span>TIMECODE</span> HELPER</h1>
   <div class="header-center">
     <select id="categorySelect" class="minimal-select">
-    </select>
+  <option value="news" selected>News</option>
+  <option value="sport">Sport</option>
+</select>
   </div>
   <div class="header-actions">
     <!-- Settings gear (auto-transcribe toggle) -->
@@ -2278,7 +2280,7 @@
   // ═══════════════════════════════════════════════════════════════
   // INIT
   // ═══════════════════════════════════════════════════════════════
-  loadCategory(document.getElementById('categorySelect').value);
+  loadCategory('news');
 }());
 </script>
 </body>
