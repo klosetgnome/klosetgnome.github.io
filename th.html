@@ -1632,26 +1632,28 @@
     var leftCards = Array.from(colLeft.querySelectorAll('.segment-card'));
     var orderIdx = 0;
 
-    // Find first incomplete segment and highlight it
-    var foundActive = false;
     leftCards.forEach(function (card) {
       if (card.classList.contains('complete')) {
         card.style.order = 100 + orderIdx;
       } else {
         card.style.order = orderIdx;
-        if (!foundActive) {
-          card.classList.add('active-segment');
-          foundActive = true;
-        }
       }
       orderIdx++;
     });
+
+    // Highlight the active segment (next in queue) across both columns
+    if (sportStampIndex < sportSegmentOrder.length) {
+      var activeId = sportSegmentOrder[sportStampIndex];
+      var activeCard = document.getElementById('card-' + activeId);
+      if (activeCard && !sportPendingSegment) {
+        activeCard.classList.add('active-segment');
+      }
+    }
 
     // Mark pending-out segment
     if (sportPendingSegment) {
       var pendingCard = document.getElementById('card-' + sportPendingSegment);
       if (pendingCard) {
-        pendingCard.classList.remove('active-segment');
         pendingCard.classList.add('pending-out');
       }
     }
@@ -1688,7 +1690,10 @@
       colLeft.appendChild(buildSegmentCard(seg));
       if (catId === 'sport') sportSegmentOrder.push(seg.id);
     });
-    (cat.right || []).forEach(function (seg) { rightFixed.appendChild(buildSegmentCard(seg)); });
+    (cat.right || []).forEach(function (seg) {
+      rightFixed.appendChild(buildSegmentCard(seg));
+      if (catId === 'sport') sportSegmentOrder.push(seg.id);
+    });
 
     document.getElementById('addPickupBtn').textContent = cat.addLabel || '+ Add Pickup Point';
 
@@ -1722,7 +1727,6 @@
     var pc = document.getElementById('pickupsContainer');
     pc.insertBefore(card, pc.firstChild);
     updateStampButtons();
-    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
 
   function updateStampButtons() {
@@ -2054,7 +2058,6 @@
     var pc = document.getElementById('pickupsContainer');
     pc.insertBefore(card, pc.firstChild);
     updateStampButtons();
-    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return card;
   }
 
@@ -2079,7 +2082,9 @@
     if (!card) return;
 
     var tc = secondsToTimecode(wavesurfer.getCurrentTime());
-    var startInput = card.querySelector('.tc-input[data-tc-id$="-start"]');
+    // Use the first tc-input in the card (works for all segment types)
+    var tcInputs = card.querySelectorAll('.tc-input');
+    var startInput = tcInputs.length ? tcInputs[0] : null;
     if (startInput) {
       startInput.value = tc;
       startInput.classList.remove('invalid');
@@ -2088,7 +2093,6 @@
       sportPendingSegment = segId;
       showToast(getSegmentLabel(segId) + ' IN: ' + tc);
       updateSportSegmentVisuals();
-      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }
 
@@ -2106,7 +2110,9 @@
     if (!card) return;
 
     var tc = secondsToTimecode(wavesurfer.getCurrentTime());
-    var endInput = card.querySelector('.tc-input[data-tc-id$="-end"]');
+    // Use the second tc-input in the card (works for all segment types)
+    var tcInputs = card.querySelectorAll('.tc-input');
+    var endInput = tcInputs.length > 1 ? tcInputs[1] : null;
     if (endInput) {
       endInput.value = tc;
       endInput.classList.remove('invalid');
@@ -2118,16 +2124,6 @@
       sportPendingSegment = null;
       sportStampIndex++;
       updateSportSegmentVisuals();
-
-      // Scroll to next segment if available
-      if (sportStampIndex < sportSegmentOrder.length) {
-        var nextCard = document.getElementById('card-' + sportSegmentOrder[sportStampIndex]);
-        if (nextCard) {
-          setTimeout(function () {
-            nextCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, 300);
-        }
-      }
     }
   }
 
@@ -2252,11 +2248,7 @@
       return;
     }
 
-    // Space = Play / Pause (only when not in a text input)
-    if (e.code === 'Space' && !isInput) {
-      e.preventDefault();
-      if (wavesurfer && audioLoaded) wavesurfer.playPause();
-    }
+
 
     // Arrow keys for skip
     if (!isInput || isTcInput) {
