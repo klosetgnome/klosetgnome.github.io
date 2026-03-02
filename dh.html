@@ -373,6 +373,39 @@
       pointer-events: none;
     }
 
+    /* ── History section ── */
+    #history {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+    }
+    #history:empty { display: none; }
+
+    .history-entry {
+      opacity: 0.55;
+      transition: opacity 0.2s;
+      animation: fadeInUp 0.35s ease;
+    }
+    .history-entry:hover { opacity: 0.85; }
+
+    .history-entry .results-header {
+      font-size: 9px;
+      letter-spacing: 2.5px;
+    }
+
+    .history-entry .row-content {
+      font-size: 13px;
+    }
+    .history-entry .result-row.headline .row-content {
+      font-size: 14px;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 0.55; transform: translateY(0); }
+    }
+
     /* ── Responsive (page-specific) ── */
     @media (max-width: 600px) {
       .row-meta { width: 90px; padding: 12px 10px; }
@@ -497,6 +530,11 @@
     </div>
   </div>
 
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-label">Processing transcript…</div>
+    <div class="progress-track"><div class="progress-bar"></div></div>
+  </div>
+
   <div class="submit-row">
     <div class="field-group">
       <label>Model <span id="modelStatusLegacy" style="display:none;"></span></label>
@@ -506,10 +544,7 @@
     <button class="submit" id="submitBtn" style="display:none;">Create</button>
   </div>
 
-  <div class="progress-wrap" id="progressWrap">
-    <div class="progress-label">Processing transcript…</div>
-    <div class="progress-track"><div class="progress-bar"></div></div>
-  </div>
+  <div id="history"></div>
 
   <div class="error-box" id="errorBox"></div>
 </main>
@@ -570,11 +605,17 @@
   // ── NEW: Submit button + input collapse state ──
   var btn          = document.getElementById('submitBtn');
   var inputSection = document.getElementById('inputSection');
+  var historyEl    = document.getElementById('history');
   var hasGenerated = false;
+  var generationCount = 0;
 
+  // CHANGED: Only show Create button for pasted text, not file drops.
+  // File drops use the auto-submit countdown instead.
+  // After first generation, always show the Recreate button.
   function updateSubmitVisibility() {
-    var hasContent = !!(loadedFileText || transcriptEl.value.trim());
-    btn.style.display = hasContent ? '' : 'none';
+    if (hasGenerated) { btn.style.display = ''; return; }
+    var hasPastedContent = !loadedFileText && !!transcriptEl.value.trim();
+    btn.style.display = hasPastedContent ? '' : 'none';
   }
 
   function collapseInputs() {
@@ -585,6 +626,74 @@
 
   function expandInputs() {
     inputSection.classList.remove('collapsed');
+  }
+
+  function saveToHistory() {
+    var h1 = document.getElementById('h1').textContent;
+    var h2 = document.getElementById('h2').textContent;
+    var h3 = document.getElementById('h3').textContent;
+    var desc = document.getElementById('desc').innerHTML;
+    if (!h1 && !h2 && !h3 && !desc) return;
+
+    var entry = document.createElement('div');
+    entry.className = 'history-entry';
+
+    var uid = 'hist-' + Date.now() + '-';
+    entry.innerHTML =
+      '<div class="results visible">' +
+        '<div class="results-header">Generation ' + generationCount + '</div>' +
+        '<div class="result-row headline">' +
+          '<div class="row-meta"><span class="row-tag">Headline 1</span></div>' +
+          '<div class="row-content" id="' + uid + 'h1"></div>' +
+          '<button class="copy-btn" data-target="' + uid + 'h1" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
+        '</div>' +
+        '<div class="result-row headline">' +
+          '<div class="row-meta"><span class="row-tag">Headline 2</span></div>' +
+          '<div class="row-content" id="' + uid + 'h2"></div>' +
+          '<button class="copy-btn" data-target="' + uid + 'h2" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
+        '</div>' +
+        '<div class="result-row headline">' +
+          '<div class="row-meta"><span class="row-tag">Headline 3</span></div>' +
+          '<div class="row-content" id="' + uid + 'h3"></div>' +
+          '<button class="copy-btn" data-target="' + uid + 'h3" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
+        '</div>' +
+        '<div class="result-row description">' +
+          '<div class="row-meta"><span class="row-tag">Description</span></div>' +
+          '<div class="row-content" id="' + uid + 'desc"></div>' +
+          '<button class="copy-btn" data-target="' + uid + 'desc" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' +
+        '</div>' +
+      '</div>';
+
+    document.getElementById(uid + 'h1').textContent = h1;
+    document.getElementById(uid + 'h2').textContent = h2;
+    document.getElementById(uid + 'h3').textContent = h3;
+    document.getElementById(uid + 'desc').innerHTML = desc;
+
+    // Wire copy buttons in this history entry
+    entry.querySelectorAll('.copy-btn').forEach(function (cbtn) {
+      cbtn.addEventListener('click', async function () {
+        var el = document.getElementById(cbtn.dataset.target);
+        var text = el ? el.textContent.trim() : '';
+        if (!text) return;
+        try { await navigator.clipboard.writeText(text); }
+        catch (e) {
+          var ta = document.createElement('textarea');
+          ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+          document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); document.body.removeChild(ta);
+        }
+        cbtn.classList.add('copied');
+        setTimeout(function () { cbtn.classList.remove('copied'); }, 1800);
+      });
+    });
+
+    // Insert at top of history
+    historyEl.insertBefore(entry, historyEl.firstChild);
+
+    // Cap at 3
+    while (historyEl.children.length > 3) {
+      historyEl.removeChild(historyEl.lastChild);
+    }
   }
 
   // ── Countdown elements ──
@@ -665,7 +774,7 @@
       fileBar.classList.add('visible');
       dropPrompt.classList.add('hidden');
       transcriptEl.style.display = 'none';
-      updateSubmitVisibility(); // CHANGED: show button now file is loaded
+      updateSubmitVisibility();
 
       setTimeout(function () {
         startAutoSubmitCountdown();
@@ -684,7 +793,7 @@
     transcriptEl.value = '';
     transcriptEl.focus();
     cancelCountdown();
-    updateSubmitVisibility(); // CHANGED: hide button now content is cleared
+    updateSubmitVisibility();
   }
 
   var dragCounter = 0;
@@ -696,7 +805,6 @@
   document.getElementById('browseLink').addEventListener('click', function () { fileInput.click(); });
   fileInput.addEventListener('change', function () { if (fileInput.files && fileInput.files.length > 0) handleFile(fileInput.files[0]); });
   fileRemoveBtn.addEventListener('click', clearFile);
-  // CHANGED: merged updateSubmitVisibility into the input listener
   transcriptEl.addEventListener('input', function () {
     if (loadedFileText) { loadedFileText = null; fileBar.classList.remove('visible'); }
     updateSubmitVisibility();
@@ -782,6 +890,9 @@
     // CHANGED: reset to fresh state on category switch
     expandInputs();
     hasGenerated = false;
+    generationCount = 0;
+    historyEl.innerHTML = '';
+    document.querySelector('#results .results-header').textContent = 'Episode Copy';
     btn.textContent = 'Create';
     updateSubmitVisibility();
 
@@ -823,6 +934,12 @@
     var results    = document.getElementById('results');
 
     errorBox.classList.remove('visible');
+
+    // Save current results to history before clearing (on regenerate)
+    if (hasGenerated) {
+      saveToHistory();
+    }
+
     results.classList.remove('visible');
 
     // Cancel any running countdown when submit fires
@@ -880,6 +997,8 @@
       descEl.innerHTML = description;
 
       results.classList.add('visible');
+      generationCount++;
+      document.querySelector('#results .results-header').textContent = 'Episode Copy — Generation ' + generationCount;
       results.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
       // CHANGED: collapse inputs and switch to Recreate after success
