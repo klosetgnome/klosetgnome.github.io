@@ -2714,6 +2714,17 @@
     });
     orderedCards = orderedCards.concat(pickupCards);
 
+    // Editor notes first
+    var editorNotes = document.getElementById('editorNotes').value.trim();
+    if (editorNotes) {
+      plainLines.push('Editor Notes');
+      plainLines.push(editorNotes);
+      plainLines.push('');
+      htmlLines.push('<b>Editor Notes</b>');
+      htmlLines.push(escapeHtml(editorNotes).replace(/\n/g, '<br>'));
+      htmlLines.push('<br>');
+    }
+
     orderedCards.forEach(function (card) {
       var hdr = card.querySelector('.segment-header .header-left span');
       var title = hdr ? hdr.textContent : '';
@@ -2752,16 +2763,6 @@
       plainLines.push('');
       htmlLines.push('<br>');
     });
-
-    var editorNotes = document.getElementById('editorNotes').value.trim();
-    if (editorNotes) {
-      plainLines.push('Editor Notes');
-      plainLines.push(editorNotes);
-      plainLines.push('');
-      htmlLines.push('<b>Editor Notes</b>');
-      htmlLines.push(escapeHtml(editorNotes).replace(/\n/g, '<br>'));
-      htmlLines.push('<br>');
-    }
 
     if (!valid) { showError('Some required fields are missing or invalid. Please check highlighted fields.'); return; }
     var plainText = plainLines.join('\n').trim();
