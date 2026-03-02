@@ -724,10 +724,10 @@
         '</div>' +
       '</div>';
 
-    document.getElementById(uid + 'h1').textContent = h1;
-    document.getElementById(uid + 'h2').textContent = h2;
-    document.getElementById(uid + 'h3').textContent = h3;
-    document.getElementById(uid + 'desc').innerHTML = desc;
+    entry.querySelector('#' + uid + 'h1').textContent = h1;
+    entry.querySelector('#' + uid + 'h2').textContent = h2;
+    entry.querySelector('#' + uid + 'h3').textContent = h3;
+    entry.querySelector('#' + uid + 'desc').innerHTML = desc;
 
     // Wire copy buttons in this history entry
     entry.querySelectorAll('.copy-btn').forEach(function (cbtn) {
