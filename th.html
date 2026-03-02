@@ -804,8 +804,8 @@
         <div class="setting-row" style="margin-top:10px;">
           <span class="setting-label">Seek Handle</span>
           <div style="display:flex;align-items:center;gap:6px;">
-            <input type="number" id="seekHandleInput" min="1" max="9" value="5" style="width:36px;padding:4px 6px;text-align:center;font-family:var(--mono);font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);outline:none;" />
-            <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted);">sec</span>
+            <input type="number" id="seekHandleInput" min="1" max="9" value="3" style="width:36px;padding:4px 6px;text-align:center;font-family:var(--mono);font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);outline:none;" />
+            <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted);">ms</span>
           </div>
         </div>
       </div>
@@ -1969,12 +1969,12 @@
   var searchMatches = [];
   var searchIdx     = -1;
 
-  var seekHandleSec = 5;
+  var seekHandleMs = 3;
   var seekHandleInput = document.getElementById('seekHandleInput');
   seekHandleInput.addEventListener('input', function () {
     var val = parseInt(this.value, 10);
     if (val >= 1 && val <= 9) {
-      seekHandleSec = val;
+      seekHandleMs = val;
       localStorage.setItem('seekHandle', String(val));
     }
   });
@@ -1986,7 +1986,7 @@
     if (saved !== null) {
       var val = parseInt(saved, 10);
       if (val >= 1 && val <= 9) {
-        seekHandleSec = val;
+        seekHandleMs = val;
         seekHandleInput.value = val;
       }
     }
@@ -2011,8 +2011,8 @@
       }
     }
 
-    // Pre-roll: back up by seek handle (in seconds) to catch sentence start
-    seekTime = Math.max(0, seekTime - seekHandleSec);
+    // Pre-roll: back up by seek handle (ms) to catch clipped onsets
+    seekTime = Math.max(0, seekTime - (seekHandleMs / 1000));
 
     wavesurfer.seekTo(seekTime / d);
     if (autoplayKeywordEnabled && !wavesurfer.isPlaying()) {
