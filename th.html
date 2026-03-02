@@ -785,6 +785,13 @@
             <span class="toggle-track"></span>
           </label>
         </div>
+        <div class="setting-row" style="margin-top:10px;">
+          <span class="setting-label">Sentence Timestamps</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="sentenceTimestampsToggle" />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
       </div>
     </div>
     <!-- Keyboard shortcuts -->
@@ -1086,6 +1093,26 @@
   })();
 
   // ═══════════════════════════════════════════════════════════════
+  // SENTENCE TIMESTAMPS TOGGLE
+  // ═══════════════════════════════════════════════════════════════
+  var sentenceTimestampsEnabled = false;
+  var sentenceTimestampsToggle = document.getElementById('sentenceTimestampsToggle');
+  sentenceTimestampsToggle.addEventListener('change', function () {
+    sentenceTimestampsEnabled = this.checked;
+    localStorage.setItem('sentenceTimestamps', sentenceTimestampsEnabled ? '1' : '0');
+    // Re-render transcript if we have one
+    if (transcriptChunks && transcriptChunks.length) displayTranscript();
+  });
+
+  (function () {
+    var saved = localStorage.getItem('sentenceTimestamps');
+    if (saved !== null) {
+      sentenceTimestampsEnabled = saved === '1';
+      sentenceTimestampsToggle.checked = sentenceTimestampsEnabled;
+    }
+  })();
+
+  // ═══════════════════════════════════════════════════════════════
   // TRANSCRIPTION WEB WORKER
   // ═══════════════════════════════════════════════════════════════
   var workerScript = function () {
@@ -1118,7 +1145,7 @@
         self.postMessage({ type: 'status', text: 'Transcribing' + (device === 'webgpu' ? ' (GPU accelerated)' : '') + '…' });
         self.postMessage({ type: 'progress', value: 5 });
         var result = await transcriber(e.data.audio, {
-          return_timestamps: 'word', chunk_length_s: chunkSec, stride_length_s: 5,
+          return_timestamps: true, chunk_length_s: chunkSec, stride_length_s: 5,
           language: 'en', task: 'transcribe',
           callback_function: function () {
             chunksProcessed++;
@@ -1323,33 +1350,22 @@
     if (!quoteInput) return;
     if (!isValidTimecode(tcInput.value)) return;
     var seconds = timecodeToSeconds(tcInput.value);
-
-    // Find the word closest to the stamped timecode
-    var closestIdx = -1, minDist = Infinity;
+    var closestChunk = null, minDist = Infinity;
     for (var i = 0; i < transcriptChunks.length; i++) {
       var c = transcriptChunks[i];
-      if (seconds >= c.start && seconds <= c.end) { closestIdx = i; minDist = 0; break; }
+      if (seconds >= c.start && seconds <= c.end) { closestChunk = c; minDist = 0; break; }
       var d = Math.min(Math.abs(seconds - c.start), Math.abs(seconds - c.end));
-      if (d < minDist) { minDist = d; closestIdx = i; }
+      if (d < minDist) { minDist = d; closestChunk = c; }
     }
-    if (closestIdx < 0 || minDist > 5) return;
-
-    // Gather words: start from closestIdx, collect forward until ~80 chars
-    var words = [];
-    var totalLen = 0;
-    for (var j = closestIdx; j < transcriptChunks.length && totalLen < 80; j++) {
-      var w = transcriptChunks[j].text.trim();
-      if (!w) continue;
-      words.push(w);
-      totalLen += w.length + 1;
+    if (closestChunk && minDist < 5) {
+      var snippet = closestChunk.text.trim();
+      if (snippet.length > 80) {
+        var sp = snippet.indexOf(' ', 60);
+        if (sp !== -1) snippet = snippet.substring(0, sp) + '…';
+      }
+      quoteInput.value = snippet;
+      checkCardCompletion(quoteInput);
     }
-    var snippet = words.join(' ');
-    if (snippet.length > 80) {
-      var sp = snippet.indexOf(' ', 60);
-      if (sp !== -1) snippet = snippet.substring(0, sp) + '…';
-    }
-    quoteInput.value = snippet;
-    checkCardCompletion(quoteInput);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1880,21 +1896,17 @@
     var container = document.getElementById('transcriptDisplay');
     if (!transcriptChunks || !transcriptChunks.length) return;
     var html = '';
-    var lastMarker = -Infinity;
-    var MARKER_INTERVAL = 5; // show a timecode marker every ~5 seconds
     for (var i = 0; i < transcriptChunks.length; i++) {
       var c = transcriptChunks[i];
-      // Insert timecode marker periodically
-      if (c.start - lastMarker >= MARKER_INTERVAL || i === 0) {
+      if (sentenceTimestampsEnabled) {
         html += '<strong class="ts-marker" style="color:var(--accent);font-size:9px;cursor:pointer;" data-start="' + c.start + '">[' + secondsToTimecode(c.start) + ']</strong> ';
-        lastMarker = c.start;
       }
       html += '<span class="ts-word" data-start="' + c.start + '" data-end="' + c.end + '">' + escapeHtml(c.text.trim()) + '</span> ';
     }
     container.innerHTML = html;
     container.classList.add('visible');
     document.getElementById('transportSearch').classList.add('visible');
-    // Click on a word → seek
+    // Click on a chunk → seek
     container.querySelectorAll('.ts-word').forEach(function (el) {
       el.addEventListener('click', function () {
         if (wavesurfer && audioLoaded) {
