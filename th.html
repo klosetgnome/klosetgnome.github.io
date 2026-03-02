@@ -826,9 +826,14 @@
         <div class="shortcuts-panel-label">Keyboard Shortcuts</div>
         <div class="shortcuts-panel-list">
           <div class="shortcut-row">
-            <span class="shortcut-desc">Play / Pause</span>
-            <span class="shortcut-keys"><kbd>Space</kbd></span>
+            <span class="shortcut-desc">Play / Cycle Speed</span>
+            <span class="shortcut-keys"><kbd>F4</kbd></span>
           </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Pause / Reset Speed</span>
+            <span class="shortcut-keys"><kbd>F5</kbd></span>
+          </div>
+          <div class="shortcuts-divider"></div>
           <div class="shortcut-row">
             <span class="shortcut-desc">Skip ±5s</span>
             <span class="shortcut-keys"><kbd>←</kbd> <kbd>→</kbd></span>
@@ -836,24 +841,6 @@
           <div class="shortcut-row">
             <span class="shortcut-desc">Skip ±1s</span>
             <span class="shortcut-keys"><kbd>Shift</kbd><span class="key-plus">+</span><kbd>←</kbd> <kbd>→</kbd></span>
-          </div>
-          <div class="shortcuts-divider"></div>
-          <div class="shortcut-row">
-            <span class="shortcut-desc">Stamp timecode</span>
-            <span class="shortcut-keys"><kbd>T</kbd></span>
-          </div>
-          <div class="shortcuts-divider"></div>
-          <div class="shortcut-row">
-            <span class="shortcut-desc">Faster</span>
-            <span class="shortcut-keys"><kbd>D</kbd></span>
-          </div>
-          <div class="shortcut-row">
-            <span class="shortcut-desc">Slower</span>
-            <span class="shortcut-keys"><kbd>S</kbd></span>
-          </div>
-          <div class="shortcut-row">
-            <span class="shortcut-desc">Reset speed</span>
-            <span class="shortcut-keys"><kbd>R</kbd></span>
           </div>
           <div class="shortcuts-divider"></div>
           <div class="shortcut-row">
@@ -930,7 +917,7 @@
         </button>
         <span class="transport-time" id="transportTime">00.00.00</span>
         <span class="transport-duration" id="transportDuration">/ 00.00.00</span>
-        <span class="speed-badge" id="speedBadge" title="Click to cycle speed (D faster, S slower, R reset)">1&times;</span>
+        <span class="speed-badge" id="speedBadge" title="Click to cycle speed (F4)">1&times;</span>
         <span class="transport-spacer"></span>
         <!-- Transcription status (inline, right-aligned — hidden when search appears) -->
         <div class="transport-status" id="transportStatus">
@@ -1061,8 +1048,8 @@
   // CONSTANTS
   // ═══════════════════════════════════════════════════════════════
   var FPS = 25;
-  var SPEED_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2];
-  var speedIndex = 2;
+  var SPEED_STEPS = [1, 1.5, 2, 2.5];
+  var speedIndex = 0;
 
   // ═══════════════════════════════════════════════════════════════
   // STATE
@@ -1305,9 +1292,7 @@
     if (wavesurfer) wavesurfer.setPlaybackRate(rate);
   }
 
-  function speedUp() { setSpeed(speedIndex + 1); }
-  function speedDown() { setSpeed(speedIndex - 1); }
-  function speedReset() { setSpeed(SPEED_STEPS.indexOf(1)); }
+  function speedReset() { setSpeed(0); }
 
   document.getElementById('speedBadge').addEventListener('click', function () {
     setSpeed((speedIndex + 1) % SPEED_STEPS.length);
@@ -1333,16 +1318,6 @@
       checkCardCompletion(this);
     });
     input.addEventListener('focus', function () { this.classList.remove('invalid'); });
-    input.addEventListener('keydown', function (e) {
-      if ((e.key === 't' || e.key === 'T') && wavesurfer && audioLoaded) {
-        e.preventDefault();
-        this.value = secondsToTimecode(wavesurfer.getCurrentTime());
-        this.classList.remove('invalid');
-        autoPopulateQuote(this);
-        checkCardCompletion(this);
-        showToast('Timecode stamped: ' + this.value);
-      }
-    });
   }
 
   function setupQuoteInput(input) {
@@ -1908,10 +1883,28 @@
     var isInput = (tag === 'input' || tag === 'textarea' || tag === 'select');
     var isTcInput = e.target.classList && e.target.classList.contains('tc-input');
 
-    if (e.code === 'Space' && !isInput) {
+    // F4 = Play & cycle speed (1x → 1.5x → 2x → 2.5x → 1x)
+    if (e.key === 'F4') {
       e.preventDefault();
-      if (wavesurfer && audioLoaded) wavesurfer.playPause();
+      if (wavesurfer && audioLoaded) {
+        if (wavesurfer.isPlaying()) {
+          // Cycle to next speed
+          setSpeed((speedIndex + 1) % SPEED_STEPS.length);
+        } else {
+          wavesurfer.play();
+        }
+      }
     }
+
+    // F5 = Pause & reset speed to 1x
+    if (e.key === 'F5') {
+      e.preventDefault();
+      if (wavesurfer && audioLoaded) {
+        if (wavesurfer.isPlaying()) wavesurfer.pause();
+        speedReset();
+      }
+    }
+
     if (!isInput || isTcInput) {
       if (e.key === 'ArrowLeft' && wavesurfer && audioLoaded && (!isInput || e.shiftKey)) {
         e.preventDefault(); wavesurfer.skip(e.shiftKey ? -1 : -5);
@@ -1919,11 +1912,6 @@
       if (e.key === 'ArrowRight' && wavesurfer && audioLoaded && (!isInput || e.shiftKey)) {
         e.preventDefault(); wavesurfer.skip(e.shiftKey ? 1 : 5);
       }
-    }
-    if (!isInput || isTcInput) {
-      if (e.key === 'd' || e.key === 'D') { e.preventDefault(); speedUp(); }
-      if (e.key === 's' || e.key === 'S') { e.preventDefault(); speedDown(); }
-      if (e.key === 'r' || e.key === 'R') { e.preventDefault(); speedReset(); }
     }
   });
 
