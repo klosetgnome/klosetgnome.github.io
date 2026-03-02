@@ -799,6 +799,13 @@
             <span class="toggle-track"></span>
           </label>
         </div>
+        <div class="setting-row" style="margin-top:10px;">
+          <span class="setting-label">Seek Handle</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="number" id="seekHandleInput" min="1" max="9" value="5" style="width:36px;padding:4px 6px;text-align:center;font-family:var(--mono);font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);outline:none;" />
+            <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted);">ms</span>
+          </div>
+        </div>
       </div>
     </div>
     <!-- Keyboard shortcuts -->
@@ -1978,8 +1985,28 @@
   var searchMatches = [];
   var searchIdx     = -1;
 
-  var SEEK_PRE_ROLL = 0.003; // 3ms before chunk start to catch clipped onsets
-  var SEEK_POST_ROLL = 0.003; // 3ms after chunk end
+  var seekHandleMs = 5;
+  var seekHandleInput = document.getElementById('seekHandleInput');
+  seekHandleInput.addEventListener('input', function () {
+    var val = parseInt(this.value, 10);
+    if (val >= 1 && val <= 9) {
+      seekHandleMs = val;
+      localStorage.setItem('seekHandle', String(val));
+    }
+  });
+  // Prevent global shortcuts while typing in the input
+  seekHandleInput.addEventListener('keydown', function (e) { e.stopPropagation(); });
+
+  (function () {
+    var saved = localStorage.getItem('seekHandle');
+    if (saved !== null) {
+      var val = parseInt(saved, 10);
+      if (val >= 1 && val <= 9) {
+        seekHandleMs = val;
+        seekHandleInput.value = val;
+      }
+    }
+  })();
 
   function seekToWord(el, query) {
     if (!wavesurfer || !audioLoaded) return;
@@ -2000,8 +2027,8 @@
       }
     }
 
-    // Pre-roll: back up 3ms so we catch the onset of the first syllable
-    seekTime = Math.max(0, seekTime - SEEK_PRE_ROLL);
+    // Pre-roll: back up by seek handle to catch clipped onsets
+    seekTime = Math.max(0, seekTime - (seekHandleMs / 1000));
 
     wavesurfer.seekTo(seekTime / d);
     if (autoplayKeywordEnabled && !wavesurfer.isPlaying()) {
