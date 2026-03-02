@@ -826,6 +826,10 @@
         <div class="shortcuts-panel-label">Keyboard Shortcuts</div>
         <div class="shortcuts-panel-list">
           <div class="shortcut-row">
+            <span class="shortcut-desc">Play / Pause</span>
+            <span class="shortcut-keys"><kbd>Space</kbd></span>
+          </div>
+          <div class="shortcut-row">
             <span class="shortcut-desc">Play / Cycle Speed</span>
             <span class="shortcut-keys"><kbd>F4</kbd></span>
           </div>
@@ -1882,6 +1886,12 @@
     var tag = e.target.tagName.toLowerCase();
     var isInput = (tag === 'input' || tag === 'textarea' || tag === 'select');
     var isTcInput = e.target.classList && e.target.classList.contains('tc-input');
+
+    // Space = Play / Pause (only when not in a text input)
+    if (e.code === 'Space' && !isInput) {
+      e.preventDefault();
+      if (wavesurfer && audioLoaded) wavesurfer.playPause();
+    }
 
     // F4 = Play & cycle speed (1x → 1.5x → 2x → 2.5x → 1x)
     if (e.key === 'F4') {
