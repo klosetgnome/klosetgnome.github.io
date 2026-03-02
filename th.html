@@ -792,6 +792,13 @@
             <span class="toggle-track"></span>
           </label>
         </div>
+        <div class="setting-row" style="margin-top:10px;">
+          <span class="setting-label">Seek to Word</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="seekToWordToggle" />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
       </div>
     </div>
     <!-- Keyboard shortcuts -->
@@ -1109,6 +1116,24 @@
     if (saved !== null) {
       sentenceTimestampsEnabled = saved === '1';
       sentenceTimestampsToggle.checked = sentenceTimestampsEnabled;
+    }
+  })();
+
+  // ═══════════════════════════════════════════════════════════════
+  // SEEK TO WORD TOGGLE
+  // ═══════════════════════════════════════════════════════════════
+  var seekToWordEnabled = false;
+  var seekToWordToggle = document.getElementById('seekToWordToggle');
+  seekToWordToggle.addEventListener('change', function () {
+    seekToWordEnabled = this.checked;
+    localStorage.setItem('seekToWord', seekToWordEnabled ? '1' : '0');
+  });
+
+  (function () {
+    var saved = localStorage.getItem('seekToWord');
+    if (saved !== null) {
+      seekToWordEnabled = saved === '1';
+      seekToWordToggle.checked = seekToWordEnabled;
     }
   })();
 
@@ -1953,15 +1978,28 @@
   var searchMatches = [];
   var searchIdx     = -1;
 
-  function seekToWord(el) {
+  function seekToWord(el, query) {
     if (!wavesurfer || !audioLoaded) return;
     var start = parseFloat(el.dataset.start);
+    var end = parseFloat(el.dataset.end);
     var d = wavesurfer.getDuration();
-    if (d > 0 && !isNaN(start)) {
-      wavesurfer.seekTo(start / d);
-      if (autoplayKeywordEnabled && !wavesurfer.isPlaying()) {
-        wavesurfer.play();
+    if (!(d > 0) || isNaN(start)) return;
+
+    var seekTime = start;
+
+    // Interpolate only when Seek to Word is enabled
+    if (seekToWordEnabled && query && !isNaN(end) && end > start) {
+      var text = el.textContent.toLowerCase();
+      var matchPos = text.indexOf(query.toLowerCase());
+      if (matchPos > 0 && text.length > 0) {
+        var ratio = matchPos / text.length;
+        seekTime = start + ratio * (end - start);
       }
+    }
+
+    wavesurfer.seekTo(seekTime / d);
+    if (autoplayKeywordEnabled && !wavesurfer.isPlaying()) {
+      wavesurfer.play();
     }
   }
 
@@ -1993,7 +2031,7 @@
       searchIdx = 0;
       searchMatches[0].classList.add('search-active');
       scrollToSearchMatch(searchMatches[0]);
-      seekToWord(searchMatches[0]);
+      seekToWord(searchMatches[0], query);
       searchCountEl.textContent = '1 / ' + searchMatches.length;
       searchNavEl.classList.add('visible');
     } else {
@@ -2016,7 +2054,7 @@
     searchIdx = (searchIdx + dir + searchMatches.length) % searchMatches.length;
     searchMatches[searchIdx].classList.add('search-active');
     scrollToSearchMatch(searchMatches[searchIdx]);
-    seekToWord(searchMatches[searchIdx]);
+    seekToWord(searchMatches[searchIdx], searchInput.value.trim());
     searchCountEl.textContent = (searchIdx + 1) + ' / ' + searchMatches.length;
   }
 
