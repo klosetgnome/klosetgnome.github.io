@@ -35,12 +35,131 @@
     .site-header h1 { flex-shrink: 0; }
     .theme-toggle { flex-shrink: 0; }
 
-    /* ── Header actions (shortcuts + theme toggle) ── */
+    /* ── Header actions (settings + shortcuts + theme toggle) ── */
     .header-actions {
       display: flex;
       align-items: center;
       gap: 8px;
       flex-shrink: 0;
+    }
+
+    /* ── Settings gear (auto-transcribe) ── */
+    .settings-wrap {
+      position: relative;
+    }
+
+    .settings-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s ease;
+      width: 38px;
+      height: 38px;
+      flex-shrink: 0;
+    }
+    .settings-toggle:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .settings-toggle.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+    .settings-toggle svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 1.5;
+      transition: transform 0.4s ease;
+    }
+    .settings-toggle:hover svg,
+    .settings-toggle.active svg {
+      transform: rotate(60deg);
+    }
+
+    .settings-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      z-index: 100;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow-sm);
+      padding: 16px 20px;
+      min-width: 260px;
+      animation: fadeInDown 0.2s ease;
+    }
+    .settings-panel.visible { display: block; }
+
+    .settings-panel-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .setting-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+    }
+
+    /* ── Toggle switch ── */
+    .toggle-switch {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 11px;
+      cursor: pointer;
+      transition: background 0.25s ease;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      background: var(--surface);
+      border-radius: 50%;
+      transition: transform 0.25s ease;
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+    .toggle-switch input:checked + .toggle-track {
+      background: var(--accent);
+    }
+    .toggle-switch input:checked + .toggle-track::after {
+      transform: translateX(18px);
     }
 
     .shortcuts-wrap {
@@ -266,29 +385,15 @@
       background: var(--error-glow);
     }
 
-    .transcribe-row {
-      display: none; align-items: center; gap: 12px; padding: 0 20px 16px;
+    .transcribe-status-bar {
+      display: none; align-items: center; gap: 12px; padding: 10px 20px;
+      border-top: 1px solid var(--border);
     }
-    .transcribe-row.visible { display: flex; }
-    .transcribe-btn {
-      font-family: var(--mono); font-size: 11px; font-weight: 500;
-      letter-spacing: 1px; text-transform: uppercase;
-      border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 8px 16px; cursor: pointer; background: var(--surface);
-      color: var(--text-primary); transition: all 0.2s;
-    }
-    .transcribe-btn:hover {
-      border-color: var(--accent); color: var(--accent);
-      background: var(--accent-light);
-    }
-    .transcribe-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .transcribe-btn.done {
-      border-color: var(--success); color: var(--success);
-      background: var(--success-light);
-    }
-    .transcribe-status {
+    .transcribe-status-bar.visible { display: flex; }
+    .transcribe-status-text {
       font-family: var(--mono); font-size: 11px;
       color: var(--text-muted); letter-spacing: 0.5px;
+      flex: 1;
     }
     .transcribe-progress {
       flex: 1; height: 3px; background: var(--border);
@@ -321,6 +426,7 @@
       background: rgba(192, 81, 45, 0.15); color: var(--accent);
     }
 
+    /* ── Content area (hidden until audio loaded) ── */
     .columns-wrap {
       width: 100%;
       display: grid;
@@ -340,6 +446,15 @@
       flex-direction: column;
       gap: 16px;
     }
+
+    .content-area {
+      display: none;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+      animation: fadeInUp 0.5s ease both;
+    }
+    .content-area.visible { display: flex; }
 
     @media (max-width: 860px) {
       .columns-wrap { grid-template-columns: 1fr; }
@@ -478,7 +593,6 @@
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       overflow: hidden;
-      animation: fadeInUp 0.5s ease 0.18s both;
       transition: background 0.3s ease, border-color 0.3s ease;
     }
     .editor-notes-card .card-label {
@@ -508,11 +622,11 @@
       justify-content: flex-end;
       align-items: center;
       gap: 12px;
-      animation: fadeInUp 0.5s ease 0.2s both;
     }
     .btn-group { display: flex; gap: 12px; flex-shrink: 0; }
     .export-btn {
-      font-family: var(--serif); font-size: 14px; font-weight: 600;
+      font-family: var(--mono); font-size: 12px; font-weight: 500;
+      letter-spacing: 2px; text-transform: uppercase;
       border: none; border-radius: var(--radius); padding: 12px 24px;
       cursor: pointer; transition: all 0.2s; white-space: nowrap;
       background: var(--accent); color: #fff;
@@ -543,12 +657,12 @@
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
     @media (max-width: 700px) {
-      .site-header { padding: 20px 16px; gap: 8px; }
       main { padding: 32px 16px 60px; }
       .segment-row { padding: 10px 12px; gap: 6px; }
       .quote-input { min-width: 60px; }
       .tc-input { width: 92px; font-size: 13px; }
       .shortcuts-panel { min-width: 260px; right: -40px; }
+      .settings-panel { min-width: 220px; right: -80px; }
     }
   </style>
 </head>
@@ -563,6 +677,26 @@
     </select>
   </div>
   <div class="header-actions">
+    <!-- Settings gear (auto-transcribe toggle) -->
+    <div class="settings-wrap">
+      <button class="settings-toggle" id="settingsToggle" aria-label="Settings" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+      <div class="settings-panel" id="settingsPanel">
+        <div class="settings-panel-label">Settings</div>
+        <div class="setting-row">
+          <span class="setting-label">Auto Transcribe</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoTranscribeToggle" checked />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <!-- Keyboard shortcuts -->
     <div class="shortcuts-wrap">
       <button class="shortcuts-toggle" id="shortcutsToggle" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -627,7 +761,6 @@
 
   <div class="card" id="audioCard">
     <span class="card-label">Audio</span>
-    <span class="card-hint">Drop up to 5 audio stems — they'll be mixed into a single waveform for navigation and transcription</span>
 
     <div class="audio-drop-zone" id="audioDropZone">
       <div class="audio-drop-overlay" id="audioDropOverlay">
@@ -677,9 +810,9 @@
       </div>
     </div>
 
-    <div class="transcribe-row" id="transcribeRow">
-      <button class="transcribe-btn" id="transcribeBtn">Transcribe</button>
-      <span class="transcribe-status" id="transcribeStatus"></span>
+    <!-- Transcription status (no button — triggered automatically via settings) -->
+    <div class="transcribe-status-bar" id="transcribeStatusBar">
+      <span class="transcribe-status-text" id="transcribeStatus"></span>
       <div class="transcribe-progress" id="transcribeProgress">
         <div class="transcribe-progress-bar" id="transcribeProgressBar"></div>
       </div>
@@ -694,26 +827,29 @@
     </div>
   </div>
 
-  <div class="columns-wrap">
-    <div class="col-left" id="colLeft"></div>
-    <div class="col-right" id="colRight">
-      <div id="rightFixedSegments"></div>
-      <div id="pickupsContainer"></div>
-      <div class="add-pickup-row">
-        <button class="add-pickup-btn" id="addPickupBtn">+ Add Pickup Point</button>
+  <!-- Content area: hidden until audio is loaded -->
+  <div class="content-area" id="contentArea">
+    <div class="columns-wrap">
+      <div class="col-left" id="colLeft"></div>
+      <div class="col-right" id="colRight">
+        <div id="rightFixedSegments"></div>
+        <div id="pickupsContainer"></div>
+        <div class="add-pickup-row">
+          <button class="add-pickup-btn" id="addPickupBtn">+ Add Pickup Point</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="editor-notes-card" id="editorNotesCard">
-    <span class="card-label">Editor Notes</span>
-    <textarea class="editor-notes-textarea" id="editorNotes" placeholder="Additional notes for the editor…"></textarea>
-  </div>
+    <div class="editor-notes-card" id="editorNotesCard">
+      <span class="card-label">Editor Notes</span>
+      <textarea class="editor-notes-textarea" id="editorNotes" placeholder="Additional notes for the editor…"></textarea>
+    </div>
 
-  <div class="bottom-bar">
-    <div class="btn-group">
-      <button class="export-btn secondary" id="clearAllBtn">Clear All</button>
-      <button class="export-btn" id="copyAllBtn">Copy All</button>
+    <div class="bottom-bar">
+      <div class="btn-group">
+        <button class="export-btn secondary" id="clearAllBtn">Clear All</button>
+        <button class="export-btn" id="copyAllBtn">Copy All</button>
+      </div>
     </div>
   </div>
 
@@ -739,7 +875,6 @@
     var next = isDark ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
-    // Update wavesurfer colours if loaded
     if (wavesurfer && audioLoaded) {
       var style = getComputedStyle(document.documentElement);
       wavesurfer.setOptions({
@@ -750,24 +885,43 @@
     }
   });
 
-  // ── Shortcuts panel toggle ──────────────────────────────────────────
-  var shortcutsToggle = document.getElementById('shortcutsToggle');
-  var shortcutsPanel  = document.getElementById('shortcutsPanel');
+  // ── Settings panel toggle ───────────────────────────────────────────
+  var settingsToggle = document.getElementById('settingsToggle');
+  var settingsPanel  = document.getElementById('settingsPanel');
 
-  shortcutsToggle.addEventListener('click', function (e) {
+  settingsToggle.addEventListener('click', function (e) {
+    e.stopPropagation();
+    settingsPanel.classList.toggle('visible');
+    settingsToggle.classList.toggle('active');
+    // Close shortcuts if open
+    shortcutsPanel.classList.remove('visible');
+    shortcutsToggleBtn.classList.remove('active');
+  });
+
+  // ── Shortcuts panel toggle ──────────────────────────────────────────
+  var shortcutsToggleBtn = document.getElementById('shortcutsToggle');
+  var shortcutsPanel     = document.getElementById('shortcutsPanel');
+
+  shortcutsToggleBtn.addEventListener('click', function (e) {
     e.stopPropagation();
     shortcutsPanel.classList.toggle('visible');
-    shortcutsToggle.classList.toggle('active');
+    shortcutsToggleBtn.classList.toggle('active');
+    // Close settings if open
+    settingsPanel.classList.remove('visible');
+    settingsToggle.classList.remove('active');
   });
 
   document.addEventListener('click', function (e) {
-    if (!shortcutsPanel.contains(e.target) && e.target !== shortcutsToggle) {
+    if (!shortcutsPanel.contains(e.target) && e.target !== shortcutsToggleBtn) {
       shortcutsPanel.classList.remove('visible');
-      shortcutsToggle.classList.remove('active');
+      shortcutsToggleBtn.classList.remove('active');
+    }
+    if (!settingsPanel.contains(e.target) && e.target !== settingsToggle) {
+      settingsPanel.classList.remove('visible');
+      settingsToggle.classList.remove('active');
     }
   });
 
-  // Helper to get current theme waveform colours
   function getWaveformColors() {
     var style = getComputedStyle(document.documentElement);
     return {
@@ -796,6 +950,28 @@
   var mixedBlob = null;
   var mixedBuffer = null;
   var activeCategory = 'sport';
+  var autoTranscribeEnabled = true;
+  var autoTranscribeTimer = null;
+  var transcriptionWorker = null;
+  var mixGeneration = 0; // incremented each mix to detect stale transcriptions
+
+  // ═══════════════════════════════════════════════════════════════
+  // AUTO-TRANSCRIBE TOGGLE
+  // ═══════════════════════════════════════════════════════════════
+  var autoTranscribeToggle = document.getElementById('autoTranscribeToggle');
+  autoTranscribeToggle.addEventListener('change', function () {
+    autoTranscribeEnabled = this.checked;
+    localStorage.setItem('autoTranscribe', autoTranscribeEnabled ? '1' : '0');
+  });
+
+  // Restore from localStorage
+  (function () {
+    var saved = localStorage.getItem('autoTranscribe');
+    if (saved !== null) {
+      autoTranscribeEnabled = saved === '1';
+      autoTranscribeToggle.checked = autoTranscribeEnabled;
+    }
+  })();
 
   // ═══════════════════════════════════════════════════════════════
   // TRANSCRIPTION WEB WORKER
@@ -944,6 +1120,16 @@
   }
   function hideWaveformLoading() {
     document.getElementById('waveformLoading').classList.remove('visible');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SHOW / HIDE CONTENT AREA
+  // ═══════════════════════════════════════════════════════════════
+  function showContentArea() {
+    document.getElementById('contentArea').classList.add('visible');
+  }
+  function hideContentArea() {
+    document.getElementById('contentArea').classList.remove('visible');
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1099,7 +1285,6 @@
     (cat.left || []).forEach(function (seg) { colLeft.appendChild(buildSegmentCard(seg)); });
     (cat.right || []).forEach(function (seg) { rightFixed.appendChild(buildSegmentCard(seg)); });
 
-    // Update the add button label
     document.getElementById('addPickupBtn').textContent = cat.addLabel || '+ Add Pickup Point';
 
     updateStampButtons();
@@ -1209,12 +1394,40 @@
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // CANCEL IN-PROGRESS TRANSCRIPTION
+  // ═══════════════════════════════════════════════════════════════
+  function cancelTranscription() {
+    if (autoTranscribeTimer) {
+      clearTimeout(autoTranscribeTimer);
+      autoTranscribeTimer = null;
+    }
+    if (transcriptionWorker) {
+      transcriptionWorker.terminate();
+      transcriptionWorker = null;
+    }
+    isTranscribing = false;
+    transcriptChunks = null;
+    document.getElementById('transcribeStatusBar').classList.remove('visible');
+    document.getElementById('transcribeProgress').classList.remove('visible');
+    document.getElementById('transcribeStatus').textContent = '';
+    document.getElementById('transcribeProgressBar').style.width = '0%';
+    document.getElementById('transcribeProgressBar').classList.remove('indeterminate');
+    document.getElementById('transcriptDisplay').classList.remove('visible');
+    document.getElementById('transcriptDisplay').innerHTML = '';
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // MIX STEMS
   // ═══════════════════════════════════════════════════════════════
   async function mixAndLoadStems() {
     if (!stemFiles.length) return;
+
+    // Cancel any in-progress transcription (cancel-and-restart)
+    cancelTranscription();
+    mixGeneration++;
+    var thisMix = mixGeneration;
+
     document.getElementById('waveformArea').classList.add('visible');
-    document.getElementById('transcribeRow').classList.add('visible');
     showWaveformLoading('Decoding ' + stemFiles.length + ' stem' + (stemFiles.length > 1 ? 's' : '') + '…');
 
     try {
@@ -1225,6 +1438,10 @@
         var ab = await stemFiles[i].arrayBuffer();
         buffers.push(await audioCtx.decodeAudioData(ab));
       }
+
+      // Bail if a newer mix has started
+      if (thisMix !== mixGeneration) { audioCtx.close(); return; }
+
       updateWaveformLoading('Mixing stems…');
       await new Promise(function (r) { setTimeout(r, 50); });
 
@@ -1269,6 +1486,9 @@
       mixedBlob = audioBufferToWav(mixedBuffer);
       audioCtx.close();
 
+      // Bail if a newer mix has started
+      if (thisMix !== mixGeneration) return;
+
       updateWaveformLoading('Rendering waveform…');
 
       if (wavesurfer) wavesurfer.destroy();
@@ -1286,11 +1506,22 @@
       wavesurfer.load(URL.createObjectURL(mixedBlob));
 
       wavesurfer.on('ready', function () {
+        // Bail if a newer mix has started
+        if (thisMix !== mixGeneration) return;
+
         audioLoaded = true;
         updateStampButtons();
+        showContentArea();
         document.getElementById('transportDuration').textContent = '/ ' + secondsToTimecode(wavesurfer.getDuration());
         wavesurfer.setPlaybackRate(SPEED_STEPS[speedIndex]);
         hideWaveformLoading();
+
+        // Auto-transcribe after 0.3s delay
+        if (autoTranscribeEnabled && mixedBuffer) {
+          autoTranscribeTimer = setTimeout(function () {
+            if (thisMix === mixGeneration) startTranscription(thisMix);
+          }, 300);
+        }
       });
       wavesurfer.on('audioprocess', updateTransportTime);
       wavesurfer.on('seeking', updateTransportTime);
@@ -1336,24 +1567,19 @@
   }
 
   function clearAudio() {
+    cancelTranscription();
     if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
-    audioLoaded = false; transcriptChunks = null; stemFiles = [];
+    audioLoaded = false; stemFiles = [];
     mixedBlob = null; mixedBuffer = null;
     audioFileInput.value = '';
     stemsBar.classList.remove('visible'); stemsChips.innerHTML = '';
     document.getElementById('audioFileBar').classList.remove('visible');
     audioPrompt.classList.remove('hidden');
     document.getElementById('waveformArea').classList.remove('visible');
-    document.getElementById('transcribeRow').classList.remove('visible');
-    document.getElementById('transcriptDisplay').classList.remove('visible');
-    document.getElementById('transcriptDisplay').innerHTML = '';
     document.getElementById('transportTime').textContent = '00.00.00';
     document.getElementById('transportDuration').textContent = '/ 00.00.00';
-    document.getElementById('transcribeBtn').disabled = false;
-    document.getElementById('transcribeBtn').textContent = 'Transcribe';
-    document.getElementById('transcribeBtn').classList.remove('done');
-    document.getElementById('transcribeStatus').textContent = '';
     hideWaveformLoading();
+    hideContentArea();
     speedReset();
     updateStampButtons();
   }
@@ -1399,26 +1625,45 @@
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // WHISPER TRANSCRIPTION
+  // WHISPER TRANSCRIPTION (auto-triggered)
   // ═══════════════════════════════════════════════════════════════
-  document.getElementById('transcribeBtn').addEventListener('click', async function () {
+  async function startTranscription(expectedGeneration) {
     if (isTranscribing || !mixedBuffer) return;
-    var btn = this;
-    var status = document.getElementById('transcribeStatus');
-    var prog = document.getElementById('transcribeProgress');
-    var progBar = document.getElementById('transcribeProgressBar');
+    if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) return;
 
-    isTranscribing = true; btn.disabled = true;
-    status.textContent = 'Starting transcription worker…';
+    var statusBar = document.getElementById('transcribeStatusBar');
+    var status    = document.getElementById('transcribeStatus');
+    var prog      = document.getElementById('transcribeProgress');
+    var progBar   = document.getElementById('transcribeProgressBar');
+
+    isTranscribing = true;
+    statusBar.classList.add('visible');
+    status.textContent = 'Starting transcription…';
     prog.classList.add('visible');
     progBar.classList.add('indeterminate');
 
     try {
       var audioData = await getMixedAudio16k();
-      var worker = new Worker(workerUrl, { type: 'module' });
 
-      worker.onmessage = function (e) {
+      // Bail if mix changed during resample
+      if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) {
+        isTranscribing = false;
+        return;
+      }
+
+      transcriptionWorker = new Worker(workerUrl, { type: 'module' });
+
+      transcriptionWorker.onmessage = function (e) {
         var msg = e.data;
+
+        // Bail if mix changed
+        if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) {
+          transcriptionWorker.terminate();
+          transcriptionWorker = null;
+          isTranscribing = false;
+          return;
+        }
+
         if (msg.type === 'status') status.textContent = msg.text;
         if (msg.type === 'progress') {
           progBar.classList.remove('indeterminate');
@@ -1435,36 +1680,38 @@
           }
           displayTranscript();
           status.textContent = 'Transcription complete — quotes will auto-populate when you stamp timecodes';
-          btn.textContent = 'Transcribed'; btn.classList.add('done');
           isTranscribing = false;
           setTimeout(function () { prog.classList.remove('visible'); }, 1000);
-          worker.terminate();
+          transcriptionWorker.terminate();
+          transcriptionWorker = null;
         }
         if (msg.type === 'error') {
           console.error('Worker transcription error:', msg.text);
           status.textContent = 'Transcription failed: ' + msg.text;
-          btn.disabled = false; isTranscribing = false;
+          isTranscribing = false;
           setTimeout(function () { prog.classList.remove('visible'); }, 1000);
-          worker.terminate();
+          transcriptionWorker.terminate();
+          transcriptionWorker = null;
         }
       };
 
-      worker.onerror = function (err) {
+      transcriptionWorker.onerror = function (err) {
         console.error('Worker error:', err);
         status.textContent = 'Transcription worker failed. Check browser console.';
-        btn.disabled = false; isTranscribing = false;
+        isTranscribing = false;
         setTimeout(function () { prog.classList.remove('visible'); }, 1000);
+        transcriptionWorker = null;
       };
 
-      worker.postMessage({ audio: audioData, audioDuration: mixedBuffer.duration }, [audioData.buffer]);
+      transcriptionWorker.postMessage({ audio: audioData, audioDuration: mixedBuffer.duration }, [audioData.buffer]);
 
     } catch (err) {
       console.error('Transcription setup error:', err);
       status.textContent = 'Failed to start transcription: ' + (err.message || err);
-      btn.disabled = false; isTranscribing = false;
+      isTranscribing = false;
       setTimeout(function () { prog.classList.remove('visible'); }, 1000);
     }
-  });
+  }
 
   async function getMixedAudio16k() {
     if (!mixedBuffer) throw new Error('No mixed audio');
@@ -1522,7 +1769,7 @@
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // COPY ALL / CLEAR ALL (Rich text with bold titles)
+  // COPY ALL / CLEAR ALL
   // ═══════════════════════════════════════════════════════════════
   document.getElementById('copyAllBtn').addEventListener('click', function () {
     var plainLines = [], htmlLines = [], valid = true;
@@ -1564,7 +1811,6 @@
       htmlLines.push('<br>');
     });
 
-    // Append editor notes if present
     var editorNotes = document.getElementById('editorNotes').value.trim();
     if (editorNotes) {
       plainLines.push('Editor Notes');
@@ -1579,7 +1825,6 @@
     var plainText = plainLines.join('\n').trim();
     var htmlText = htmlLines.join('<br>').replace(/<br>(<br>)+/g, '<br><br>').trim();
 
-    // Use ClipboardItem API for rich text copy (bold titles)
     if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
       var htmlBlob = new Blob(['<html><body>' + htmlText + '</body></html>'], { type: 'text/html' });
       var textBlob = new Blob([plainText], { type: 'text/plain' });
@@ -1588,13 +1833,11 @@
       ]).then(function () {
         showToast('All timecodes copied to clipboard');
       }).catch(function () {
-        // Fallback to plain text
         navigator.clipboard.writeText(plainText).then(function () {
           showToast('All timecodes copied to clipboard (plain text)');
         });
       });
     } else {
-      // Fallback for older browsers
       navigator.clipboard.writeText(plainText).then(function () {
         showToast('All timecodes copied to clipboard');
       }).catch(function () {
