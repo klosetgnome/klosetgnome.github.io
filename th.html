@@ -620,8 +620,8 @@
       display: flex; align-items: center; gap: 4px; flex-shrink: 0;
     }
     .tc-input {
-      font-family: var(--mono); font-size: 14px; font-weight: 500;
-      width: 102px; padding: 8px 6px; border: 1px solid var(--border);
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      width: 86px; padding: 6px 6px; border: 1px solid var(--border);
       border-radius: var(--radius); background: var(--bg);
       color: var(--text-primary); text-align: center;
       letter-spacing: 1px; outline: none;
@@ -762,7 +762,7 @@
       main { padding: 32px 16px 60px; }
       .segment-row { padding: 10px 12px; gap: 6px; }
       .quote-input { min-width: 60px; }
-      .tc-input { width: 92px; font-size: 13px; }
+      .tc-input { width: 80px; font-size: 11px; }
       .shortcuts-panel { min-width: 260px; right: -40px; }
       .settings-panel { min-width: 220px; right: -80px; }
     }
@@ -960,11 +960,12 @@
       <div class="col-left" id="colLeft"></div>
       <div class="col-right" id="colRight">
         <div id="rightFixedSegments"></div>
-        <div id="pickupsContainer"></div>
-        <div class="add-pickup-row">
-          <button class="add-pickup-btn" id="addPickupBtn">+ Add Pickup Point</button>
-        </div>
       </div>
+    </div>
+
+    <div id="pickupsContainer"></div>
+    <div class="add-pickup-row">
+      <button class="add-pickup-btn" id="addPickupBtn">+ Add Pickup Point</button>
     </div>
 
     <div class="notes-actions-row">
@@ -1438,7 +1439,7 @@
     var colLeft = document.getElementById('colLeft');
     var colRight = document.getElementById('colRight');
     var rightFixed = document.getElementById('rightFixedSegments');
-    var addRow = document.querySelector('.add-pickup-row');
+    var columnsWrap = document.querySelector('.columns-wrap');
     colLeft.innerHTML = ''; rightFixed.innerHTML = '';
     document.getElementById('pickupsContainer').innerHTML = '';
     pickupCount = 0;
@@ -1449,16 +1450,10 @@
 
     document.getElementById('addPickupBtn').textContent = cat.addLabel || '+ Add Pickup Point';
 
-    // In News mode: add button + grabs go in left column, right column hidden
-    if (catId === 'news') {
-      colLeft.appendChild(document.getElementById('pickupsContainer'));
-      colLeft.appendChild(addRow);
-      colRight.style.display = 'none';
-    } else {
-      colRight.style.display = '';
-      colRight.insertBefore(document.getElementById('pickupsContainer'), addRow);
-      colRight.appendChild(addRow);
-    }
+    // Hide columns grid if both columns are empty (e.g. News)
+    var hasContent = (cat.left && cat.left.length) || (cat.right && cat.right.length);
+    columnsWrap.style.display = hasContent ? '' : 'none';
+    colRight.style.display = (cat.right && cat.right.length) ? '' : 'none';
 
     updateStampButtons();
   }
@@ -1476,7 +1471,8 @@
     removeBtn.className = 'remove-pickup'; removeBtn.textContent = 'Remove';
     removeBtn.addEventListener('click', function () { card.remove(); });
     header.appendChild(removeBtn);
-    document.getElementById('pickupsContainer').appendChild(card);
+    var pc = document.getElementById('pickupsContainer');
+    pc.insertBefore(card, pc.firstChild);
     updateStampButtons();
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
@@ -1818,7 +1814,8 @@
     removeBtn.className = 'remove-pickup'; removeBtn.textContent = 'Remove';
     removeBtn.addEventListener('click', function () { card.remove(); });
     header.appendChild(removeBtn);
-    document.getElementById('pickupsContainer').appendChild(card);
+    var pc = document.getElementById('pickupsContainer');
+    pc.insertBefore(card, pc.firstChild);
     updateStampButtons();
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return card;
@@ -2170,7 +2167,8 @@
       e.preventDefault();
       searchNavigate(e.shiftKey ? -1 : 1);
     }
-    e.stopPropagation();
+    // Let F-keys bubble up for global hotkeys (F2/F3 grabs)
+    if (!e.key.startsWith('F')) e.stopPropagation();
   });
 
   document.getElementById('searchPrev').addEventListener('click', function () { searchNavigate(-1); });
