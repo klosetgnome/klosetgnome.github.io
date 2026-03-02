@@ -635,14 +635,7 @@
         signOut.addEventListener('click', function(e) {
             e.preventDefault();
             forgetAuth();
-            wrapper.classList.remove('unlocked', 'unlocking');
-            wrapper.classList.add('locked');
-            userField.value = '';
-            passField.value = '';
-            errorMsg.textContent = '';
-            submitBtn.textContent = 'Sign In';
-            submitBtn.disabled = false;
-            userField.focus();
+            window.location.href = '/auth/signout';
         });
     </script>
 
