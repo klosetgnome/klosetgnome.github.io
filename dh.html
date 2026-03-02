@@ -411,26 +411,6 @@
 
     .submit-row {
       justify-content: flex-end;
-      position: relative;
-      z-index: 2;
-    }
-
-    /* Ensure progress-wrap never blocks clicks when hidden */
-    .progress-wrap:not(.visible) {
-      pointer-events: none;
-      position: absolute;
-      width: 0;
-      height: 0;
-      overflow: hidden;
-    }
-
-    /* Force the Recreate button to be interactive */
-    .submit.recreate-mode {
-      display: inline-block !important;
-      pointer-events: auto !important;
-      cursor: pointer !important;
-      position: relative;
-      z-index: 5;
     }
 
     /* ── NEW: Collapsible input section ── */
@@ -700,10 +680,8 @@
     inputSection.classList.add('collapsed');
     hasGenerated = true;
     btn.textContent = 'Recreate';
-    btn.classList.add('recreate-mode');
-    btn.style.display = '';
+    btn.style.display = 'inline-block';
     btn.disabled = false;
-    btn.removeAttribute('disabled');
   }
 
   function expandInputs() {
@@ -977,7 +955,6 @@
     historyEl.innerHTML = '';
     document.querySelector('#results .results-header').textContent = 'Episode Copy';
     btn.textContent = 'Create';
-    btn.classList.remove('recreate-mode');
     updateSubmitVisibility();
 
     selectPreferredModel();
