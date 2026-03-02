@@ -477,7 +477,7 @@ button.submit:disabled {
 }
 .transport-btn {
   background: var(--bg); border: 1px solid var(--border);
-  border-radius: var(--radius); width: 36px; height: 36px;
+  border-radius: var(--radius); width: 26px; height: 26px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; color: var(--text-primary); transition: all 0.2s;
   flex-shrink: 0;
@@ -489,13 +489,13 @@ button.submit:disabled {
 .transport-btn.active {
   background: var(--accent); color: #fff; border-color: var(--accent);
 }
-.transport-btn svg { width: 16px; height: 16px; }
+.transport-btn svg { width: 12px; height: 12px; }
 .transport-time {
-  font-family: var(--mono); font-size: 14px; font-weight: 500;
-  color: var(--text-primary); letter-spacing: 1px; min-width: 80px;
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  color: var(--text-primary); letter-spacing: 1px; min-width: 60px;
 }
 .transport-duration {
-  font-family: var(--mono); font-size: 12px; color: var(--text-muted);
+  font-family: var(--mono); font-size: 11px; color: var(--text-muted);
 }
 .transport-spacer { flex: 1; }
 
