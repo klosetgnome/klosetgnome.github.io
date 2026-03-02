@@ -1,65 +1,2289 @@
-Here's your reworked prompt with the key change in the HEADLINE STRATEGY section to enforce varied openings:
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow">
+  <script src="/analytics.js"></script>
+  <title>Timecode Helper</title>
+  <!-- Prevent flash of wrong theme -->
+  <script>
+    (function() {
+      var saved = localStorage.getItem('theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="astyle.css">
+  <script src="https://unpkg.com/wavesurfer.js@7"></script>
+  <style>
+    /* ── Page-specific tokens ── */
+    :root {
+      --success-light: rgba(74, 140, 63, 0.08);
+      --success-border: rgba(74, 140, 63, 0.35);
+    }
 
-You are a podcast episode metadata writer for an Australian financial markets podcast.
-You will receive:
+    [data-theme="dark"] {
+      --success-light: rgba(94, 168, 82, 0.08);
+      --success-border: rgba(94, 168, 82, 0.35);
+    }
 
-A transcript of the episode
-Optionally, a suggested title (marked with "Suggested title:")
+    /* ── Header overrides for 3-column layout ── */
+    .site-header h1 { flex-shrink: 0; }
+    .theme-toggle { flex-shrink: 0; }
 
-TASK:
+    /* ── Header actions (settings + shortcuts + theme toggle) ── */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
 
-Generate exactly three headline hooks.
-Write a single-paragraph episode description (approximately 60 words).
-Exclude: percentages, dollar amounts or specific statistics.
+    /* ── Settings gear (auto-transcribe) ── */
+    .settings-wrap {
+      position: relative;
+    }
 
-HEADLINE RULES:
+    .settings-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s ease;
+      width: 38px;
+      height: 38px;
+      flex-shrink: 0;
+    }
+    .settings-toggle:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .settings-toggle.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+    .settings-toggle svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 1.5;
+      transition: transform 0.4s ease;
+    }
+    .settings-toggle:hover svg,
+    .settings-toggle.active svg {
+      transform: rotate(60deg);
+    }
 
-Each hook must be under 37 characters. This is a hard limit.
-If a suggested title is provided, use it as a springboard: riff on its angle, tone, and idea to produce three varied refinements. Do not copy it verbatim.
-If no suggested title is provided, derive all three headlines from the transcript content.
-No commas, semicolons, em dashes, or en dashes in headlines.
-Always avoid hyphens.
+    .settings-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      z-index: 100;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow-sm);
+      padding: 16px 20px;
+      min-width: 260px;
+      animation: fadeInDown 0.2s ease;
+    }
+    .settings-panel.visible { display: block; }
 
-HEADLINE VARIETY RULE:
-Each headline MUST open with a different first word. No two headlines may share the same opening word. At most one headline may begin with "ASX". Use the three distinct framing angles below to ensure variety:
-HEADLINE STRATEGY:
-Produce one headline from each of the following three angles (in any order):
-Angle A – ASX lead (use this angle for exactly one headline):
-Open with "ASX" or "Aussie market" and describe the index movement directly.
-(e.g. "ASX extends winning streak")
-Angle B – Cause or catalyst lead:
-Open with the driver of the move: a global event, sector, commodity, or theme.
-(e.g. "Wall St falls on Trump remarks", "Trade jitters sink Aussie stocks", "Banks drag market to fresh lows")
-Angle C – Colour or narrative lead:
-Open with a vivid descriptor, sentiment word, or storytelling hook that draws the listener in.
-(e.g. "Nervous start to a big week", "Fresh highs as bulls charge on", "Panic selling grips local bourse")
-Match sentiment to market direction:
+    .settings-panel-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
 
-Market up → Use momentum language (e.g. "ASX extends winning streak").
-Market down → Use dramatic language (e.g. "Trade jitters sink Aussie stocks").
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
 
-"Record" is a powerful word: When the data supports it (actual record highs or milestones), use "Record" prominently.
-HIGH ENGAGEMENT WORDS (favour these in headlines):
+    .setting-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+    }
 
-Momentum: Winning, Streak, Record, Fresh, Best
-Psychology: Jitters, Fears, Nervous, Panic
-Intensity: Sinks, Slump, Soars, Plunges
+    /* ── Toggle switch ── */
+    .toggle-switch {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 11px;
+      cursor: pointer;
+      transition: background 0.25s ease;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      background: var(--surface);
+      border-radius: 50%;
+      transition: transform 0.25s ease;
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+    .toggle-switch input:checked + .toggle-track {
+      background: var(--accent);
+    }
+    .toggle-switch input:checked + .toggle-track::after {
+      transform: translateX(18px);
+    }
 
-LOW ENGAGEMENT WORDS (avoid in headlines but ok to use in description):
+    .shortcuts-wrap {
+      position: relative;
+    }
 
-Jargon: Data, CPI, Earnings, Jobs, Tariffs
-Technical: Rate, Cut, RBA, Inflation
-Passive: After, Ends, Result, Lower, Trade
+    .shortcuts-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s ease;
+      width: 38px;
+      height: 38px;
+      flex-shrink: 0;
+    }
+    .shortcuts-toggle:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .shortcuts-toggle.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+    .shortcuts-toggle svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 1.5;
+      transition: transform 0.2s ease;
+    }
+    .shortcuts-toggle:hover svg,
+    .shortcuts-toggle.active svg {
+      transform: scale(1.08);
+    }
 
-DESCRIPTION RULES:
+    .shortcuts-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      z-index: 100;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow-sm);
+      padding: 16px 20px;
+      min-width: 300px;
+      animation: fadeInDown 0.2s ease;
+    }
+    .shortcuts-panel.visible { display: block; }
 
-Summarise the ASX 200's overall performance and the session's main themes (e.g. earnings, inflation, US leads, commodities, interest rates).
-Note any key upcoming events or catalysts.
-Keep the tone clear, factual, professional, and engaging.
+    .shortcuts-panel-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
 
-FORMATTING AND ACCURACY:
+    .shortcuts-panel-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
-Cross-check company names against correct formatting (e.g. "CBA", "ANZ", "Fortescue Ltd", "Coles Group Ltd") as transcription may introduce errors.
+    .shortcut-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
 
-Respond ONLY with the following JSON object and nothing else:
-{"headline1":"...","headline2":"...","headline3":"...","description":"..."}
+    .shortcut-keys {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .shortcut-keys kbd {
+      display: inline-block;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      min-width: 22px;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .shortcut-keys .key-plus {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    .shortcut-desc {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-align: right;
+    }
+
+    .shortcuts-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+      gap: 20px;
+      width: 100%;
+    }
+
+    .audio-drop-zone { position: relative; width: 100%; }
+    .audio-drop-overlay {
+      display: none; position: absolute; inset: 0; z-index: 10;
+      background: var(--accent-light); border: 2px dashed var(--accent);
+      border-radius: var(--radius); align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .audio-drop-overlay.active { display: flex; }
+    .audio-drop-overlay span {
+      font-family: var(--mono); font-size: 12px; font-weight: 500;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--accent);
+    }
+    .audio-prompt {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 12px; padding: 36px 20px;
+      min-height: 140px; text-align: center;
+    }
+    .audio-prompt.hidden { display: none; }
+    .audio-prompt-icon { color: var(--text-muted); opacity: 0.5; }
+    .audio-prompt-icon svg { width: 36px; height: 36px; }
+    .audio-prompt-text {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--text-secondary); line-height: 1.9;
+    }
+    .audio-prompt-text .browse {
+      color: var(--accent); cursor: pointer; transition: opacity 0.2s;
+    }
+    .audio-prompt-text .browse:hover { text-decoration: underline; }
+
+    /* ── Page-specific waveform overrides ── */
+    .waveform-area { display: none; flex-direction: column; gap: 0; }
+    .waveform-area.visible { display: flex; }
+
+    /* ── Audio top bar (dynamic: AUDIO label → STEMS with chips) ── */
+    .audio-top-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      min-height: 46px;
+      flex-wrap: wrap;
+    }
+    .audio-top-bar-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+    .audio-top-bar-chips {
+      display: contents;
+    }
+    .audio-top-bar .stem-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 4px 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--text-primary);
+    }
+    .audio-top-bar .stem-chip .stem-remove {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 14px; line-height: 1;
+      transition: color 0.2s; padding: 0;
+    }
+    .audio-top-bar .stem-chip .stem-remove:hover { color: var(--error); }
+    .audio-top-bar .stems-add-btn {
+      background: none; border: 1px dashed var(--border);
+      border-radius: var(--radius); padding: 4px 12px;
+      font-family: var(--mono); font-size: 11px; color: var(--text-muted);
+      cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+    }
+    .audio-top-bar .stems-add-btn:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light); border-style: solid;
+    }
+    .audio-top-bar .stems-add-btn.disabled { opacity: 0.3; pointer-events: none; }
+    .audio-top-bar-spacer { flex: 1; }
+    .audio-top-bar-clear {
+      display: none;
+      flex-shrink: 0;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .audio-top-bar-clear.visible { display: inline-flex; }
+    .audio-top-bar-clear:hover {
+      border-color: var(--error);
+      color: var(--error);
+      background: var(--error-glow);
+    }
+
+    /* ── Transcription status (inline in transport row) ── */
+    .transport-status {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      flex-shrink: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .transport-status.visible { display: flex; }
+    .transport-status-text {
+      font-family: var(--mono); font-size: 10px;
+      color: var(--text-muted); letter-spacing: 0.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .transport-status-progress {
+      width: 60px; height: 3px; background: var(--border);
+      border-radius: 3px; overflow: hidden; flex-shrink: 0;
+      display: none;
+    }
+    .transport-status-progress.visible { display: block; }
+    .transport-status-progress-bar {
+      height: 100%; width: 0%; background: var(--accent);
+      transition: width 0.3s ease;
+    }
+    .transport-status-progress-bar.indeterminate {
+      width: 100%; animation: indeterminate 1.8s ease-in-out infinite;
+    }
+
+    /* ── Transcript search (inline in transport) ── */
+    .transport-search {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+    .transport-search.visible { display: flex; }
+    .transport-search-input {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      color: var(--text-primary);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 5px 10px;
+      outline: none;
+      width: 160px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .transport-search-input::placeholder { color: var(--text-muted); }
+    .transport-search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .transport-search-count {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+      min-width: 40px;
+      text-align: right;
+    }
+    .transport-search-nav {
+      display: none;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .transport-search-nav.visible { display: flex; }
+    .transport-search-nav button {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s;
+      padding: 0;
+    }
+    .transport-search-nav button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+    .transport-search-nav button svg { width: 12px; height: 12px; }
+    .ts-word.search-match {
+      background: rgba(160, 120, 40, 0.2);
+      border-radius: 2px;
+    }
+    .ts-word.search-active {
+      background: var(--accent-light);
+      color: var(--accent);
+      outline: 1px solid var(--accent);
+      border-radius: 2px;
+    }
+
+    .transcript-display {
+      display: none; max-height: 160px; overflow-y: auto;
+      padding: 12px 20px 16px; border-top: 1px solid var(--border);
+      font-family: var(--mono); font-size: 11px; line-height: 1.8;
+      color: var(--text-secondary);
+    }
+    .transcript-display.visible { display: block; }
+    .transcript-display .ts-word {
+      cursor: pointer; padding: 1px 0; border-radius: 2px;
+      transition: background 0.15s;
+    }
+    .transcript-display .ts-word:hover {
+      background: var(--accent-light); color: var(--accent);
+    }
+    .transcript-display .ts-word.highlight {
+      background: rgba(192, 81, 45, 0.15); color: var(--accent);
+    }
+    .transcript-display .ts-marker {
+      user-select: none;
+      margin-right: 2px;
+    }
+
+    /* ── Content area (hidden until audio loaded) ── */
+    .columns-wrap {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    .col-left, .col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #rightFixedSegments,
+    #pickupsContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .content-area {
+      display: none;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+      animation: fadeInUp 0.5s ease both;
+    }
+    .content-area.visible { display: flex; }
+
+    @media (max-width: 860px) {
+      .columns-wrap { grid-template-columns: 1fr; }
+      .notes-actions-row { flex-direction: column; }
+      .actions-group { flex-direction: row; justify-content: flex-end; }
+    }
+
+    .segment-card {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      animation: fadeInUp 0.4s ease both;
+      transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+    }
+    .segment-card.complete {
+      border-color: var(--success-border);
+      box-shadow: 0 0 0 1px var(--success-border);
+      background: linear-gradient(to bottom, rgba(74, 140, 63, 0.04), var(--surface) 40%);
+    }
+    .segment-card.complete .segment-header { color: var(--success); }
+    .segment-card.complete .complete-tick { display: inline-block; }
+
+    .segment-header {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--text-muted);
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      transition: color 0.4s ease;
+    }
+    .segment-header .header-left {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .complete-tick {
+      display: none; color: var(--success);
+    }
+    .complete-tick svg { width: 14px; height: 14px; }
+    .segment-header .remove-pickup {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+      text-transform: uppercase; background: none;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 4px 10px; cursor: pointer; color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .segment-header .remove-pickup:hover {
+      border-color: var(--error); color: var(--error);
+      background: var(--error-glow);
+    }
+
+    .segment-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .segment-row:last-child { border-bottom: none; }
+
+    .row-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-muted);
+      width: 44px; flex-shrink: 0;
+    }
+    .row-label-wide {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-muted);
+      width: auto; flex-shrink: 0; white-space: nowrap;
+    }
+
+    .tc-wrap {
+      display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+    }
+    .tc-input {
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      width: 86px; padding: 6px 6px; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--bg);
+      color: var(--text-primary); text-align: center;
+      letter-spacing: 1px; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .tc-input::placeholder { color: var(--text-muted); font-weight: 400; }
+    .tc-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .tc-input.invalid {
+      border-color: var(--error);
+      box-shadow: 0 0 0 3px var(--error-glow);
+    }
+    .stamp-btn {
+      background: none; border: 1px solid var(--border);
+      border-radius: var(--radius); width: 30px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .stamp-btn:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light);
+    }
+    .stamp-btn.disabled { opacity: 0.3; pointer-events: none; }
+    .stamp-btn svg { width: 14px; height: 14px; }
+
+    .quote-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--text-muted);
+      flex-shrink: 0; margin-left: 4px;
+    }
+    .quote-input {
+      flex: 1; min-width: 80px; font-family: var(--mono); font-size: 12px;
+      line-height: 1.6; padding: 8px 10px; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--bg);
+      color: var(--text-primary); outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .quote-input::placeholder { color: var(--text-muted); }
+    .quote-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .add-pickup-row { width: 100%; }
+    .add-pickup-btn {
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      background: var(--surface); border: 1px dashed var(--border);
+      border-radius: var(--radius); padding: 12px 24px; cursor: pointer;
+      color: var(--text-secondary); transition: all 0.2s; width: 100%;
+    }
+    .add-pickup-btn:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light); border-style: solid;
+    }
+
+    /* ── Editor Notes ── */
+    /* ── Editor Notes + Action Buttons Row ── */
+    .notes-actions-row {
+      width: 100%;
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+    }
+    .editor-notes-card {
+      flex: 1;
+      min-width: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+    .editor-notes-card .card-label {
+      padding: 14px 20px 0;
+    }
+    .editor-notes-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px 20px 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--text-primary);
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    .editor-notes-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .actions-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .export-btn {
+      font-family: var(--mono); font-size: 12px; font-weight: 500;
+      letter-spacing: 2px; text-transform: uppercase;
+      border: none; border-radius: var(--radius); padding: 12px 24px;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+      background: var(--accent); color: #fff;
+    }
+    .export-btn:hover {
+      background: #d4623e; transform: translateY(-1px);
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+    .export-btn:active { transform: translateY(0); }
+    .export-btn.secondary {
+      background: var(--surface); color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    .export-btn.secondary:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light); box-shadow: none;
+    }
+
+    .toast {
+      position: fixed; bottom: 32px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      font-family: var(--mono); font-size: 12px; letter-spacing: 1px;
+      background: var(--text-primary); color: var(--bg);
+      padding: 12px 24px; border-radius: var(--radius);
+      opacity: 0; transition: all 0.3s ease; z-index: 100;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 700px) {
+      main { padding: 32px 16px 60px; }
+      .segment-row { padding: 10px 12px; gap: 6px; }
+      .quote-input { min-width: 60px; }
+      .tc-input { width: 80px; font-size: 11px; }
+      .shortcuts-panel { min-width: 260px; right: -40px; }
+      .settings-panel { min-width: 220px; right: -80px; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1><span>TIMECODE</span> HELPER</h1>
+  <div class="header-center">
+    <select id="categorySelect" class="minimal-select">
+      <option value="sport">Sport</option>
+      <option value="news" selected>News</option>
+    </select>
+  </div>
+  <div class="header-actions">
+    <!-- Settings gear (auto-transcribe toggle) -->
+    <div class="settings-wrap">
+      <button class="settings-toggle" id="settingsToggle" aria-label="Settings" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+      <div class="settings-panel" id="settingsPanel">
+        <div class="settings-panel-label">Settings</div>
+        <div class="setting-row">
+          <span class="setting-label">Autoplay Keyword</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoplayKeywordToggle" checked />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="setting-row" style="margin-top:10px;">
+          <span class="setting-label">Sentence Timestamps</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="sentenceTimestampsToggle" />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="setting-row" style="margin-top:10px;">
+          <span class="setting-label">Seek to Word</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="seekToWordToggle" />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <!-- Keyboard shortcuts -->
+    <div class="shortcuts-wrap">
+      <button class="shortcuts-toggle" id="shortcutsToggle" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2" ry="2"/>
+          <path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/>
+          <path d="M6 12h.001"/><path d="M10 12h.001"/><path d="M14 12h.001"/><path d="M18 12h.001"/>
+          <path d="M8 16h8"/>
+        </svg>
+      </button>
+      <div class="shortcuts-panel" id="shortcutsPanel">
+        <div class="shortcuts-panel-label">Keyboard Shortcuts</div>
+        <div class="shortcuts-panel-list">
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Play / Pause</span>
+            <span class="shortcut-keys"><kbd>Space</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Skip ±5s</span>
+            <span class="shortcut-keys"><kbd>←</kbd> <kbd>→</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Skip ±1s</span>
+            <span class="shortcut-keys"><kbd>Shift</kbd><span class="key-plus">+</span><kbd>←</kbd> <kbd>→</kbd></span>
+          </div>
+          <div class="shortcuts-divider"></div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Stamp timecode</span>
+            <span class="shortcut-keys"><kbd>T</kbd></span>
+          </div>
+          <div class="shortcuts-divider"></div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Faster</span>
+            <span class="shortcut-keys"><kbd>D</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Slower</span>
+            <span class="shortcut-keys"><kbd>S</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Reset speed</span>
+            <span class="shortcut-keys"><kbd>R</kbd></span>
+          </div>
+          <div class="shortcuts-divider"></div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Grab IN</span>
+            <span class="shortcut-keys"><kbd>F2</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Grab OUT</span>
+            <span class="shortcut-keys"><kbd>F3</kbd></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+      <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+      </svg>
+      <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2"/><path d="M12 20v2"/>
+        <path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+        <path d="M2 12h2"/><path d="M20 12h2"/>
+        <path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div class="card" id="audioCard">
+    <!-- Dynamic top bar: AUDIO → STEMS with chips when loaded -->
+    <div class="audio-top-bar" id="audioTopBar">
+      <span class="audio-top-bar-label" id="audioTopLabel">Audio</span>
+      <div class="audio-top-bar-chips" id="audioTopChips"></div>
+      <span class="audio-top-bar-spacer"></span>
+      <button class="audio-top-bar-clear" id="audioTopClear">Clear</button>
+    </div>
+
+    <div class="audio-drop-zone" id="audioDropZone">
+      <div class="audio-drop-overlay" id="audioDropOverlay">
+        <span>Drop audio file(s) here</span>
+      </div>
+      <div class="audio-prompt" id="audioPrompt">
+        <div class="audio-prompt-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <div class="audio-prompt-text">
+          Drag &amp; drop .wav or audio files here (up to 5 stems)<br>
+          or <span class="browse" id="audioBrowse">browse to select</span>
+        </div>
+      </div>
+      <input type="file" id="audioFileInput" accept=".wav,.mp3,.m4a,.ogg,.flac,audio/*" multiple style="display:none;" />
+      <input type="file" id="stemsAddInput" accept=".wav,.mp3,.m4a,.ogg,.flac,audio/*" multiple style="display:none;" />
+    </div>
+
+    <div class="waveform-area" id="waveformArea">
+      <div class="waveform-loading" id="waveformLoading">
+        <span class="waveform-loading-label">Processing audio…</span>
+        <div class="waveform-loading-track"><div class="waveform-loading-bar"></div></div>
+        <span class="waveform-loading-detail" id="waveformLoadingDetail">Decoding stems</span>
+      </div>
+      <div class="waveform-container"><div id="waveform"></div></div>
+      <div class="transport">
+        <button class="transport-btn" id="btnSkipBack" title="Skip back 5s">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+        </button>
+        <button class="transport-btn" id="btnPlayPause" title="Play / Pause (Space)">
+          <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6,4 20,12 6,20"/></svg>
+          <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none"><rect x="5" y="4" width="4" height="16"/><rect x="15" y="4" width="4" height="16"/></svg>
+        </button>
+        <button class="transport-btn" id="btnSkipFwd" title="Skip forward 5s">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+        </button>
+        <span class="transport-time" id="transportTime">00.00.00</span>
+        <span class="transport-duration" id="transportDuration">/ 00.00.00</span>
+        <span class="speed-badge" id="speedBadge" title="Click to cycle speed (D faster, S slower, R reset)">1&times;</span>
+        <span class="transport-spacer"></span>
+        <!-- Transcription status (inline, right-aligned — hidden when search appears) -->
+        <div class="transport-status" id="transportStatus">
+          <span class="transport-status-text" id="transcribeStatus"></span>
+          <div class="transport-status-progress" id="transcribeProgress">
+            <div class="transport-status-progress-bar" id="transcribeProgressBar"></div>
+          </div>
+        </div>
+        <!-- Transcript search (appears after transcription, replaces status) -->
+        <div class="transport-search" id="transportSearch">
+          <span class="transport-search-count" id="searchCount"></span>
+          <div class="transport-search-nav" id="searchNav">
+            <button id="searchPrev" title="Previous match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+            <button id="searchNext" title="Next match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></button>
+          </div>
+          <input type="text" class="transport-search-input" id="transcriptSearchInput" placeholder="Search transcript…" />
+        </div>
+      </div>
+    </div>
+
+    <div class="transcript-display" id="transcriptDisplay"></div>
+  </div>
+
+  <!-- Content area: hidden until audio is loaded -->
+  <div class="content-area" id="contentArea">
+    <div class="columns-wrap">
+      <div class="col-left" id="colLeft"></div>
+      <div class="col-right" id="colRight">
+        <div id="rightFixedSegments"></div>
+      </div>
+    </div>
+
+    <div id="pickupsContainer"></div>
+    <div class="add-pickup-row">
+      <button class="add-pickup-btn" id="addPickupBtn">+ Add Pickup Point</button>
+    </div>
+
+    <div class="notes-actions-row">
+      <div class="editor-notes-card" id="editorNotesCard">
+        <span class="card-label">Editor Notes</span>
+        <textarea class="editor-notes-textarea" id="editorNotes" placeholder="Additional notes for the editor…"></textarea>
+      </div>
+      <div class="actions-group">
+        <button class="export-btn" id="copyAllBtn">Copy All</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+</main>
+
+<footer>
+      <a href="index.html"><span style="color: var(--accent);">dev.</span>nialfernandes.com</a>
+      <span style="color: var(--text-muted); margin: 0 8px;">|</span>
+      <a href="privacy.html">Privacy Policy</a>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Theme toggle ────────────────────────────────────────────────────
+  var themeToggle = document.querySelector('.theme-toggle');
+  themeToggle.addEventListener('click', function () {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    if (wavesurfer && audioLoaded) {
+      var style = getComputedStyle(document.documentElement);
+      wavesurfer.setOptions({
+        waveColor: style.getPropertyValue('--waveform-wave').trim(),
+        progressColor: style.getPropertyValue('--waveform-progress').trim(),
+        cursorColor: style.getPropertyValue('--waveform-cursor').trim()
+      });
+    }
+  });
+
+  // ── Settings panel toggle ───────────────────────────────────────────
+  var settingsToggle = document.getElementById('settingsToggle');
+  var settingsPanel  = document.getElementById('settingsPanel');
+
+  settingsToggle.addEventListener('click', function (e) {
+    e.stopPropagation();
+    settingsPanel.classList.toggle('visible');
+    settingsToggle.classList.toggle('active');
+    // Close shortcuts if open
+    shortcutsPanel.classList.remove('visible');
+    shortcutsToggleBtn.classList.remove('active');
+  });
+
+  // ── Shortcuts panel toggle ──────────────────────────────────────────
+  var shortcutsToggleBtn = document.getElementById('shortcutsToggle');
+  var shortcutsPanel     = document.getElementById('shortcutsPanel');
+
+  shortcutsToggleBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    shortcutsPanel.classList.toggle('visible');
+    shortcutsToggleBtn.classList.toggle('active');
+    // Close settings if open
+    settingsPanel.classList.remove('visible');
+    settingsToggle.classList.remove('active');
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!shortcutsPanel.contains(e.target) && e.target !== shortcutsToggleBtn) {
+      shortcutsPanel.classList.remove('visible');
+      shortcutsToggleBtn.classList.remove('active');
+    }
+    if (!settingsPanel.contains(e.target) && e.target !== settingsToggle) {
+      settingsPanel.classList.remove('visible');
+      settingsToggle.classList.remove('active');
+    }
+  });
+
+  function getWaveformColors() {
+    var style = getComputedStyle(document.documentElement);
+    return {
+      wave: style.getPropertyValue('--waveform-wave').trim(),
+      progress: style.getPropertyValue('--waveform-progress').trim(),
+      cursor: style.getPropertyValue('--waveform-cursor').trim()
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // CONSTANTS
+  // ═══════════════════════════════════════════════════════════════
+  var FPS = 25;
+  var SPEED_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  var speedIndex = 2;
+
+  // ═══════════════════════════════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════════════════════════════
+  var wavesurfer = null;
+  var audioLoaded = false;
+  var transcriptChunks = null;
+  var pickupCount = 0;
+  var isTranscribing = false;
+  var stemFiles = [];
+  var mixedBlob = null;
+  var mixedBuffer = null;
+  var activeCategory = 'news';
+  var autoTranscribeEnabled = true;
+  var autoTranscribeTimer = null;
+  var transcriptionWorker = null;
+  var mixGeneration = 0; // incremented each mix to detect stale transcriptions
+
+  // ═══════════════════════════════════════════════════════════════
+  // AUTOPLAY KEYWORD TOGGLE
+  // ═══════════════════════════════════════════════════════════════
+  var autoplayKeywordEnabled = true;
+  var autoplayKeywordToggle = document.getElementById('autoplayKeywordToggle');
+  autoplayKeywordToggle.addEventListener('change', function () {
+    autoplayKeywordEnabled = this.checked;
+    localStorage.setItem('autoplayKeyword', autoplayKeywordEnabled ? '1' : '0');
+  });
+
+  (function () {
+    var saved = localStorage.getItem('autoplayKeyword');
+    if (saved !== null) {
+      autoplayKeywordEnabled = saved === '1';
+      autoplayKeywordToggle.checked = autoplayKeywordEnabled;
+    }
+  })();
+
+  // ═══════════════════════════════════════════════════════════════
+  // SENTENCE TIMESTAMPS TOGGLE
+  // ═══════════════════════════════════════════════════════════════
+  var sentenceTimestampsEnabled = false;
+  var sentenceTimestampsToggle = document.getElementById('sentenceTimestampsToggle');
+  sentenceTimestampsToggle.addEventListener('change', function () {
+    sentenceTimestampsEnabled = this.checked;
+    localStorage.setItem('sentenceTimestamps', sentenceTimestampsEnabled ? '1' : '0');
+    // Re-render transcript if we have one
+    if (transcriptChunks && transcriptChunks.length) displayTranscript();
+  });
+
+  (function () {
+    var saved = localStorage.getItem('sentenceTimestamps');
+    if (saved !== null) {
+      sentenceTimestampsEnabled = saved === '1';
+      sentenceTimestampsToggle.checked = sentenceTimestampsEnabled;
+    }
+  })();
+
+  // ═══════════════════════════════════════════════════════════════
+  // SEEK TO WORD TOGGLE
+  // ═══════════════════════════════════════════════════════════════
+  var seekToWordEnabled = false;
+  var seekToWordToggle = document.getElementById('seekToWordToggle');
+  seekToWordToggle.addEventListener('change', function () {
+    seekToWordEnabled = this.checked;
+    localStorage.setItem('seekToWord', seekToWordEnabled ? '1' : '0');
+  });
+
+  (function () {
+    var saved = localStorage.getItem('seekToWord');
+    if (saved !== null) {
+      seekToWordEnabled = saved === '1';
+      seekToWordToggle.checked = seekToWordEnabled;
+    }
+  })();
+
+  // ═══════════════════════════════════════════════════════════════
+  // TRANSCRIPTION WEB WORKER
+  // ═══════════════════════════════════════════════════════════════
+  var workerScript = function () {
+    self.onmessage = async function (e) {
+      try {
+        self.postMessage({ type: 'status', text: 'Loading transcription library…' });
+        var transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
+        var modelId = 'onnx-community/whisper-base';
+        var device = 'wasm';
+        if (typeof navigator !== 'undefined' && navigator.gpu) {
+          try {
+            var adapter = await navigator.gpu.requestAdapter();
+            if (adapter) {
+              device = 'webgpu';
+              self.postMessage({ type: 'status', text: 'WebGPU detected — loading model with GPU acceleration…' });
+            }
+          } catch (ignored) {}
+        }
+        if (device === 'wasm') {
+          self.postMessage({ type: 'status', text: 'Loading model (WASM mode — no GPU detected)…' });
+        }
+        var transcriber = await transformers.pipeline(
+          'automatic-speech-recognition', modelId,
+          { dtype: device === 'webgpu' ? 'fp32' : 'q8', device: device }
+        );
+        var audioLengthSec = e.data.audioDuration || 0;
+        var chunkSec = 30;
+        var totalChunks = Math.max(1, Math.ceil(audioLengthSec / chunkSec));
+        var chunksProcessed = 0;
+        self.postMessage({ type: 'status', text: 'Transcribing' + (device === 'webgpu' ? ' (GPU accelerated)' : '') + '…' });
+        self.postMessage({ type: 'progress', value: 5 });
+        var result = await transcriber(e.data.audio, {
+          return_timestamps: true, chunk_length_s: chunkSec, stride_length_s: 5,
+          language: 'en', task: 'transcribe',
+          callback_function: function () {
+            chunksProcessed++;
+            var pct = Math.min(95, Math.round((chunksProcessed / totalChunks) * 95));
+            self.postMessage({ type: 'progress', value: pct });
+            self.postMessage({ type: 'status', text: 'Transcribing' + (device === 'webgpu' ? ' (GPU)' : '') + '… chunk ' + chunksProcessed + '/' + totalChunks });
+          }
+        });
+        self.postMessage({ type: 'progress', value: 100 });
+        self.postMessage({ type: 'result', data: result });
+      } catch (err) {
+        self.postMessage({ type: 'error', text: err.message || String(err) });
+      }
+    };
+  };
+
+  var workerBlob = new Blob(['(' + workerScript.toString() + ')()'], { type: 'application/javascript' });
+  var workerUrl = URL.createObjectURL(workerBlob);
+
+  // ═══════════════════════════════════════════════════════════════
+  // CATEGORY DEFINITIONS
+  // ═══════════════════════════════════════════════════════════════
+  var CATEGORIES = {
+    sport: {
+      addLabel: '+ Add Pickup Point',
+      addPrefix: 'Pickup',
+      left: [
+        { id: 'seg1', label: 'Segment 1', hasQuotes: true },
+        { id: 'seg2', label: 'Segment 2', hasQuotes: true },
+        { id: 'seg3', label: 'Segment 3', hasQuotes: true },
+        { id: 'seg4', label: 'Segment 4', hasQuotes: true },
+        { id: 'seg5', label: 'Segment 5', hasQuotes: true }
+      ],
+      right: [
+        { id: 'midroll', label: 'Midroll', hasQuotes: false, customRows: [
+          { label: 'Into Break', tcId: 'into-break' },
+          { label: 'Out of Break', tcId: 'out-of-break' }
+        ]},
+        { id: 'radio-outro', label: 'Radio Outro', hasQuotes: false, startEnd: true },
+        { id: 'radio-promo', label: 'Radio Promo', hasQuotes: false, startEnd: true }
+      ]
+    },
+    news: {
+      addLabel: '+ Add Grab',
+      addPrefix: 'Grab',
+      left: [],
+      right: []
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // HELPERS
+  // ═══════════════════════════════════════════════════════════════
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+
+  function secondsToTimecode(s) {
+    var totalSec = Math.round(s);
+    var hh = Math.floor(totalSec / 3600);
+    var mm = Math.floor((totalSec % 3600) / 60);
+    var ss = totalSec % 60;
+    return String(hh).padStart(2, '0') + '.' + String(mm).padStart(2, '0') + '.' + String(ss).padStart(2, '0');
+  }
+
+  function formatTimecodeForCopy(tc) {
+    if (!tc) return '??:??:??:00';
+    return tc.replace(/\./g, ':') + ':00';
+  }
+
+  function timecodeToSeconds(tc) {
+    var parts = tc.split('.');
+    if (parts.length !== 3) return NaN;
+    var hh = parseInt(parts[0], 10), mm = parseInt(parts[1], 10), ss = parseInt(parts[2], 10);
+    if (isNaN(hh) || isNaN(mm) || isNaN(ss)) return NaN;
+    if (mm < 0 || mm > 59 || ss < 0 || ss > 59) return NaN;
+    return hh * 3600 + mm * 60 + ss;
+  }
+
+  function isValidTimecode(tc) {
+    return /^\d{1,2}\.\d{1,2}\.\d{1,2}$/.test(tc) && !isNaN(timecodeToSeconds(tc));
+  }
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function () { t.classList.remove('show'); }, 2200);
+  }
+
+  function showError(msg) {
+    var box = document.getElementById('errorBox');
+    box.textContent = msg; box.classList.add('visible');
+    setTimeout(function () { box.classList.remove('visible'); }, 8000);
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement('div'); div.textContent = str; return div.innerHTML;
+  }
+
+  function showWaveformLoading(detail) {
+    document.getElementById('waveformLoadingDetail').textContent = detail || '';
+    document.getElementById('waveformLoading').classList.add('visible');
+  }
+  function updateWaveformLoading(detail) {
+    document.getElementById('waveformLoadingDetail').textContent = detail || '';
+  }
+  function hideWaveformLoading() {
+    document.getElementById('waveformLoading').classList.remove('visible');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SHOW / HIDE CONTENT AREA
+  // ═══════════════════════════════════════════════════════════════
+  function showContentArea() {
+    document.getElementById('contentArea').classList.add('visible');
+  }
+  function hideContentArea() {
+    document.getElementById('contentArea').classList.remove('visible');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PLAYBACK SPEED
+  // ═══════════════════════════════════════════════════════════════
+  function setSpeed(idx) {
+    speedIndex = Math.max(0, Math.min(SPEED_STEPS.length - 1, idx));
+    var rate = SPEED_STEPS[speedIndex];
+    var badge = document.getElementById('speedBadge');
+    badge.textContent = rate + '×';
+    badge.classList.toggle('modified', rate !== 1);
+    if (wavesurfer) wavesurfer.setPlaybackRate(rate);
+  }
+
+  function speedUp() { setSpeed(speedIndex + 1); }
+  function speedDown() { setSpeed(speedIndex - 1); }
+  function speedReset() { setSpeed(SPEED_STEPS.indexOf(1)); }
+
+  document.getElementById('speedBadge').addEventListener('click', function () {
+    setSpeed((speedIndex + 1) % SPEED_STEPS.length);
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // TIMECODE INPUT
+  // ═══════════════════════════════════════════════════════════════
+  function setupTimecodeInput(input) {
+    input.addEventListener('input', function () {
+      var digits = this.value.replace(/[^\d]/g, '');
+      if (digits.length > 6) digits = digits.substring(0, 6);
+      var formatted = '';
+      for (var i = 0; i < digits.length; i++) {
+        if (i === 2 || i === 4) formatted += '.';
+        formatted += digits[i];
+      }
+      this.value = formatted;
+    });
+    input.addEventListener('blur', function () {
+      if (this.value && !isValidTimecode(this.value)) this.classList.add('invalid');
+      else this.classList.remove('invalid');
+      checkCardCompletion(this);
+    });
+    input.addEventListener('focus', function () { this.classList.remove('invalid'); });
+    input.addEventListener('keydown', function (e) {
+      if ((e.key === 't' || e.key === 'T') && wavesurfer && audioLoaded) {
+        e.preventDefault();
+        this.value = secondsToTimecode(wavesurfer.getCurrentTime());
+        this.classList.remove('invalid');
+        autoPopulateQuote(this);
+        checkCardCompletion(this);
+        showToast('Timecode stamped: ' + this.value);
+      }
+    });
+  }
+
+  function setupQuoteInput(input) {
+    input.addEventListener('blur', function () { checkCardCompletion(this); });
+    input.addEventListener('input', function () { checkCardCompletion(this); });
+  }
+
+  function checkCardCompletion(el) {
+    var card = el.closest('.segment-card');
+    if (!card) return;
+    var complete = true;
+    card.querySelectorAll('.tc-input').forEach(function (tc) {
+      if (!tc.value || !isValidTimecode(tc.value)) complete = false;
+    });
+    card.querySelectorAll('.quote-input').forEach(function (q) {
+      if (!q.value.trim()) complete = false;
+    });
+    if (complete) card.classList.add('complete');
+    else card.classList.remove('complete');
+  }
+
+  function autoPopulateQuote(tcInput) {
+    if (!transcriptChunks || !transcriptChunks.length) return;
+    var row = tcInput.closest('.segment-row');
+    if (!row) return;
+    var quoteInput = row.querySelector('.quote-input');
+    if (!quoteInput) return;
+    if (!isValidTimecode(tcInput.value)) return;
+    var seconds = timecodeToSeconds(tcInput.value);
+    var closestChunk = null, minDist = Infinity;
+    for (var i = 0; i < transcriptChunks.length; i++) {
+      var c = transcriptChunks[i];
+      if (seconds >= c.start && seconds <= c.end) { closestChunk = c; minDist = 0; break; }
+      var d = Math.min(Math.abs(seconds - c.start), Math.abs(seconds - c.end));
+      if (d < minDist) { minDist = d; closestChunk = c; }
+    }
+    if (closestChunk && minDist < 5) {
+      var snippet = closestChunk.text.trim();
+      if (snippet.length > 80) {
+        var sp = snippet.indexOf(' ', 60);
+        if (sp !== -1) snippet = snippet.substring(0, sp) + '…';
+      }
+      quoteInput.value = snippet;
+      checkCardCompletion(quoteInput);
+    }
+  }
+
+  // Back-fill quotes for any timecode inputs that were stamped before
+  // transcription finished. Finds tc-inputs with values whose paired
+  // quote-input is still empty, and runs autoPopulateQuote on them.
+  function backfillQuotes() {
+    document.querySelectorAll('.tc-input').forEach(function (tcInput) {
+      if (!tcInput.value || !isValidTimecode(tcInput.value)) return;
+      var row = tcInput.closest('.segment-row');
+      if (!row) return;
+      var quoteInput = row.querySelector('.quote-input');
+      if (quoteInput && !quoteInput.value) {
+        autoPopulateQuote(tcInput);
+      }
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // BUILD SEGMENT CARD
+  // ═══════════════════════════════════════════════════════════════
+  var CLOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+  var TICK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+  function buildSegmentCard(seg) {
+    var card = document.createElement('div');
+    card.className = 'segment-card';
+    card.id = 'card-' + seg.id;
+    var header = '<div class="segment-header"><div class="header-left"><span>' + seg.label + '</span><span class="complete-tick">' + TICK_SVG + '</span></div></div>';
+    var rows = '';
+
+    if (seg.customRows) {
+      for (var c = 0; c < seg.customRows.length; c++) {
+        var cr = seg.customRows[c];
+        rows += '<div class="segment-row"><span class="row-label-wide">' + cr.label + '</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + cr.tcId + '" placeholder="00.00.00" maxlength="8" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div></div>';
+      }
+    } else if (seg.startEnd && !seg.hasQuotes) {
+      ['Start', 'End'].forEach(function (lbl) {
+        rows += '<div class="segment-row"><span class="row-label">' + lbl + '</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + lbl.toLowerCase() + '" placeholder="00.00.00" maxlength="8" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div></div>';
+      });
+    } else {
+      rows += '<div class="segment-row"><span class="row-label">Start</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-start" placeholder="00.00.00" maxlength="8" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div><span class="quote-label">Quote in</span><input type="text" class="quote-input" data-quote-id="' + seg.id + '-quote-in" placeholder="First words…" required /></div>';
+      rows += '<div class="segment-row"><span class="row-label">End</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-end" placeholder="00.00.00" maxlength="8" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div><span class="quote-label">Quote out</span><input type="text" class="quote-input" data-quote-id="' + seg.id + '-quote-out" placeholder="Last words…" required /></div>';
+    }
+
+    card.innerHTML = header + rows;
+    card.querySelectorAll('.tc-input').forEach(setupTimecodeInput);
+    card.querySelectorAll('.quote-input').forEach(setupQuoteInput);
+    card.querySelectorAll('.stamp-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (!wavesurfer || !audioLoaded) return;
+        var tcInput = btn.closest('.tc-wrap').querySelector('.tc-input');
+        tcInput.value = secondsToTimecode(wavesurfer.getCurrentTime());
+        tcInput.classList.remove('invalid');
+        autoPopulateQuote(tcInput);
+        checkCardCompletion(tcInput);
+        showToast('Timecode stamped: ' + tcInput.value);
+      });
+    });
+    return card;
+  }
+
+  function loadCategory(catId) {
+    activeCategory = catId;
+    var colLeft = document.getElementById('colLeft');
+    var colRight = document.getElementById('colRight');
+    var rightFixed = document.getElementById('rightFixedSegments');
+    var columnsWrap = document.querySelector('.columns-wrap');
+    colLeft.innerHTML = ''; rightFixed.innerHTML = '';
+    document.getElementById('pickupsContainer').innerHTML = '';
+    pickupCount = 0;
+    var cat = CATEGORIES[catId];
+    if (!cat) return;
+    (cat.left || []).forEach(function (seg) { colLeft.appendChild(buildSegmentCard(seg)); });
+    (cat.right || []).forEach(function (seg) { rightFixed.appendChild(buildSegmentCard(seg)); });
+
+    document.getElementById('addPickupBtn').textContent = cat.addLabel || '+ Add Pickup Point';
+
+    // Hide columns grid if both columns are empty (e.g. News)
+    var hasContent = (cat.left && cat.left.length) || (cat.right && cat.right.length);
+    columnsWrap.style.display = hasContent ? '' : 'none';
+    colRight.style.display = (cat.right && cat.right.length) ? '' : 'none';
+
+    updateStampButtons();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PICKUPS / EDIT POINTS
+  // ═══════════════════════════════════════════════════════════════
+  document.getElementById('addPickupBtn').addEventListener('click', function () {
+    var cat = CATEGORIES[activeCategory];
+    var prefix = (cat && cat.addPrefix) ? cat.addPrefix : 'Pickup';
+    pickupCount++;
+    var card = buildSegmentCard({ id: 'pickup-' + pickupCount, label: prefix + ' ' + pickupCount, hasQuotes: true });
+    var header = card.querySelector('.segment-header');
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-pickup'; removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', function () { card.remove(); });
+    header.appendChild(removeBtn);
+    var pc = document.getElementById('pickupsContainer');
+    pc.insertBefore(card, pc.firstChild);
+    updateStampButtons();
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  function updateStampButtons() {
+    document.querySelectorAll('.stamp-btn').forEach(function (btn) {
+      if (audioLoaded) btn.classList.remove('disabled');
+      else btn.classList.add('disabled');
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // MULTI-STEM AUDIO
+  // ═══════════════════════════════════════════════════════════════
+  var audioDropZone = document.getElementById('audioDropZone');
+  var audioDropOverlay = document.getElementById('audioDropOverlay');
+  var audioPrompt = document.getElementById('audioPrompt');
+  var audioFileInput = document.getElementById('audioFileInput');
+  var stemsAddInput = document.getElementById('stemsAddInput');
+  var audioTopChips = document.getElementById('audioTopChips');
+  var dragCounter = 0;
+
+  audioDropZone.addEventListener('dragenter', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter++; audioDropOverlay.classList.add('active');
+  });
+  audioDropZone.addEventListener('dragover', function (e) { e.preventDefault(); e.stopPropagation(); });
+  audioDropZone.addEventListener('dragleave', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    if (--dragCounter <= 0) { dragCounter = 0; audioDropOverlay.classList.remove('active'); }
+  });
+  audioDropZone.addEventListener('drop', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter = 0; audioDropOverlay.classList.remove('active');
+    if (e.dataTransfer && e.dataTransfer.files.length) addStemFiles(Array.from(e.dataTransfer.files));
+  });
+
+  document.getElementById('audioBrowse').addEventListener('click', function () { audioFileInput.click(); });
+  audioFileInput.addEventListener('change', function () {
+    if (this.files.length) addStemFiles(Array.from(this.files)); this.value = '';
+  });
+  stemsAddInput.addEventListener('change', function () {
+    if (this.files.length) addStemFiles(Array.from(this.files)); this.value = '';
+  });
+  document.getElementById('audioTopClear').addEventListener('click', clearAudio);
+
+  function isAudioFile(f) {
+    return f.type.startsWith('audio/') || /\.(wav|mp3|m4a|ogg|flac)$/i.test(f.name);
+  }
+
+  function addStemFiles(files) {
+    var valid = files.filter(isAudioFile);
+    if (!valid.length) { showError('Please drop audio files (.wav, .mp3, .m4a, .ogg, .flac).'); return; }
+    var remaining = 5 - stemFiles.length;
+    if (remaining <= 0) { showError('Maximum 5 stems. Remove one first.'); return; }
+    stemFiles = stemFiles.concat(valid.slice(0, remaining));
+    if (stemFiles.length > 5) stemFiles = stemFiles.slice(0, 5);
+    renderStems(); mixAndLoadStems();
+  }
+
+  function removeStem(idx) {
+    stemFiles.splice(idx, 1);
+    if (!stemFiles.length) clearAudio();
+    else { renderStems(); mixAndLoadStems(); }
+  }
+
+  function truncateFilename(name, maxLen) {
+    if (name.length <= maxLen) return name;
+    var ext = '';
+    var dotIdx = name.lastIndexOf('.');
+    if (dotIdx > 0) { ext = name.substring(dotIdx); name = name.substring(0, dotIdx); }
+    var available = maxLen - ext.length - 1;
+    if (available < 4) return name.substring(0, maxLen - 1) + '…';
+    return name.substring(0, available) + '…' + ext;
+  }
+
+  function renderStems() {
+    audioPrompt.classList.add('hidden');
+    var label = document.getElementById('audioTopLabel');
+    var clearBtn = document.getElementById('audioTopClear');
+
+    // Build chips + add button into the top bar
+    audioTopChips.innerHTML = '';
+
+    if (stemFiles.length === 1) {
+      label.textContent = 'Audio';
+    } else {
+      label.textContent = 'Stems';
+    }
+
+    stemFiles.forEach(function (f, i) {
+      var chip = document.createElement('span');
+      chip.className = 'stem-chip';
+      chip.innerHTML = '<span>' + escapeHtml(truncateFilename(f.name, 12)) + '</span><button class="stem-remove" data-idx="' + i + '" title="Remove">&times;</button>';
+      audioTopChips.appendChild(chip);
+    });
+
+    // Add button (if room)
+    if (stemFiles.length < 5) {
+      var addBtn = document.createElement('button');
+      addBtn.className = 'stems-add-btn';
+      addBtn.textContent = '+ Add';
+      addBtn.title = 'Add another stem';
+      addBtn.addEventListener('click', function () { stemsAddInput.click(); });
+      audioTopChips.appendChild(addBtn);
+    }
+
+    audioTopChips.querySelectorAll('.stem-remove').forEach(function (btn) {
+      btn.addEventListener('click', function () { removeStem(parseInt(btn.dataset.idx, 10)); });
+    });
+
+    clearBtn.classList.add('visible');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // CANCEL IN-PROGRESS TRANSCRIPTION
+  // ═══════════════════════════════════════════════════════════════
+  function cancelTranscription() {
+    if (autoTranscribeTimer) {
+      clearTimeout(autoTranscribeTimer);
+      autoTranscribeTimer = null;
+    }
+    if (transcriptionWorker) {
+      transcriptionWorker.terminate();
+      transcriptionWorker = null;
+    }
+    isTranscribing = false;
+    transcriptChunks = null;
+    document.getElementById('transportStatus').classList.remove('visible');
+    document.getElementById('transcribeProgress').classList.remove('visible');
+    document.getElementById('transcribeStatus').textContent = '';
+    document.getElementById('transcribeProgressBar').style.width = '0%';
+    document.getElementById('transcribeProgressBar').classList.remove('indeterminate');
+    document.getElementById('transcriptDisplay').classList.remove('visible');
+    document.getElementById('transcriptDisplay').innerHTML = '';
+    document.getElementById('transportSearch').classList.remove('visible');
+    document.getElementById('transcriptSearchInput').value = '';
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // MIX STEMS
+  // ═══════════════════════════════════════════════════════════════
+  async function mixAndLoadStems() {
+    if (!stemFiles.length) return;
+
+    // Cancel any in-progress transcription (cancel-and-restart)
+    cancelTranscription();
+    mixGeneration++;
+    var thisMix = mixGeneration;
+
+    document.getElementById('waveformArea').classList.add('visible');
+    showWaveformLoading('Decoding ' + stemFiles.length + ' stem' + (stemFiles.length > 1 ? 's' : '') + '…');
+
+    try {
+      var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var buffers = [];
+      for (var i = 0; i < stemFiles.length; i++) {
+        updateWaveformLoading('Decoding stem ' + (i + 1) + ' of ' + stemFiles.length + '…');
+        var ab = await stemFiles[i].arrayBuffer();
+        buffers.push(await audioCtx.decodeAudioData(ab));
+      }
+
+      // Bail if a newer mix has started
+      if (thisMix !== mixGeneration) { audioCtx.close(); return; }
+
+      updateWaveformLoading('Mixing stems…');
+      await new Promise(function (r) { setTimeout(r, 50); });
+
+      var sampleRate = buffers[0].sampleRate;
+      var maxLength = 0;
+      buffers.forEach(function (b) {
+        var len = Math.ceil(b.duration * sampleRate);
+        if (len > maxLength) maxLength = len;
+      });
+
+      var mixed = new Float32Array(maxLength);
+      var n = buffers.length;
+
+      for (var bi = 0; bi < buffers.length; bi++) {
+        var buf = buffers[bi];
+        var mono;
+        if (buf.numberOfChannels === 1) {
+          mono = buf.getChannelData(0);
+        } else {
+          var c0 = buf.getChannelData(0), c1 = buf.getChannelData(1);
+          mono = new Float32Array(c0.length);
+          for (var s = 0; s < c0.length; s++) mono[s] = (c0[s] + c1[s]) / 2;
+        }
+        var ratio = buf.sampleRate / sampleRate;
+        var outLen = Math.ceil(mono.length / ratio);
+        for (var j = 0; j < outLen && j < maxLength; j++) {
+          var srcIdx = Math.floor(j * ratio);
+          if (srcIdx < mono.length) mixed[j] += mono[srcIdx] / n;
+        }
+      }
+
+      var peak = 0;
+      for (var p = 0; p < mixed.length; p++) { var a = Math.abs(mixed[p]); if (a > peak) peak = a; }
+      if (peak > 0 && peak !== 1) {
+        var sc = 0.95 / peak;
+        for (var p2 = 0; p2 < mixed.length; p2++) mixed[p2] *= sc;
+      }
+
+      var offCtx = new OfflineAudioContext(1, mixed.length, sampleRate);
+      mixedBuffer = offCtx.createBuffer(1, mixed.length, sampleRate);
+      mixedBuffer.copyToChannel(mixed, 0);
+      mixedBlob = audioBufferToWav(mixedBuffer);
+      audioCtx.close();
+
+      // Bail if a newer mix has started
+      if (thisMix !== mixGeneration) return;
+
+      updateWaveformLoading('Rendering waveform…');
+
+      if (wavesurfer) wavesurfer.destroy();
+      var colors = getWaveformColors();
+      wavesurfer = WaveSurfer.create({
+        container: '#waveform',
+        waveColor: colors.wave,
+        progressColor: colors.progress,
+        cursorColor: colors.cursor,
+        cursorWidth: 1,
+        barWidth: 2, barGap: 1, barRadius: 2,
+        height: 50, normalize: true
+      });
+
+      wavesurfer.load(URL.createObjectURL(mixedBlob));
+
+      wavesurfer.on('ready', function () {
+        // Bail if a newer mix has started
+        if (thisMix !== mixGeneration) return;
+
+        audioLoaded = true;
+        updateStampButtons();
+        showContentArea();
+        document.getElementById('transportDuration').textContent = '/ ' + secondsToTimecode(wavesurfer.getDuration());
+        wavesurfer.setPlaybackRate(SPEED_STEPS[speedIndex]);
+        hideWaveformLoading();
+
+        // Auto-transcribe after 0.3s delay
+        if (autoTranscribeEnabled && mixedBuffer) {
+          autoTranscribeTimer = setTimeout(function () {
+            if (thisMix === mixGeneration) startTranscription(thisMix);
+          }, 300);
+        }
+      });
+      wavesurfer.on('audioprocess', updateTransportTime);
+      wavesurfer.on('seeking', updateTransportTime);
+      wavesurfer.on('interaction', updateTransportTime);
+      wavesurfer.on('play', function () {
+        document.getElementById('iconPlay').style.display = 'none';
+        document.getElementById('iconPause').style.display = '';
+        document.getElementById('btnPlayPause').classList.add('active');
+      });
+      wavesurfer.on('pause', function () {
+        document.getElementById('iconPlay').style.display = '';
+        document.getElementById('iconPause').style.display = 'none';
+        document.getElementById('btnPlayPause').classList.remove('active');
+      });
+
+    } catch (err) {
+      console.error('Mix error:', err);
+      showError('Error processing audio: ' + (err.message || err));
+      hideWaveformLoading();
+    }
+  }
+
+  function audioBufferToWav(buffer) {
+    var sr = buffer.sampleRate, len = buffer.length, data = buffer.getChannelData(0);
+    var wb = new ArrayBuffer(44 + len * 2), v = new DataView(wb);
+    function ws(o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+    ws(0, 'RIFF'); v.setUint32(4, 36 + len * 2, true); ws(8, 'WAVE');
+    ws(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+    v.setUint16(22, 1, true); v.setUint32(24, sr, true);
+    v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    ws(36, 'data'); v.setUint32(40, len * 2, true);
+    for (var i = 0, o = 44; i < len; i++, o += 2) {
+      var s = Math.max(-1, Math.min(1, data[i]));
+      v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    return new Blob([wb], { type: 'audio/wav' });
+  }
+
+  function updateTransportTime() {
+    if (!wavesurfer) return;
+    document.getElementById('transportTime').textContent = secondsToTimecode(wavesurfer.getCurrentTime());
+    highlightTranscriptAtTime(wavesurfer.getCurrentTime());
+  }
+
+  function clearAudio() {
+    cancelTranscription();
+    if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
+    audioLoaded = false; stemFiles = [];
+    mixedBlob = null; mixedBuffer = null;
+    audioFileInput.value = '';
+    audioTopChips.innerHTML = '';
+    document.getElementById('audioTopLabel').textContent = 'Audio';
+    document.getElementById('audioTopClear').classList.remove('visible');
+    audioPrompt.classList.remove('hidden');
+    document.getElementById('waveformArea').classList.remove('visible');
+    document.getElementById('transportTime').textContent = '00.00.00';
+    document.getElementById('transportDuration').textContent = '/ 00.00.00';
+    document.getElementById('transportSearch').classList.remove('visible');
+    document.getElementById('transcriptSearchInput').value = '';
+    hideWaveformLoading();
+    hideContentArea();
+    speedReset();
+    updateStampButtons();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // TRANSPORT
+  // ═══════════════════════════════════════════════════════════════
+  document.getElementById('btnPlayPause').addEventListener('click', function () {
+    if (wavesurfer && audioLoaded) wavesurfer.playPause();
+  });
+  document.getElementById('btnSkipBack').addEventListener('click', function () {
+    if (wavesurfer && audioLoaded) wavesurfer.skip(-5);
+  });
+  document.getElementById('btnSkipFwd').addEventListener('click', function () {
+    if (wavesurfer && audioLoaded) wavesurfer.skip(5);
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // F2/F3 GRAB HOTKEYS (News mode only)
+  // ═══════════════════════════════════════════════════════════════
+  // F2 = Mark IN: finds the last grab card — if it has no IN yet,
+  //   stamp IN there; otherwise create a new grab and stamp IN.
+  // F3 = Mark OUT: finds the most recent grab with an IN but no OUT,
+  //   and stamps OUT there.
+
+  function createGrabCard() {
+    var cat = CATEGORIES[activeCategory];
+    var prefix = (cat && cat.addPrefix) ? cat.addPrefix : 'Grab';
+    pickupCount++;
+    var card = buildSegmentCard({ id: 'pickup-' + pickupCount, label: prefix + ' ' + pickupCount, hasQuotes: true });
+    var header = card.querySelector('.segment-header');
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-pickup'; removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', function () { card.remove(); });
+    header.appendChild(removeBtn);
+    var pc = document.getElementById('pickupsContainer');
+    pc.insertBefore(card, pc.firstChild);
+    updateStampButtons();
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return card;
+  }
+
+  function stampGrabIn() {
+    if (!wavesurfer || !audioLoaded) return;
+    var tc = secondsToTimecode(wavesurfer.getCurrentTime());
+    var cards = document.querySelectorAll('#pickupsContainer .segment-card');
+    var lastCard = cards.length ? cards[cards.length - 1] : null;
+
+    // If no cards yet, or the last card already has an IN, create a new one
+    var targetCard;
+    if (!lastCard) {
+      targetCard = createGrabCard();
+    } else {
+      var startInput = lastCard.querySelector('.tc-input[data-tc-id$="-start"]');
+      if (startInput && startInput.value) {
+        // Last card already has IN — create new grab
+        targetCard = createGrabCard();
+      } else {
+        targetCard = lastCard;
+      }
+    }
+
+    var inField = targetCard.querySelector('.tc-input[data-tc-id$="-start"]');
+    if (inField) {
+      inField.value = tc;
+      inField.classList.remove('invalid');
+      autoPopulateQuote(inField);
+      checkCardCompletion(inField);
+      showToast('Grab IN: ' + tc);
+    }
+  }
+
+  function stampGrabOut() {
+    if (!wavesurfer || !audioLoaded) return;
+    var tc = secondsToTimecode(wavesurfer.getCurrentTime());
+    // Find the most recent grab with an IN but no OUT
+    var cards = Array.from(document.querySelectorAll('#pickupsContainer .segment-card'));
+    for (var i = cards.length - 1; i >= 0; i--) {
+      var startInput = cards[i].querySelector('.tc-input[data-tc-id$="-start"]');
+      var endInput = cards[i].querySelector('.tc-input[data-tc-id$="-end"]');
+      if (startInput && startInput.value && endInput && !endInput.value) {
+        endInput.value = tc;
+        endInput.classList.remove('invalid');
+        autoPopulateQuote(endInput);
+        checkCardCompletion(endInput);
+        showToast('Grab OUT: ' + tc);
+        return;
+      }
+    }
+    showToast('No open grab to mark OUT — press F2 first');
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'F2') {
+      e.preventDefault();
+      stampGrabIn();
+    }
+    if (e.key === 'F3') {
+      e.preventDefault();
+      stampGrabOut();
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // KEYBOARD SHORTCUTS
+  // ═══════════════════════════════════════════════════════════════
+  document.addEventListener('keydown', function (e) {
+    // Let browser shortcuts (Cmd+R, Ctrl+S, etc.) pass through
+    if (e.metaKey || e.ctrlKey) return;
+
+    var tag = e.target.tagName.toLowerCase();
+    var isInput = (tag === 'input' || tag === 'textarea' || tag === 'select');
+    var isTcInput = e.target.classList && e.target.classList.contains('tc-input');
+
+    if (e.code === 'Space' && !isInput) {
+      e.preventDefault();
+      if (wavesurfer && audioLoaded) wavesurfer.playPause();
+    }
+    if (!isInput || isTcInput) {
+      if (e.key === 'ArrowLeft' && wavesurfer && audioLoaded && (!isInput || e.shiftKey)) {
+        e.preventDefault(); wavesurfer.skip(e.shiftKey ? -1 : -5);
+      }
+      if (e.key === 'ArrowRight' && wavesurfer && audioLoaded && (!isInput || e.shiftKey)) {
+        e.preventDefault(); wavesurfer.skip(e.shiftKey ? 1 : 5);
+      }
+    }
+    if (!isInput || isTcInput) {
+      if (e.key === 'd' || e.key === 'D') { e.preventDefault(); speedUp(); }
+      if (e.key === 's' || e.key === 'S') { e.preventDefault(); speedDown(); }
+      if (e.key === 'r' || e.key === 'R') { e.preventDefault(); speedReset(); }
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // WHISPER TRANSCRIPTION (auto-triggered)
+  // ═══════════════════════════════════════════════════════════════
+  async function startTranscription(expectedGeneration) {
+    if (isTranscribing || !mixedBuffer) return;
+    if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) return;
+
+    var statusBar = document.getElementById('transportStatus');
+    var status    = document.getElementById('transcribeStatus');
+    var prog      = document.getElementById('transcribeProgress');
+    var progBar   = document.getElementById('transcribeProgressBar');
+
+    isTranscribing = true;
+    document.getElementById('transportSearch').classList.remove('visible');
+    statusBar.classList.add('visible');
+    status.textContent = 'Starting transcription…';
+    prog.classList.add('visible');
+    progBar.classList.add('indeterminate');
+
+    try {
+      var audioData = await getMixedAudio16k();
+
+      // Bail if mix changed during resample
+      if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) {
+        isTranscribing = false;
+        return;
+      }
+
+      transcriptionWorker = new Worker(workerUrl, { type: 'module' });
+
+      transcriptionWorker.onmessage = function (e) {
+        var msg = e.data;
+
+        // Bail if mix changed
+        if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) {
+          transcriptionWorker.terminate();
+          transcriptionWorker = null;
+          isTranscribing = false;
+          return;
+        }
+
+        if (msg.type === 'status') status.textContent = msg.text;
+        if (msg.type === 'progress') {
+          progBar.classList.remove('indeterminate');
+          progBar.style.width = msg.value + '%';
+        }
+        if (msg.type === 'result') {
+          var result = msg.data;
+          if (result && result.chunks && result.chunks.length) {
+            transcriptChunks = result.chunks.map(function (c) {
+              return { start: c.timestamp[0] || 0, end: c.timestamp[1] || c.timestamp[0] + 1, text: c.text };
+            });
+          } else if (result && result.text) {
+            transcriptChunks = [{ start: 0, end: mixedBuffer.duration, text: result.text }];
+          }
+          displayTranscript();
+          backfillQuotes();
+          isTranscribing = false;
+          setTimeout(function () { prog.classList.remove('visible'); }, 1000);
+          transcriptionWorker.terminate();
+          transcriptionWorker = null;
+        }
+        if (msg.type === 'error') {
+          console.error('Worker transcription error:', msg.text);
+          status.textContent = 'Transcription failed: ' + msg.text;
+          isTranscribing = false;
+          setTimeout(function () { prog.classList.remove('visible'); }, 1000);
+          transcriptionWorker.terminate();
+          transcriptionWorker = null;
+        }
+      };
+
+      transcriptionWorker.onerror = function (err) {
+        console.error('Worker error:', err);
+        status.textContent = 'Transcription worker failed. Check browser console.';
+        isTranscribing = false;
+        setTimeout(function () { prog.classList.remove('visible'); }, 1000);
+        transcriptionWorker = null;
+      };
+
+      transcriptionWorker.postMessage({ audio: audioData, audioDuration: mixedBuffer.duration }, [audioData.buffer]);
+
+    } catch (err) {
+      console.error('Transcription setup error:', err);
+      status.textContent = 'Failed to start transcription: ' + (err.message || err);
+      isTranscribing = false;
+      setTimeout(function () { prog.classList.remove('visible'); }, 1000);
+    }
+  }
+
+  async function getMixedAudio16k() {
+    if (!mixedBuffer) throw new Error('No mixed audio');
+    var targetLen = Math.ceil(mixedBuffer.duration * 16000);
+    var offline = new OfflineAudioContext(1, targetLen, 16000);
+    var src = offline.createBufferSource();
+    src.buffer = mixedBuffer; src.connect(offline.destination); src.start();
+    var rendered = await offline.startRendering();
+    return rendered.getChannelData(0);
+  }
+
+  function displayTranscript() {
+    var container = document.getElementById('transcriptDisplay');
+    if (!transcriptChunks || !transcriptChunks.length) return;
+    var html = '';
+    for (var i = 0; i < transcriptChunks.length; i++) {
+      var c = transcriptChunks[i];
+      if (sentenceTimestampsEnabled) {
+        html += '<strong class="ts-marker" style="color:var(--accent);font-size:9px;cursor:pointer;" data-start="' + c.start + '">[' + secondsToTimecode(c.start) + ']</strong> ';
+      }
+      html += '<span class="ts-word" data-start="' + c.start + '" data-end="' + c.end + '">' + escapeHtml(c.text.trim()) + '</span> ';
+    }
+    container.innerHTML = html;
+    container.classList.add('visible');
+    document.getElementById('transportStatus').classList.remove('visible');
+    document.getElementById('transportSearch').classList.add('visible');
+    // Click on a chunk → seek
+    container.querySelectorAll('.ts-word').forEach(function (el) {
+      el.addEventListener('click', function () {
+        if (wavesurfer && audioLoaded) {
+          var d = wavesurfer.getDuration();
+          if (d > 0) wavesurfer.seekTo(parseFloat(el.dataset.start) / d);
+        }
+      });
+    });
+    // Click on a timecode marker → seek
+    container.querySelectorAll('.ts-marker').forEach(function (el) {
+      el.addEventListener('click', function () {
+        if (wavesurfer && audioLoaded) {
+          var d = wavesurfer.getDuration();
+          if (d > 0) wavesurfer.seekTo(parseFloat(el.dataset.start) / d);
+        }
+      });
+    });
+  }
+
+  function highlightTranscriptAtTime(time) {
+    var container = document.getElementById('transcriptDisplay');
+    document.querySelectorAll('.ts-word').forEach(function (el) {
+      var s = parseFloat(el.dataset.start), e = parseFloat(el.dataset.end);
+      var isActive = time >= s && time <= e;
+      el.classList.toggle('highlight', isActive);
+      if (isActive && container.classList.contains('visible')) {
+        var elTop = el.offsetTop - container.offsetTop;
+        var elBottom = elTop + el.offsetHeight;
+        var scrollTop = container.scrollTop;
+        var viewHeight = container.clientHeight;
+        if (elTop < scrollTop || elBottom > scrollTop + viewHeight) {
+          container.scrollTop = elTop - viewHeight / 2;
+        }
+      }
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // TRANSCRIPT SEARCH
+  // ═══════════════════════════════════════════════════════════════
+  var searchInput   = document.getElementById('transcriptSearchInput');
+  var searchCountEl = document.getElementById('searchCount');
+  var searchNavEl   = document.getElementById('searchNav');
+  var searchMatches = [];
+  var searchIdx     = -1;
+
+  // ── Seek pre-roll: milliseconds to back up before a chunk start ──
+  // Increase this value (1–9) if the first word of sentences gets clipped.
+  // Decrease it if you're hearing too much of the previous sentence.
+  var SEEK_HANDLE_MS = 3;
+
+  function seekToWord(el, query) {
+    if (!wavesurfer || !audioLoaded) return;
+    var start = parseFloat(el.dataset.start);
+    var end = parseFloat(el.dataset.end);
+    var d = wavesurfer.getDuration();
+    if (!(d > 0) || isNaN(start)) return;
+
+    var seekTime = start;
+
+    // Interpolate only when Seek to Word is enabled
+    if (seekToWordEnabled && query && !isNaN(end) && end > start) {
+      var text = el.textContent.toLowerCase();
+      var matchPos = text.indexOf(query.toLowerCase());
+      if (matchPos > 0 && text.length > 0) {
+        var ratio = matchPos / text.length;
+        seekTime = start + ratio * (end - start);
+      }
+    }
+
+    // Pre-roll: back up by seek handle (ms) to catch clipped onsets
+    seekTime = Math.max(0, seekTime - (SEEK_HANDLE_MS / 1000));
+
+    wavesurfer.seekTo(seekTime / d);
+    if (autoplayKeywordEnabled && !wavesurfer.isPlaying()) {
+      wavesurfer.play();
+    }
+  }
+
+  function doTranscriptSearch() {
+    var query = searchInput.value.trim().toLowerCase();
+
+    // Clear previous highlights
+    document.querySelectorAll('.ts-word.search-match, .ts-word.search-active').forEach(function (el) {
+      el.classList.remove('search-match', 'search-active');
+    });
+    searchMatches = [];
+    searchIdx = -1;
+
+    if (!query) {
+      searchCountEl.textContent = '';
+      searchNavEl.classList.remove('visible');
+      return;
+    }
+
+    document.querySelectorAll('.ts-word').forEach(function (el) {
+      var text = el.textContent.toLowerCase();
+      if (text.indexOf(query) !== -1) {
+        el.classList.add('search-match');
+        searchMatches.push(el);
+      }
+    });
+
+    if (searchMatches.length) {
+      searchIdx = 0;
+      searchMatches[0].classList.add('search-active');
+      scrollToSearchMatch(searchMatches[0]);
+      seekToWord(searchMatches[0], query);
+      searchCountEl.textContent = '1 / ' + searchMatches.length;
+      searchNavEl.classList.add('visible');
+    } else {
+      searchCountEl.textContent = '0 results';
+      searchNavEl.classList.remove('visible');
+    }
+  }
+
+  function scrollToSearchMatch(el) {
+    var container = document.getElementById('transcriptDisplay');
+    if (!container.classList.contains('visible')) return;
+    var elTop = el.offsetTop - container.offsetTop;
+    var viewHeight = container.clientHeight;
+    container.scrollTop = elTop - viewHeight / 2;
+  }
+
+  function searchNavigate(dir) {
+    if (!searchMatches.length) return;
+    searchMatches[searchIdx].classList.remove('search-active');
+    searchIdx = (searchIdx + dir + searchMatches.length) % searchMatches.length;
+    searchMatches[searchIdx].classList.add('search-active');
+    scrollToSearchMatch(searchMatches[searchIdx]);
+    seekToWord(searchMatches[searchIdx], searchInput.value.trim());
+    searchCountEl.textContent = (searchIdx + 1) + ' / ' + searchMatches.length;
+  }
+
+  searchInput.addEventListener('input', doTranscriptSearch);
+  searchInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      searchNavigate(e.shiftKey ? -1 : 1);
+    }
+    // Let F-keys bubble up for global hotkeys (F2/F3 grabs)
+    if (!e.key.startsWith('F')) e.stopPropagation();
+  });
+
+  document.getElementById('searchPrev').addEventListener('click', function () { searchNavigate(-1); });
+  document.getElementById('searchNext').addEventListener('click', function () { searchNavigate(1); });
+
+  // ═══════════════════════════════════════════════════════════════
+  // CATEGORY CHANGE
+  // ═══════════════════════════════════════════════════════════════
+  document.getElementById('categorySelect').addEventListener('change', function () {
+    loadCategory(this.value);
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // COPY ALL / CLEAR ALL
+  // ═══════════════════════════════════════════════════════════════
+  document.getElementById('copyAllBtn').addEventListener('click', function () {
+    var plainLines = [], htmlLines = [], valid = true;
+    document.querySelectorAll('.segment-card').forEach(function (card) {
+      var hdr = card.querySelector('.segment-header .header-left span');
+      var title = hdr ? hdr.textContent : '';
+      plainLines.push(title);
+      htmlLines.push('<b>' + escapeHtml(title) + '</b>');
+      card.querySelectorAll('.segment-row').forEach(function (row) {
+        var rl = row.querySelector('.row-label') || row.querySelector('.row-label-wide');
+        var tc = row.querySelector('.tc-input');
+        var qi = row.querySelector('.quote-input');
+        var plainLine = '';
+        var htmlLine = '';
+        if (rl) {
+          plainLine += rl.textContent.trim() + ': ';
+          htmlLine += escapeHtml(rl.textContent.trim()) + ': ';
+        }
+        if (tc) {
+          if (!tc.value || !isValidTimecode(tc.value)) { tc.classList.add('invalid'); valid = false; }
+          var copyTc = formatTimecodeForCopy(tc.value);
+          plainLine += copyTc;
+          htmlLine += escapeHtml(copyTc);
+        }
+        if (qi) {
+          if (!qi.value.trim()) {
+            qi.style.borderColor = 'var(--error)'; qi.style.boxShadow = '0 0 0 3px var(--error-glow)';
+            setTimeout(function () { qi.style.borderColor = ''; qi.style.boxShadow = ''; }, 3000);
+            valid = false;
+          }
+          var ql = rl && rl.textContent.includes('Start') ? 'Quote in' : 'Quote out';
+          plainLine += '  |  ' + ql + ': ' + (qi.value || '—');
+          htmlLine += '&nbsp;&nbsp;|&nbsp;&nbsp;' + escapeHtml(ql) + ': ' + escapeHtml(qi.value || '—');
+        }
+        plainLines.push(plainLine);
+        htmlLines.push(htmlLine);
+      });
+      plainLines.push('');
+      htmlLines.push('<br>');
+    });
+
+    var editorNotes = document.getElementById('editorNotes').value.trim();
+    if (editorNotes) {
+      plainLines.push('Editor Notes');
+      plainLines.push(editorNotes);
+      plainLines.push('');
+      htmlLines.push('<b>Editor Notes</b>');
+      htmlLines.push(escapeHtml(editorNotes).replace(/\n/g, '<br>'));
+      htmlLines.push('<br>');
+    }
+
+    if (!valid) { showError('Some required fields are missing or invalid. Please check highlighted fields.'); return; }
+    var plainText = plainLines.join('\n').trim();
+    var htmlText = htmlLines.join('<br>').replace(/<br>(<br>)+/g, '<br><br>').trim();
+
+    if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+      var htmlBlob = new Blob(['<html><body>' + htmlText + '</body></html>'], { type: 'text/html' });
+      var textBlob = new Blob([plainText], { type: 'text/plain' });
+      navigator.clipboard.write([
+        new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
+      ]).then(function () {
+        showToast('All timecodes copied to clipboard');
+      }).catch(function () {
+        navigator.clipboard.writeText(plainText).then(function () {
+          showToast('All timecodes copied to clipboard (plain text)');
+        });
+      });
+    } else {
+      navigator.clipboard.writeText(plainText).then(function () {
+        showToast('All timecodes copied to clipboard');
+      }).catch(function () {
+        var ta = document.createElement('textarea');
+        ta.value = plainText; ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+        showToast('All timecodes copied to clipboard');
+      });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // INIT
+  // ═══════════════════════════════════════════════════════════════
+  loadCategory('news');
+}());
+</script>
+</body>
+</html>
