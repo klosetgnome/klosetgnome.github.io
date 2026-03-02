@@ -1055,6 +1055,29 @@
       <input type="file" id="stemsAddInput" accept=".wav,.mp3,.m4a,.ogg,.flac,audio/*" multiple style="display:none;" />
     </div>
 
+    <!-- URL Grab section (News mode only — visible when no audio loaded) -->
+    <div class="url-grab-section" id="urlGrabSection">
+      <div class="url-grab-divider"><span>or paste a link</span></div>
+      <div class="url-grab-row">
+        <input type="text" class="url-grab-input" id="urlGrabInput"
+               placeholder="https://www.youtube.com/watch?v=..."
+               autocomplete="off" spellcheck="false" />
+        <div class="url-countdown-ring" id="urlCountdownRing" style="display:none;">
+          <svg viewBox="0 0 20 20">
+            <circle class="ring-bg" cx="10" cy="10" r="8"/>
+            <circle class="ring-fg" id="urlRingFg" cx="10" cy="10" r="8"/>
+          </svg>
+          <span class="url-countdown-number" id="urlCountdownNumber">3</span>
+        </div>
+        <button class="url-grab-btn" id="urlGrabBtn">Grab</button>
+      </div>
+      <div class="url-grab-status" id="urlGrabStatus">
+        <span class="status-dot working" id="urlGrabDot"></span>
+        <span id="urlGrabStatusText">Downloading audio…</span>
+        <span class="cancel-link" id="urlGrabCancel">Cancel</span>
+      </div>
+    </div>
+
     <div class="waveform-area" id="waveformArea">
       <div class="waveform-loading" id="waveformLoading">
         <span class="waveform-loading-label">Processing audio…</span>
@@ -1268,13 +1291,10 @@
   // ═══════════════════════════════════════════════════════════════
   // SPORT SEQUENTIAL STAMPING STATE
   // ═══════════════════════════════════════════════════════════════
-  // Ordered list of all segment IDs (left + right) for Sport mode.
-  // sportStampQueue tracks which segments still need stamping.
-  // sportPendingSegment = id of segment that has IN but not OUT.
   var sportSegmentOrder = [];
   var sportStampIndex = 0;
   var sportPendingSegment = null;
-  var newsPendingGrabId = null;  // grab id waiting for OUT in news mode
+  var newsPendingGrabId = null;
 
   // ═══════════════════════════════════════════════════════════════
   // AUTOPLAY KEYWORD TOGGLE
@@ -1498,7 +1518,6 @@
   function showPendingOverlay(segmentLabel) {
     pendingSegNameEl.textContent = segmentLabel;
     pendingOverlay.classList.add('visible');
-    // Auto-dismiss after 3 seconds
     if (pendingOverlayTimer) clearTimeout(pendingOverlayTimer);
     pendingOverlayTimer = setTimeout(hidePendingOverlay, 3000);
   }
@@ -1510,7 +1529,6 @@
 
   pendingDismissBtn.addEventListener('click', hidePendingOverlay);
 
-  // Close on Escape or clicking backdrop
   pendingOverlay.addEventListener('click', function (e) {
     if (e.target === pendingOverlay) hidePendingOverlay();
   });
@@ -1584,7 +1602,6 @@
     var card = el.closest('.segment-card');
     if (!card) return;
 
-    // Check if all timecodes are set (for reordering)
     var tcDone = true;
     card.querySelectorAll('.tc-input').forEach(function (tc) {
       if (!tc.value || !isValidTimecode(tc.value)) tcDone = false;
@@ -1592,7 +1609,6 @@
     if (tcDone) card.classList.add('tc-done');
     else card.classList.remove('tc-done');
 
-    // Check if fully complete (timecodes + quotes — for green tick)
     var complete = tcDone;
     card.querySelectorAll('.quote-input').forEach(function (q) {
       if (!q.value.trim()) complete = false;
@@ -1600,7 +1616,6 @@
     if (complete) card.classList.add('complete');
     else card.classList.remove('complete');
 
-    // Update segment ordering
     updateSegmentVisuals();
   }
 
@@ -1704,14 +1719,12 @@
   // SPORT SEGMENT VISUAL ORDERING
   // ═══════════════════════════════════════════════════════════════
   function updateSegmentVisuals() {
-    // Remove all visual states
     document.querySelectorAll('.segment-card').forEach(function (card) {
       card.classList.remove('active-segment', 'pending-out');
       card.style.order = '';
     });
 
     if (activeCategory === 'sport') {
-      // For left-column segments, reorder: incomplete first, tc-done last
       var colLeft = document.getElementById('colLeft');
       var leftCards = Array.from(colLeft.querySelectorAll('.segment-card'));
       var orderIdx = 0;
@@ -1725,7 +1738,6 @@
         orderIdx++;
       });
 
-      // Right-column segments: same reorder
       var rightFixed = document.getElementById('rightFixedSegments');
       var rightCards = Array.from(rightFixed.querySelectorAll('.segment-card'));
       var rIdx = 0;
@@ -1739,7 +1751,6 @@
       });
     }
 
-    // Reorder pickups container cards (both categories)
     var pcCards = Array.from(document.querySelectorAll('#pickupsContainer .segment-card'));
     var pIdx = 0;
     pcCards.forEach(function (card) {
@@ -1751,7 +1762,6 @@
       pIdx++;
     });
 
-    // Highlight the active segment (next in queue) for sport
     if (activeCategory === 'sport' && sportStampIndex < sportSegmentOrder.length) {
       var activeId = sportSegmentOrder[sportStampIndex];
       var activeCard = document.getElementById('card-' + activeId);
@@ -1760,7 +1770,6 @@
       }
     }
 
-    // Mark pending-out segment (both categories)
     if (sportPendingSegment) {
       var pendingCard = document.getElementById('card-' + sportPendingSegment);
       if (pendingCard) {
@@ -1774,7 +1783,6 @@
       }
     }
 
-    // Check if all predefined segments are stamped — move pickups/notes to top
     var contentArea = document.getElementById('contentArea');
     if (sportSegmentOrder.length > 0) {
       var allStamped = true;
@@ -1808,7 +1816,6 @@
     document.getElementById('pickupsContainer').innerHTML = '';
     pickupCount = 0;
 
-    // Reset sport stamping state
     sportSegmentOrder = [];
     sportStampIndex = 0;
     sportPendingSegment = null;
@@ -1831,14 +1838,16 @@
     columnsWrap.style.display = hasContent ? '' : 'none';
     colRight.style.display = (cat.right && cat.right.length) ? '' : 'none';
 
-    // Toggle news-mode class for layout ordering
     document.getElementById('contentArea').classList.toggle('news-mode', catId === 'news');
 
-    // Enable flex ordering for left column in sport mode
     if (catId === 'sport') {
       colLeft.style.display = 'flex';
       colLeft.style.flexDirection = 'column';
     }
+
+    // Show URL grab in News mode only (when no audio loaded)
+    if (catId === 'news') showUrlGrabSection();
+    else hideUrlGrabSection();
 
     updateStampButtons();
     updateSegmentVisuals();
@@ -2087,6 +2096,8 @@
         audioLoaded = true;
         updateStampButtons();
         showContentArea();
+        // Hide URL grab once audio is in the waveform
+        urlGrabSection.classList.remove('visible');
         document.getElementById('transportDuration').textContent = '/ ' + secondsToTimecode(wavesurfer.getDuration());
         wavesurfer.setPlaybackRate(SPEED_STEPS[speedIndex]);
         hideWaveformLoading();
@@ -2142,6 +2153,7 @@
 
   function clearAudio() {
     cancelTranscription();
+    cancelUrlGrab();
     if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
     audioLoaded = false; stemFiles = [];
     mixedBlob = null; mixedBuffer = null;
@@ -2157,6 +2169,8 @@
     document.getElementById('transcriptSearchInput').value = '';
     hideWaveformLoading();
     hideContentArea();
+    // Re-show URL grab if still in News mode
+    if (activeCategory === 'news') showUrlGrabSection();
     speedReset();
     updateStampButtons();
   }
@@ -2194,17 +2208,14 @@
     return card;
   }
 
-  // ── Sport mode: stamp IN sequentially across segments, then pickups ──
   function sportStampIn() {
     if (!wavesurfer || !audioLoaded) return;
 
-    // If there's a pending segment/pickup waiting for OUT, show the overlay
     if (sportPendingSegment) {
       showPendingOverlay(getSegmentLabel(sportPendingSegment));
       return;
     }
 
-    // Still working through predefined segments
     if (sportStampIndex < sportSegmentOrder.length) {
       var segId = sportSegmentOrder[sportStampIndex];
       var card = document.getElementById('card-' + segId);
@@ -2225,7 +2236,6 @@
       return;
     }
 
-    // Predefined segments done — look for a pickup card that needs an IN
     var pickupCards = Array.from(document.querySelectorAll('#pickupsContainer .segment-card'));
     var targetCard = null;
     for (var i = 0; i < pickupCards.length; i++) {
@@ -2254,7 +2264,6 @@
     }
   }
 
-  // ── Sport mode: stamp OUT for the pending segment ──
   function sportStampOut() {
     if (!wavesurfer || !audioLoaded) return;
 
@@ -2268,7 +2277,6 @@
     if (!card) return;
 
     var tc = secondsToTimecode(wavesurfer.getCurrentTime());
-    // Use the second tc-input in the card (works for all segment types)
     var tcInputs = card.querySelectorAll('.tc-input');
     var endInput = tcInputs.length > 1 ? tcInputs[1] : null;
     if (endInput) {
@@ -2278,7 +2286,6 @@
       checkCardCompletion(endInput);
       showToast(getSegmentLabel(segId) + ' OUT: ' + tc);
 
-      // Clear pending, advance index only for predefined segments
       sportPendingSegment = null;
       if (sportStampIndex < sportSegmentOrder.length) {
         sportStampIndex++;
@@ -2287,11 +2294,9 @@
     }
   }
 
-  // ── News mode: grab IN/OUT with pending overlay ──
   function newsStampIn() {
     if (!wavesurfer || !audioLoaded) return;
 
-    // If there's a pending grab waiting for OUT, show the overlay
     if (newsPendingGrabId) {
       showPendingOverlay(getSegmentLabel(newsPendingGrabId));
       return;
@@ -2336,7 +2341,6 @@
     }
   }
 
-  // ── Unified F6/F7 dispatchers ──
   function handleMarkIn() {
     if (activeCategory === 'sport') sportStampIn();
     else newsStampIn();
@@ -2358,14 +2362,12 @@
     var isInput = (tag === 'input' || tag === 'textarea' || tag === 'select');
     var isTcInput = e.target.classList && e.target.classList.contains('tc-input');
 
-    // ── F2 = Skip back 1s ──
     if (e.key === 'F2') {
       e.preventDefault();
       if (wavesurfer && audioLoaded) wavesurfer.skip(-1);
       return;
     }
 
-    // ── F3 = Play & cycle speed ──
     if (e.key === 'F3') {
       e.preventDefault();
       if (wavesurfer && audioLoaded) {
@@ -2378,14 +2380,12 @@
       return;
     }
 
-    // ── F4 = Skip fwd 1s ──
     if (e.key === 'F4') {
       e.preventDefault();
       if (wavesurfer && audioLoaded) wavesurfer.skip(1);
       return;
     }
 
-    // ── F5 = Pause ──
     if (e.key === 'F5') {
       e.preventDefault();
       if (wavesurfer && audioLoaded) {
@@ -2395,23 +2395,18 @@
       return;
     }
 
-    // ── F6 = Mark IN ──
     if (e.key === 'F6') {
       e.preventDefault();
       handleMarkIn();
       return;
     }
 
-    // ── F7 = Mark OUT ──
     if (e.key === 'F7') {
       e.preventDefault();
       handleMarkOut();
       return;
     }
 
-
-
-    // Arrow keys for skip
     if (!isInput || isTcInput) {
       if (e.key === 'ArrowLeft' && wavesurfer && audioLoaded && (!isInput || e.shiftKey)) {
         e.preventDefault(); wavesurfer.skip(e.shiftKey ? -1 : -5);
@@ -2682,17 +2677,222 @@
   });
 
   // ═══════════════════════════════════════════════════════════════
+  // URL GRAB — News mode content link fetch
+  // ═══════════════════════════════════════════════════════════════
+  var URL_GRAB_SERVER = 'https://mac-mini.tail257f46.ts.net';
+  var URL_GRAB_API_KEY = null;
+  var URL_REGEX = /^https?:\/\/[^\s]+$/i;
+  var urlGrabCountdownTimer = null;
+  var urlGrabAbortController = null;
+  var RING_CIRCUMFERENCE = 2 * Math.PI * 8;
+
+  var urlGrabSection     = document.getElementById('urlGrabSection');
+  var urlGrabInput       = document.getElementById('urlGrabInput');
+  var urlGrabBtn         = document.getElementById('urlGrabBtn');
+  var urlGrabStatus      = document.getElementById('urlGrabStatus');
+  var urlGrabDot         = document.getElementById('urlGrabDot');
+  var urlGrabStatusText  = document.getElementById('urlGrabStatusText');
+  var urlCountdownRing   = document.getElementById('urlCountdownRing');
+  var urlCountdownNumber = document.getElementById('urlCountdownNumber');
+  var urlRingFg          = document.getElementById('urlRingFg');
+  var urlGrabCancel      = document.getElementById('urlGrabCancel');
+
+  function isUrl(text) { return URL_REGEX.test(text.trim()); }
+
+  function showUrlGrabSection() {
+    if (!audioLoaded) urlGrabSection.classList.add('visible');
+  }
+
+  function hideUrlGrabSection() {
+    urlGrabSection.classList.remove('visible');
+    cancelUrlCountdown();
+    cancelUrlGrab();
+    urlGrabInput.value = '';
+  }
+
+  function cancelUrlCountdown() {
+    if (urlGrabCountdownTimer) {
+      clearInterval(urlGrabCountdownTimer);
+      urlGrabCountdownTimer = null;
+    }
+    urlCountdownRing.style.display = 'none';
+    urlGrabBtn.style.display = '';
+  }
+
+  function startUrlCountdown() {
+    cancelUrlCountdown();
+    var remaining = 3;
+
+    urlGrabBtn.style.display = 'none';
+    urlCountdownRing.style.display = '';
+    urlCountdownNumber.textContent = remaining;
+
+    urlRingFg.style.transition = 'none';
+    urlRingFg.style.strokeDashoffset = '0';
+
+    requestAnimationFrame(function () {
+      urlRingFg.style.transition = 'stroke-dashoffset 1s linear';
+      urlRingFg.style.strokeDashoffset = (RING_CIRCUMFERENCE / 3).toFixed(2);
+    });
+
+    urlGrabCountdownTimer = setInterval(function () {
+      remaining--;
+      if (remaining <= 0) {
+        cancelUrlCountdown();
+        handleUrlGrab();
+        return;
+      }
+      urlCountdownNumber.textContent = remaining;
+      var offset = RING_CIRCUMFERENCE * ((3 - remaining) / 3);
+      urlRingFg.style.strokeDashoffset = offset.toFixed(2);
+    }, 1000);
+  }
+
+  urlGrabInput.addEventListener('paste', function () {
+    setTimeout(function () {
+      var val = urlGrabInput.value.trim();
+      if (isUrl(val)) startUrlCountdown();
+    }, 150);
+  });
+
+  urlGrabInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      cancelUrlCountdown();
+      handleUrlGrab();
+    }
+    if (!e.key.startsWith('F')) e.stopPropagation();
+  });
+
+  urlGrabInput.addEventListener('input', function () {
+    cancelUrlCountdown();
+  });
+
+  urlGrabBtn.addEventListener('click', function () {
+    cancelUrlCountdown();
+    handleUrlGrab();
+  });
+
+  urlGrabCancel.addEventListener('click', function () {
+    cancelUrlGrab();
+  });
+
+  function cancelUrlGrab() {
+    if (urlGrabAbortController) {
+      urlGrabAbortController.abort();
+      urlGrabAbortController = null;
+    }
+    urlGrabStatus.classList.remove('visible');
+    urlGrabBtn.disabled = false;
+    urlGrabInput.disabled = false;
+  }
+
+  var urlGrabMessages = [
+    'Connecting to server\u2026',
+    'Downloading source audio\u2026',
+    'Transcoding to proxy (96k mono 48kHz)\u2026',
+    'Almost there \u2014 streaming audio\u2026',
+  ];
+
+  async function handleUrlGrab() {
+    var url = urlGrabInput.value.trim();
+    if (!url || !isUrl(url)) {
+      showToast('Enter a valid URL');
+      return;
+    }
+
+    urlGrabBtn.disabled = true;
+    urlGrabInput.disabled = true;
+    urlGrabDot.className = 'status-dot working';
+    urlGrabStatusText.textContent = urlGrabMessages[0];
+    urlGrabStatus.classList.add('visible');
+
+    var msgIdx = 0;
+    var msgTimer = setInterval(function () {
+      msgIdx = Math.min(msgIdx + 1, urlGrabMessages.length - 1);
+      urlGrabStatusText.textContent = urlGrabMessages[msgIdx];
+    }, 5000);
+
+    urlGrabAbortController = new AbortController();
+
+    try {
+      var headers = { 'Content-Type': 'application/json' };
+      if (URL_GRAB_API_KEY) headers['X-API-Key'] = URL_GRAB_API_KEY;
+
+      var res = await fetch(URL_GRAB_SERVER + '/api/proxy', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ url: url }),
+        signal: urlGrabAbortController.signal,
+      });
+
+      clearInterval(msgTimer);
+
+      if (!res.ok) {
+        var errData;
+        try { errData = await res.json(); } catch (e) { errData = {}; }
+        throw new Error(errData.error || 'Server returned ' + res.status);
+      }
+
+      urlGrabStatusText.textContent = 'Loading into waveform\u2026';
+
+      var proxyTitle = res.headers.get('X-Proxy-Title');
+      if (proxyTitle) proxyTitle = decodeURIComponent(proxyTitle);
+      var proxyDuration = parseFloat(res.headers.get('X-Proxy-Duration')) || 0;
+
+      var audioBlob = await res.blob();
+
+      var filename = (proxyTitle || 'proxy-audio')
+        .replace(/[^a-zA-Z0-9_\-\s]/g, '')
+        .substring(0, 40)
+        .trim() + '.mp3';
+
+      var audioFile = new File([audioBlob], filename, { type: 'audio/mpeg' });
+
+      urlGrabStatus.classList.remove('visible');
+      urlGrabBtn.disabled = false;
+      urlGrabInput.disabled = false;
+      urlGrabAbortController = null;
+
+      stemFiles = [];
+      addStemFiles([audioFile]);
+
+      urlGrabSection.classList.remove('visible');
+
+      if (proxyTitle) {
+        var displayTitle = proxyTitle.length > 40
+          ? proxyTitle.substring(0, 37) + '\u2026'
+          : proxyTitle;
+        showToast('Loaded: ' + displayTitle);
+      }
+
+    } catch (err) {
+      clearInterval(msgTimer);
+      urlGrabAbortController = null;
+      urlGrabBtn.disabled = false;
+      urlGrabInput.disabled = false;
+
+      if (err.name === 'AbortError') {
+        urlGrabStatus.classList.remove('visible');
+        return;
+      }
+
+      urlGrabDot.className = 'status-dot error';
+      urlGrabStatusText.textContent = err.message || 'Download failed';
+      setTimeout(function () {
+        urlGrabStatus.classList.remove('visible');
+      }, 5000);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // COPY ALL
   // ═══════════════════════════════════════════════════════════════
   function performCopy() {
     var plainLines = [], htmlLines = [], valid = true;
 
-    // Gather cards in correct order:
-    // 1. Predefined segments in their defined order (sport)
-    // 2. Pickup/Grab cards sorted numerically ascending
     var orderedCards = [];
 
-    // Predefined segments (left column then right column, in definition order)
     var cat = CATEGORIES[activeCategory];
     if (cat) {
       (cat.left || []).forEach(function (seg) {
@@ -2705,7 +2905,6 @@
       });
     }
 
-    // Pickup/Grab cards sorted by their numeric suffix
     var pickupCards = Array.from(document.querySelectorAll('#pickupsContainer .segment-card'));
     pickupCards.sort(function (a, b) {
       var numA = parseInt((a.dataset.segId || '').replace(/\D/g, ''), 10) || 0;
@@ -2714,7 +2913,6 @@
     });
     orderedCards = orderedCards.concat(pickupCards);
 
-    // Editor notes first
     var editorNotes = document.getElementById('editorNotes').value.trim();
     if (editorNotes) {
       plainLines.push('Editor Notes');
@@ -2794,7 +2992,6 @@
   }
 
   document.getElementById('copyAllBtn').addEventListener('click', function () {
-    // Check if transcription is still running
     if (isTranscribing) {
       showCopyWarning();
       return;
