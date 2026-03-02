@@ -564,10 +564,15 @@
       animation: fadeInUp 0.4s ease both;
       transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease, order 0.4s ease;
     }
+    .segment-card.tc-done {
+      border-color: var(--border);
+      opacity: 0.6;
+    }
     .segment-card.complete {
       border-color: var(--success-border);
       box-shadow: 0 0 0 1px var(--success-border);
       background: linear-gradient(to bottom, rgba(74, 140, 63, 0.04), var(--surface) 40%);
+      opacity: 1;
     }
     .segment-card.complete .segment-header { color: var(--success); }
     .segment-card.complete .complete-tick { display: inline-block; }
@@ -1121,7 +1126,7 @@
     <div class="dialog-title">End Time Required</div>
     <div class="dialog-message">
       <span class="dialog-segment-name" id="pendingSegmentName">Segment 1</span> has a start time but no end time.<br>
-      Press <kbd style="display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-family:var(--mono);font-size:11px;">F7</kbd> to mark the OUT point before moving on.
+      Find an OUT point and press <kbd style="display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-family:var(--mono);font-size:11px;">F7</kbd> to mark it before moving on.
     </div>
     <div class="dialog-actions">
       <button class="dialog-btn dialog-btn-primary" id="pendingDismissBtn">Got it</button>
@@ -1233,8 +1238,9 @@
   // sportStampQueue tracks which segments still need stamping.
   // sportPendingSegment = id of segment that has IN but not OUT.
   var sportSegmentOrder = [];
-  var sportStampIndex = 0;        // index into sportSegmentOrder for next IN
-  var sportPendingSegment = null;  // segment id waiting for OUT
+  var sportStampIndex = 0;
+  var sportPendingSegment = null;
+  var newsPendingGrabId = null;  // grab id waiting for OUT in news mode
 
   // ═══════════════════════════════════════════════════════════════
   // AUTOPLAY KEYWORD TOGGLE
@@ -1453,14 +1459,19 @@
   var pendingOverlay = document.getElementById('segmentPendingOverlay');
   var pendingSegNameEl = document.getElementById('pendingSegmentName');
   var pendingDismissBtn = document.getElementById('pendingDismissBtn');
+  var pendingOverlayTimer = null;
 
   function showPendingOverlay(segmentLabel) {
     pendingSegNameEl.textContent = segmentLabel;
     pendingOverlay.classList.add('visible');
+    // Auto-dismiss after 3 seconds
+    if (pendingOverlayTimer) clearTimeout(pendingOverlayTimer);
+    pendingOverlayTimer = setTimeout(hidePendingOverlay, 3000);
   }
 
   function hidePendingOverlay() {
     pendingOverlay.classList.remove('visible');
+    if (pendingOverlayTimer) { clearTimeout(pendingOverlayTimer); pendingOverlayTimer = null; }
   }
 
   pendingDismissBtn.addEventListener('click', hidePendingOverlay);
@@ -1518,18 +1529,25 @@
   function checkCardCompletion(el) {
     var card = el.closest('.segment-card');
     if (!card) return;
-    var complete = true;
+
+    // Check if all timecodes are set (for reordering)
+    var tcDone = true;
     card.querySelectorAll('.tc-input').forEach(function (tc) {
-      if (!tc.value || !isValidTimecode(tc.value)) complete = false;
+      if (!tc.value || !isValidTimecode(tc.value)) tcDone = false;
     });
+    if (tcDone) card.classList.add('tc-done');
+    else card.classList.remove('tc-done');
+
+    // Check if fully complete (timecodes + quotes — for green tick)
+    var complete = tcDone;
     card.querySelectorAll('.quote-input').forEach(function (q) {
       if (!q.value.trim()) complete = false;
     });
     if (complete) card.classList.add('complete');
     else card.classList.remove('complete');
 
-    // Update sport segment ordering after completion changes
-    if (activeCategory === 'sport') updateSportSegmentVisuals();
+    // Update segment ordering
+    updateSegmentVisuals();
   }
 
   function autoPopulateQuote(tcInput) {
@@ -1618,31 +1636,43 @@
   // ═══════════════════════════════════════════════════════════════
   // SPORT SEGMENT VISUAL ORDERING
   // ═══════════════════════════════════════════════════════════════
-  function updateSportSegmentVisuals() {
-    if (activeCategory !== 'sport') return;
-
+  function updateSegmentVisuals() {
     // Remove all visual states
     document.querySelectorAll('.segment-card').forEach(function (card) {
       card.classList.remove('active-segment', 'pending-out');
       card.style.order = '';
     });
 
-    // For left-column segments, reorder: incomplete first, complete last
-    var colLeft = document.getElementById('colLeft');
-    var leftCards = Array.from(colLeft.querySelectorAll('.segment-card'));
-    var orderIdx = 0;
+    if (activeCategory === 'sport') {
+      // For left-column segments, reorder: incomplete first, tc-done last
+      var colLeft = document.getElementById('colLeft');
+      var leftCards = Array.from(colLeft.querySelectorAll('.segment-card'));
+      var orderIdx = 0;
 
-    leftCards.forEach(function (card) {
-      if (card.classList.contains('complete')) {
-        card.style.order = 100 + orderIdx;
+      leftCards.forEach(function (card) {
+        if (card.classList.contains('tc-done')) {
+          card.style.order = 100 + orderIdx;
+        } else {
+          card.style.order = orderIdx;
+        }
+        orderIdx++;
+      });
+    }
+
+    // Reorder pickups container cards (both categories)
+    var pcCards = Array.from(document.querySelectorAll('#pickupsContainer .segment-card'));
+    var pIdx = 0;
+    pcCards.forEach(function (card) {
+      if (card.classList.contains('tc-done')) {
+        card.style.order = 100 + pIdx;
       } else {
-        card.style.order = orderIdx;
+        card.style.order = pIdx;
       }
-      orderIdx++;
+      pIdx++;
     });
 
-    // Highlight the active segment (next in queue) across both columns
-    if (sportStampIndex < sportSegmentOrder.length) {
+    // Highlight the active segment (next in queue) for sport
+    if (activeCategory === 'sport' && sportStampIndex < sportSegmentOrder.length) {
       var activeId = sportSegmentOrder[sportStampIndex];
       var activeCard = document.getElementById('card-' + activeId);
       if (activeCard && !sportPendingSegment) {
@@ -1650,11 +1680,17 @@
       }
     }
 
-    // Mark pending-out segment
+    // Mark pending-out segment (both categories)
     if (sportPendingSegment) {
       var pendingCard = document.getElementById('card-' + sportPendingSegment);
       if (pendingCard) {
         pendingCard.classList.add('pending-out');
+      }
+    }
+    if (newsPendingGrabId) {
+      var newsPendingCard = document.getElementById('card-' + newsPendingGrabId);
+      if (newsPendingCard) {
+        newsPendingCard.classList.add('pending-out');
       }
     }
   }
@@ -1683,6 +1719,7 @@
     sportSegmentOrder = [];
     sportStampIndex = 0;
     sportPendingSegment = null;
+    newsPendingGrabId = null;
 
     var cat = CATEGORIES[catId];
     if (!cat) return;
@@ -1708,7 +1745,7 @@
     }
 
     updateStampButtons();
-    updateSportSegmentVisuals();
+    updateSegmentVisuals();
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -2092,7 +2129,7 @@
       checkCardCompletion(startInput);
       sportPendingSegment = segId;
       showToast(getSegmentLabel(segId) + ' IN: ' + tc);
-      updateSportSegmentVisuals();
+      updateSegmentVisuals();
     }
   }
 
@@ -2123,28 +2160,22 @@
       // Clear pending, advance index
       sportPendingSegment = null;
       sportStampIndex++;
-      updateSportSegmentVisuals();
+      updateSegmentVisuals();
     }
   }
 
-  // ── News mode: grab IN/OUT (same as before but on F6/F7) ──
+  // ── News mode: grab IN/OUT with pending overlay ──
   function newsStampIn() {
     if (!wavesurfer || !audioLoaded) return;
-    var tc = secondsToTimecode(wavesurfer.getCurrentTime());
-    var cards = document.querySelectorAll('#pickupsContainer .segment-card');
-    var lastCard = cards.length ? cards[cards.length - 1] : null;
 
-    var targetCard;
-    if (!lastCard) {
-      targetCard = createGrabCard();
-    } else {
-      var startInput = lastCard.querySelector('.tc-input[data-tc-id$="-start"]');
-      if (startInput && startInput.value) {
-        targetCard = createGrabCard();
-      } else {
-        targetCard = lastCard;
-      }
+    // If there's a pending grab waiting for OUT, show the overlay
+    if (newsPendingGrabId) {
+      showPendingOverlay(getSegmentLabel(newsPendingGrabId));
+      return;
     }
+
+    var tc = secondsToTimecode(wavesurfer.getCurrentTime());
+    var targetCard = createGrabCard();
 
     var inField = targetCard.querySelector('.tc-input[data-tc-id$="-start"]');
     if (inField) {
@@ -2152,27 +2183,34 @@
       inField.classList.remove('invalid');
       autoPopulateQuote(inField);
       checkCardCompletion(inField);
+      newsPendingGrabId = targetCard.dataset.segId;
       showToast('Grab IN: ' + tc);
+      updateSegmentVisuals();
     }
   }
 
   function newsStampOut() {
     if (!wavesurfer || !audioLoaded) return;
-    var tc = secondsToTimecode(wavesurfer.getCurrentTime());
-    var cards = Array.from(document.querySelectorAll('#pickupsContainer .segment-card'));
-    for (var i = cards.length - 1; i >= 0; i--) {
-      var startInput = cards[i].querySelector('.tc-input[data-tc-id$="-start"]');
-      var endInput = cards[i].querySelector('.tc-input[data-tc-id$="-end"]');
-      if (startInput && startInput.value && endInput && !endInput.value) {
-        endInput.value = tc;
-        endInput.classList.remove('invalid');
-        autoPopulateQuote(endInput);
-        checkCardCompletion(endInput);
-        showToast('Grab OUT: ' + tc);
-        return;
-      }
+
+    if (!newsPendingGrabId) {
+      showToast('No open grab to mark OUT — press F6 first');
+      return;
     }
-    showToast('No open grab to mark OUT — press F6 first');
+
+    var card = document.getElementById('card-' + newsPendingGrabId);
+    if (!card) return;
+
+    var tc = secondsToTimecode(wavesurfer.getCurrentTime());
+    var endInput = card.querySelector('.tc-input[data-tc-id$="-end"]');
+    if (endInput) {
+      endInput.value = tc;
+      endInput.classList.remove('invalid');
+      autoPopulateQuote(endInput);
+      checkCardCompletion(endInput);
+      showToast('Grab OUT: ' + tc);
+      newsPendingGrabId = null;
+      updateSegmentVisuals();
+    }
   }
 
   // ── Unified F6/F7 dispatchers ──
@@ -2182,7 +2220,7 @@
   }
 
   function handleMarkOut() {
-    hidePendingOverlay(); // close overlay if open
+    hidePendingOverlay();
     if (activeCategory === 'sport') sportStampOut();
     else newsStampOut();
   }
