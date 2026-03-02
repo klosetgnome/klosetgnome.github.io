@@ -1371,12 +1371,12 @@
         { id: 'seg5', label: 'Segment 5', hasQuotes: true }
       ],
       right: [
-        { id: 'midroll', label: 'Midroll', hasQuotes: false, customRows: [
+        { id: 'midroll', label: 'Midroll', hasQuotes: true, customRows: [
           { label: 'Into Break', tcId: 'into-break' },
           { label: 'Out of Break', tcId: 'out-of-break' }
         ]},
-        { id: 'radio-outro', label: 'Radio Outro', hasQuotes: false, startEnd: true },
-        { id: 'radio-promo', label: 'Radio Promo', hasQuotes: false, startEnd: true }
+        { id: 'radio-outro', label: 'Radio Outro', hasQuotes: true, startEnd: true },
+        { id: 'radio-promo', label: 'Radio Promo', hasQuotes: true, startEnd: true }
       ]
     },
     news: {
@@ -1611,11 +1611,24 @@
     if (seg.customRows) {
       for (var c = 0; c < seg.customRows.length; c++) {
         var cr = seg.customRows[c];
-        rows += '<div class="segment-row"><span class="row-label-wide">' + cr.label + '</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + cr.tcId + '" placeholder="00.00.00" maxlength="8" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div></div>';
+        var quoteLabel = c === 0 ? 'Quote in' : 'Quote out';
+        var quotePlaceholder = c === 0 ? 'First words…' : 'Last words…';
+        rows += '<div class="segment-row"><span class="row-label-wide">' + cr.label + '</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + cr.tcId + '" placeholder="00.00.00" maxlength="8" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div>';
+        if (seg.hasQuotes) {
+          rows += '<span class="quote-label">' + quoteLabel + '</span><input type="text" class="quote-input" data-quote-id="' + seg.id + '-quote-' + (c === 0 ? 'in' : 'out') + '" placeholder="' + quotePlaceholder + '" required />';
+        }
+        rows += '</div>';
       }
-    } else if (seg.startEnd && !seg.hasQuotes) {
-      ['Start', 'End'].forEach(function (lbl) {
-        rows += '<div class="segment-row"><span class="row-label">' + lbl + '</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + lbl.toLowerCase() + '" placeholder="00.00.00" maxlength="8" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div></div>';
+    } else if (seg.startEnd) {
+      var labels = ['Start', 'End'];
+      labels.forEach(function (lbl, idx) {
+        var quoteLabel = idx === 0 ? 'Quote in' : 'Quote out';
+        var quotePlaceholder = idx === 0 ? 'First words…' : 'Last words…';
+        rows += '<div class="segment-row"><span class="row-label">' + lbl + '</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-' + lbl.toLowerCase() + '" placeholder="00.00.00" maxlength="8" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div>';
+        if (seg.hasQuotes) {
+          rows += '<span class="quote-label">' + quoteLabel + '</span><input type="text" class="quote-input" data-quote-id="' + seg.id + '-quote-' + (idx === 0 ? 'in' : 'out') + '" placeholder="' + quotePlaceholder + '" required />';
+        }
+        rows += '</div>';
       });
     } else {
       rows += '<div class="segment-row"><span class="row-label">Start</span><div class="tc-wrap"><input type="text" class="tc-input" data-tc-id="' + seg.id + '-start" placeholder="00.00.00" maxlength="8" required /><button class="stamp-btn disabled" title="Stamp current time">' + CLOCK_SVG + '</button></div><span class="quote-label">Quote in</span><input type="text" class="quote-input" data-quote-id="' + seg.id + '-quote-in" placeholder="First words…" required /></div>';
@@ -1662,6 +1675,19 @@
           card.style.order = orderIdx;
         }
         orderIdx++;
+      });
+
+      // Right-column segments: same reorder
+      var rightFixed = document.getElementById('rightFixedSegments');
+      var rightCards = Array.from(rightFixed.querySelectorAll('.segment-card'));
+      var rIdx = 0;
+      rightCards.forEach(function (card) {
+        if (card.classList.contains('tc-done')) {
+          card.style.order = 100 + rIdx;
+        } else {
+          card.style.order = rIdx;
+        }
+        rIdx++;
       });
     }
 
@@ -2593,15 +2619,15 @@
         var qi = row.querySelector('.quote-input');
         var plainLine = '';
         var htmlLine = '';
-        if (rl) {
-          plainLine += rl.textContent.trim() + ': ';
-          htmlLine += escapeHtml(rl.textContent.trim()) + ': ';
-        }
+        var labelText = rl ? rl.textContent.trim() : '';
         if (tc) {
           if (!tc.value || !isValidTimecode(tc.value)) { tc.classList.add('invalid'); valid = false; }
           var copyTc = formatTimecodeForCopy(tc.value);
-          plainLine += copyTc;
-          htmlLine += escapeHtml(copyTc);
+          plainLine += copyTc + ' ' + labelText;
+          htmlLine += escapeHtml(copyTc) + ' ' + escapeHtml(labelText);
+        } else if (labelText) {
+          plainLine += labelText;
+          htmlLine += escapeHtml(labelText);
         }
         if (qi) {
           if (!qi.value.trim()) {
@@ -2609,7 +2635,8 @@
             setTimeout(function () { qi.style.borderColor = ''; qi.style.boxShadow = ''; }, 3000);
             valid = false;
           }
-          var ql = rl && rl.textContent.includes('Start') ? 'Quote in' : 'Quote out';
+          var isFirstRow = rl && (rl.textContent.includes('Start') || rl.textContent.includes('Into'));
+          var ql = isFirstRow ? 'Quote in' : 'Quote out';
           plainLine += '  |  ' + ql + ': ' + (qi.value || '—');
           htmlLine += '&nbsp;&nbsp;|&nbsp;&nbsp;' + escapeHtml(ql) + ': ' + escapeHtml(qi.value || '—');
         }
