@@ -767,7 +767,8 @@
       .then(function (t) { PROMPT = t; promptLoaded = true; })
       .catch(function (e) { showError('Failed to load prompt file "' + file + '".'); promptLoaded = false; });
   }
-  loadPrompt('zpmtdha.txt');
+    var initOpt = categorySelect.options[categorySelect.selectedIndex];
+    loadPrompt(initOpt.getAttribute('data-prompt'));
   categorySelect.addEventListener('change', function () {
     var opt = categorySelect.options[categorySelect.selectedIndex];
     loadPrompt(opt.getAttribute('data-prompt'));
@@ -790,7 +791,8 @@
   // ── Deep-link via hash (e.g. #finance or #news) ──────────────────
   (function () {
     var hash = window.location.hash.replace('#', '').toLowerCase();
-    if (hash && categorySelect.querySelector('option[value="' + hash + '"]')) {
+          var hashOpt = categorySelect.querySelector('option[value="' + hash + '"]:not([hidden])');
+          if (hash && hashOpt) {
       categorySelect.value = hash;
       categorySelect.dispatchEvent(new Event('change'));
     }
