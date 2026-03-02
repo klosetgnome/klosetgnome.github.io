@@ -1978,6 +1978,9 @@
   var searchMatches = [];
   var searchIdx     = -1;
 
+  var SEEK_PRE_ROLL = 0.003; // 3ms before chunk start to catch clipped onsets
+  var SEEK_POST_ROLL = 0.003; // 3ms after chunk end
+
   function seekToWord(el, query) {
     if (!wavesurfer || !audioLoaded) return;
     var start = parseFloat(el.dataset.start);
@@ -1996,6 +1999,9 @@
         seekTime = start + ratio * (end - start);
       }
     }
+
+    // Pre-roll: back up 3ms so we catch the onset of the first syllable
+    seekTime = Math.max(0, seekTime - SEEK_PRE_ROLL);
 
     wavesurfer.seekTo(seekTime / d);
     if (autoplayKeywordEnabled && !wavesurfer.isPlaying()) {
