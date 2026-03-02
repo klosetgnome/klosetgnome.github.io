@@ -725,7 +725,7 @@
       .then(function (t) { PROMPT = t; promptLoaded = true; })
       .catch(function (e) { showError('Failed to load prompt file "' + file + '".'); promptLoaded = false; });
   }
-
+  loadPrompt('zpmtdha.txt');
   categorySelect.addEventListener('change', function () {
     var opt = categorySelect.options[categorySelect.selectedIndex];
     loadPrompt(opt.getAttribute('data-prompt'));
