@@ -291,7 +291,6 @@
 
         /* Sign out link */
         .sign-out {
-            display: none;
             font-family: var(--mono);
             font-size: 10px;
             letter-spacing: 0.5px;
@@ -301,15 +300,12 @@
             opacity: 0.5;
             transition: opacity 0.2s ease;
             margin-top: 24px;
+            display: inline-block;
         }
 
         .sign-out:hover {
             opacity: 1;
             color: var(--accent);
-        }
-
-        .tools-wrapper.unlocked ~ .sign-out {
-            display: inline-block;
         }
 
         /* ── Responsive: tablet ── */
@@ -377,6 +373,7 @@
         .tool-pod:nth-child(6) { animation-delay: 0.3s; }
         .tool-pod:nth-child(7) { animation-delay: 0.35s; }
         .tool-pod:nth-child(8) { animation-delay: 0.4s; }
+        .tool-pod:nth-child(9) { animation-delay: 0.45s; }
     </style>
 </head>
 <body>
@@ -539,10 +536,26 @@
                     </div>
                 </a>
 
+                <!-- 9. User Admin -->
+                <a href="/admin" class="tool-pod">
+                    <div class="pod-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                    </div>
+                    <div class="pod-text">
+                        <div class="pod-name">User Admin</div>
+                        <div class="pod-desc">Manage access</div>
+                    </div>
+                </a>
+
             </div>
         </div>
 
-        <a class="sign-out" href="/auth/signout" style="display:inline-block;">sign out</a>
+        <a class="sign-out" href="/auth/signout">sign out</a>
     </main>
 
     <footer>
@@ -561,14 +574,13 @@
             localStorage.setItem('theme', next);
         });
 
-        /* ── Auth gate ── */
+        /* ── Auth gate (client-side fallback) ── */
         const wrapper   = document.getElementById('toolsWrapper');
         const overlay   = document.getElementById('authOverlay');
         const userField = document.getElementById('authUser');
         const passField = document.getElementById('authPass');
         const submitBtn = document.getElementById('authSubmit');
         const errorMsg  = document.getElementById('authError');
-        const signOut   = document.getElementById('signOut');
 
         // Check for remembered auth on load
         if (isRemembered()) {
@@ -630,13 +642,6 @@
             errorMsg.textContent = msg;
             errorMsg.style.opacity = '1';
         }
-
-        // Handle sign-out
-        signOut.addEventListener('click', function(e) {
-            e.preventDefault();
-            forgetAuth();
-            window.location.href = '/auth/signout';
-        });
     </script>
 
 </body>
