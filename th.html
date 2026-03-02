@@ -1817,7 +1817,7 @@
             transcriptChunks = [{ start: 0, end: mixedBuffer.duration, text: result.text }];
           }
           displayTranscript();
-          status.textContent = 'Transcription complete — quotes will auto-populate when you stamp timecodes';
+          status.textContent = 'Transcribed \u2014 quotes auto-populate when you stamp timecodes';
           isTranscribing = false;
           setTimeout(function () { prog.classList.remove('visible'); }, 1000);
           transcriptionWorker.terminate();
