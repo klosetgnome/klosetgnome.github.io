@@ -2686,7 +2686,35 @@
   // ═══════════════════════════════════════════════════════════════
   function performCopy() {
     var plainLines = [], htmlLines = [], valid = true;
-    document.querySelectorAll('.segment-card').forEach(function (card) {
+
+    // Gather cards in correct order:
+    // 1. Predefined segments in their defined order (sport)
+    // 2. Pickup/Grab cards sorted numerically ascending
+    var orderedCards = [];
+
+    // Predefined segments (left column then right column, in definition order)
+    var cat = CATEGORIES[activeCategory];
+    if (cat) {
+      (cat.left || []).forEach(function (seg) {
+        var c = document.getElementById('card-' + seg.id);
+        if (c) orderedCards.push(c);
+      });
+      (cat.right || []).forEach(function (seg) {
+        var c = document.getElementById('card-' + seg.id);
+        if (c) orderedCards.push(c);
+      });
+    }
+
+    // Pickup/Grab cards sorted by their numeric suffix
+    var pickupCards = Array.from(document.querySelectorAll('#pickupsContainer .segment-card'));
+    pickupCards.sort(function (a, b) {
+      var numA = parseInt((a.dataset.segId || '').replace(/\D/g, ''), 10) || 0;
+      var numB = parseInt((b.dataset.segId || '').replace(/\D/g, ''), 10) || 0;
+      return numA - numB;
+    });
+    orderedCards = orderedCards.concat(pickupCards);
+
+    orderedCards.forEach(function (card) {
       var hdr = card.querySelector('.segment-header .header-left span');
       var title = hdr ? hdr.textContent : '';
       plainLines.push(title);
