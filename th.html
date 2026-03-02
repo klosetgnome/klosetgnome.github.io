@@ -555,6 +555,12 @@
     .content-area.all-stamped .add-pickup-row { order: 2; }
     .content-area.all-stamped .notes-actions-row { order: 3; }
 
+    /* News mode: keep add/notes/copy above grabs at all times */
+    .content-area.news-mode .columns-wrap { order: 0; }
+    .content-area.news-mode .add-pickup-row { order: 1; }
+    .content-area.news-mode .notes-actions-row { order: 2; }
+    .content-area.news-mode #pickupsContainer { order: 10; }
+
     @media (max-width: 860px) {
       .columns-wrap { grid-template-columns: 1fr; }
       .notes-actions-row { flex-direction: column; }
@@ -1782,6 +1788,9 @@
     var hasContent = (cat.left && cat.left.length) || (cat.right && cat.right.length);
     columnsWrap.style.display = hasContent ? '' : 'none';
     colRight.style.display = (cat.right && cat.right.length) ? '' : 'none';
+
+    // Toggle news-mode class for layout ordering
+    document.getElementById('contentArea').classList.toggle('news-mode', catId === 'news');
 
     // Enable flex ordering for left column in sport mode
     if (catId === 'sport') {
