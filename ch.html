@@ -130,6 +130,10 @@
     }
 
     /* ── Results (page-specific: copy button, body, lists) ── */
+    #results {
+      position: relative;
+    }
+
     .results-copy {
       background: none;
       border: 1px solid var(--border);
@@ -178,6 +182,58 @@
       line-height: 1.6;
     }
     .results-body li:last-child { margin-bottom: 0; }
+
+    /* ── Regenerating overlay inside results ── */
+    #results.regenerating .results-header,
+    #results.regenerating .results-body {
+      filter: blur(6px);
+      opacity: 0.35;
+      pointer-events: none;
+      transition: filter 0.4s ease, opacity 0.4s ease;
+    }
+
+    .regen-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: var(--surface-transparent, rgba(0,0,0,0.05));
+      border-radius: var(--radius-lg);
+    }
+    #results.regenerating .regen-overlay {
+      display: flex;
+    }
+
+    .regen-overlay .regen-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .regen-overlay .regen-track {
+      width: 60%;
+      max-width: 300px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .regen-overlay .regen-bar {
+      width: 40%;
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      animation: regenSlide 1.4s ease-in-out infinite;
+    }
+    @keyframes regenSlide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
 
     /* ── Gear settings toggle ── */
     .header-actions {
@@ -280,6 +336,56 @@
     .submit-row {
       justify-content: flex-end;
     }
+
+    /* ── Collapsible input section ── */
+    .input-section {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      transition: opacity 0.35s ease, max-height 0.45s ease;
+      max-height: 800px;
+      overflow: hidden;
+    }
+    .input-section.collapsed {
+      opacity: 0;
+      max-height: 0 !important;
+      pointer-events: none;
+    }
+
+    /* ── History section ── */
+    #history {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+    }
+    #history:empty { display: none; }
+
+    .history-entry {
+      opacity: 0.55;
+      transition: opacity 0.2s;
+      animation: historyFadeIn 0.35s ease;
+    }
+    .history-entry:hover { opacity: 0.85; }
+
+    .history-entry .results-header {
+      font-size: 9px;
+      letter-spacing: 2.5px;
+    }
+
+    .history-entry .results-body {
+      font-size: 13px;
+    }
+
+    .history-entry .results-copy {
+      font-size: 9px;
+    }
+
+    @keyframes historyFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 0.55; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
@@ -325,6 +431,10 @@
 <main>
 
   <div class="results" id="results">
+    <div class="regen-overlay" id="regenOverlay">
+      <span class="regen-label">Recreating…</span>
+      <div class="regen-track"><div class="regen-bar"></div></div>
+    </div>
     <div class="results-header">
       <span id="resultsLabel">Summary</span>
       <button class="results-copy" id="copyBtn" title="Copy to clipboard">
@@ -335,6 +445,16 @@
     <div class="results-body" id="resultContent"></div>
   </div>
 
+  <div class="submit-row" id="submitRow">
+    <div class="field-group">
+      <label>Model <span id="modelStatusLegacy" style="display:none;"></span></label>
+      <select id="modelLegacy" class="minimal-select" style="display:none;"></select>
+    </div>
+    <button class="submit" id="submitBtn" style="display:none;">Create</button>
+  </div>
+
+  <div id="history"></div>
+
   <div class="warn-banner" id="warnBanner">
     <strong>Local file detected.</strong> Browsers block API requests when a file is opened directly from disk (<code>file://</code>) due to CORS restrictions.<br>
     You need to serve this file over HTTP. The simplest way is to open a terminal in the same folder and run:<br>
@@ -342,38 +462,32 @@
     Then open <code>http://localhost:8080/copyhelper.html</code> in your browser.
   </div>
 
-  <div class="card">
-    <span class="card-label">Your Text</span>
-    <span class="card-hint" id="inputHint">Paste text, or a link to a webpage, to summarise</span>
-    <div class="textarea-wrap" id="textareaWrap">
-      <div class="textarea-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-          <path d="m15 5 4 4"/>
-        </svg>
+  <div class="input-section" id="inputSection">
+    <div class="card">
+      <span class="card-label">Your Text</span>
+      <span class="card-hint" id="inputHint">Paste text, or a link to a webpage, to summarise</span>
+      <div class="textarea-wrap" id="textareaWrap">
+        <div class="textarea-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+            <path d="m15 5 4 4"/>
+          </svg>
+        </div>
+        <textarea id="inputText" placeholder="Type, paste, or drop a link here…"></textarea>
       </div>
-      <textarea id="inputText" placeholder="Type, paste, or drop a link here…"></textarea>
-    </div>
-    <div class="fetch-bar" id="fetchBar">
-      <div class="fetch-spinner" id="fetchSpinner"></div>
-      <div class="countdown-ring" id="countdownRing" style="display:none;">
-        <svg viewBox="0 0 20 20">
-          <circle class="ring-bg" cx="10" cy="10" r="8"/>
-          <circle class="ring-fg" id="ringFg" cx="10" cy="10" r="8"/>
-        </svg>
-        <span class="countdown-number" id="countdownNumber">3</span>
+      <div class="fetch-bar" id="fetchBar">
+        <div class="fetch-spinner" id="fetchSpinner"></div>
+        <div class="countdown-ring" id="countdownRing" style="display:none;">
+          <svg viewBox="0 0 20 20">
+            <circle class="ring-bg" cx="10" cy="10" r="8"/>
+            <circle class="ring-fg" id="ringFg" cx="10" cy="10" r="8"/>
+          </svg>
+          <span class="countdown-number" id="countdownNumber">3</span>
+        </div>
+        <span class="fetch-label" id="fetchLabel">Fetching page content…</span>
+        <button class="fetch-clear" id="fetchClear">Clear</button>
       </div>
-      <span class="fetch-label" id="fetchLabel">Fetching page content…</span>
-      <button class="fetch-clear" id="fetchClear">Clear</button>
     </div>
-  </div>
-
-  <div class="submit-row">
-    <div class="field-group">
-      <label>Model <span id="modelStatusLegacy" style="display:none;"></span></label>
-      <select id="modelLegacy" class="minimal-select" style="display:none;"></select>
-    </div>
-    <button class="submit" id="submitBtn">Create</button>
   </div>
 
   <div class="progress-wrap" id="progressWrap">
@@ -439,6 +553,13 @@
   var countdownTimer = null;
   var RING_CIRCUMFERENCE = 2 * Math.PI * 8; // r=8 → ≈50.27
 
+  // ── State for recreate + history ──
+  var btn          = document.getElementById('submitBtn');
+  var inputSection = document.getElementById('inputSection');
+  var historyEl    = document.getElementById('history');
+  var hasGenerated = false;
+  var generationCount = 0;
+
   var HINTS = {
     message:   'Paste bullet points or rough notes to turn into a polished email',
     summarise: 'Paste text, or a link to a webpage, to summarise',
@@ -462,10 +583,86 @@
 
   inputTextEl.addEventListener('input', function () {
     textareaWrap.classList.toggle('has-text', inputTextEl.value.length > 0);
+    updateSubmitVisibility();
   });
 
   if (window.location.protocol === 'file:') {
     document.getElementById('warnBanner').classList.add('visible');
+  }
+
+  // ── Submit button visibility ──────────────────────────────────────
+  // After first generation, always show Recreate.
+  // Before first generation: show Create only for typed/pasted text,
+  // NOT for URL pastes in summarise mode (auto-submit handles those).
+  function updateSubmitVisibility() {
+    if (hasGenerated) { btn.style.display = 'inline-block'; return; }
+    var hasText = !!inputTextEl.value.trim();
+    var isUrlPaste = fetchedFromUrl && categorySelect.value === 'summarise';
+    btn.style.display = (hasText && !isUrlPaste) ? 'inline-block' : 'none';
+  }
+
+  function collapseInputs() {
+    inputSection.classList.add('collapsed');
+    hasGenerated = true;
+    btn.textContent = 'Recreate';
+    btn.style.display = 'inline-block';
+    btn.disabled = false;
+  }
+
+  function expandInputs() {
+    inputSection.classList.remove('collapsed');
+  }
+
+  function saveToHistory() {
+    var content = document.getElementById('resultContent').innerHTML;
+    if (!content) return;
+
+    var uid = 'hist-' + Date.now();
+    var entry = document.createElement('div');
+    entry.className = 'history-entry';
+
+    entry.innerHTML =
+      '<div class="results visible">' +
+        '<div class="results-header">' +
+          '<span>Generation ' + generationCount + '</span>' +
+          '<button class="results-copy" id="' + uid + '-copy" title="Copy to clipboard">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+            '<span class="copy-label">Copy</span>' +
+          '</button>' +
+        '</div>' +
+        '<div class="results-body" id="' + uid + '-body"></div>' +
+      '</div>';
+
+    entry.querySelector('#' + uid + '-body').innerHTML = content;
+
+    // Wire copy button in this history entry
+    var copyBtn = entry.querySelector('#' + uid + '-copy');
+    copyBtn.addEventListener('click', async function () {
+      var el = entry.querySelector('#' + uid + '-body');
+      var text = el ? (el.innerText || '').trim() : '';
+      if (!text) return;
+      try { await navigator.clipboard.writeText(text); }
+      catch (e) {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      copyBtn.classList.add('copied');
+      copyBtn.querySelector('.copy-label').textContent = 'Copied';
+      setTimeout(function () {
+        copyBtn.classList.remove('copied');
+        copyBtn.querySelector('.copy-label').textContent = 'Copy';
+      }, 1800);
+    });
+
+    // Insert at top of history
+    historyEl.insertBefore(entry, historyEl.firstChild);
+
+    // Cap at 3
+    while (historyEl.children.length > 3) {
+      historyEl.removeChild(historyEl.lastChild);
+    }
   }
 
   // ── URL detection & fetching ──────────────────────────────────────
@@ -487,6 +684,7 @@
     fetchBar.classList.remove('visible');
     cancelCountdown();
     fetchedFromUrl = null;
+    updateSubmitVisibility();
   }
 
   // ── Auto-submit countdown ─────────────────────────────────────────
@@ -528,7 +726,7 @@
       if (remaining <= 0) {
         cancelCountdown();
         // Auto-click the submit button
-        document.getElementById('submitBtn').click();
+        btn.click();
         return;
       }
       countdownNumber.textContent = remaining;
@@ -546,6 +744,7 @@
     textareaWrap.classList.remove('has-text');
     hideFetchBar();
     inputTextEl.focus();
+    updateSubmitVisibility();
   });
 
   function extractText(html) {
@@ -564,6 +763,7 @@
     fetchedFromUrl = url;
     showFetchBar('Fetching page content…', true);
     inputTextEl.disabled = true;
+    updateSubmitVisibility();
     if (fetchAbort) fetchAbort.abort();
     fetchAbort = new AbortController();
     try {
@@ -578,14 +778,17 @@
       inputTextEl.value = text;
       textareaWrap.classList.add('has-text');
       showFetchBar('Fetched from ' + new URL(url).hostname, false);
+      updateSubmitVisibility();
 
       // Start auto-submit countdown (only for URL pastes in summarise mode)
       startAutoSubmitCountdown();
     } catch (err) {
       if (err.name === 'AbortError') return;
       inputTextEl.value = url;
+      fetchedFromUrl = null;
       hideFetchBar();
       showError('Could not fetch page content. Try copying and pasting the text directly.\n\n' + (err.message || ''));
+      updateSubmitVisibility();
     } finally {
       inputTextEl.disabled = false;
     }
@@ -625,14 +828,22 @@
     inputTextEl.placeholder    = PLACEHOLDERS[cat];
     progressLabel.textContent  = PROGRESS_LABELS[cat];
     resultsLabel.textContent   = RESULT_LABELS[cat];
-    document.getElementById('submitBtn').textContent = 'Create';
     document.getElementById('results').classList.remove('visible');
+    document.getElementById('results').classList.remove('regenerating');
     document.getElementById('errorBox').classList.remove('visible');
 
     // Clear text when switching modes
     inputTextEl.value = '';
     textareaWrap.classList.remove('has-text');
     hideFetchBar();
+
+    // Reset to fresh state on category switch
+    expandInputs();
+    hasGenerated = false;
+    generationCount = 0;
+    historyEl.innerHTML = '';
+    btn.textContent = 'Create';
+    updateSubmitVisibility();
 
     // Re-select the preferred model for the new category
     selectPreferredModel();
@@ -754,27 +965,38 @@
   }
 
   // ── Submit ────────────────────────────────────────────────────────
-  document.getElementById('submitBtn').addEventListener('click', async function () {
+  btn.addEventListener('click', async function () {
     var text     = inputTextEl.value.trim();
     var model    = modelEl.value;
     var cat      = categorySelect.value;
     var errorBox = document.getElementById('errorBox');
     var progress = document.getElementById('progressWrap');
     var results  = document.getElementById('results');
-    var btn      = document.getElementById('submitBtn');
+    var isRecreate = hasGenerated;
 
     errorBox.classList.remove('visible');
-    results.classList.remove('visible');
+
+    // Save current results to history before regenerating
+    if (isRecreate) {
+      saveToHistory();
+      results.classList.add('regenerating');
+    } else {
+      results.classList.remove('visible');
+    }
 
     // Cancel any running countdown when submit fires
     cancelCountdown();
 
-    if (!text) { showError('Please type or paste some text before submitting.'); return; }
-    if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); return; }
+    if (!text) { showError('Please type or paste some text before submitting.'); results.classList.remove('regenerating'); return; }
+    if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); results.classList.remove('regenerating'); return; }
 
     progressLabel.textContent = PROGRESS_LABELS[cat];
     resultsLabel.textContent  = RESULT_LABELS[cat];
-    progress.classList.add('visible');
+
+    // Only show external progress bar on first create
+    if (!isRecreate) {
+      progress.classList.add('visible');
+    }
     btn.disabled = true;
 
     // Hide the fetch bar once generation starts
@@ -800,13 +1022,19 @@
       out = out.replace(/^```(?:markdown|md)?\s*\n?/i,'').replace(/\n?```\s*$/i,'').trim();
 
       document.getElementById('resultContent').innerHTML = render(out);
+      results.classList.remove('regenerating');
       results.classList.add('visible');
+      generationCount++;
+      resultsLabel.textContent = (RESULT_LABELS[cat] || 'Summary') + ' \u2014 Generation ' + generationCount;
       results.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      btn.textContent = 'Recreate';
+
+      // Collapse inputs and switch to Recreate after success
+      collapseInputs();
     } catch (err) {
       var msg = err.message || String(err);
       if (/failed to fetch|networkerror|load failed/i.test(msg))
         msg = 'Network error: could not reach the proxy worker.\nCheck WORKER_URL and ensure you are serving over HTTP.';
+      results.classList.remove('regenerating');
       showError(msg);
     } finally {
       progress.classList.remove('visible');
@@ -819,21 +1047,22 @@
     box.textContent = msg;
     box.classList.add('visible');
     document.getElementById('progressWrap').classList.remove('visible');
-    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('results').classList.remove('regenerating');
+    btn.disabled = false;
   }
 
   document.getElementById('copyBtn').addEventListener('click', async function () {
     var text = (document.getElementById('resultContent').innerText || '').trim();
     if (!text) return;
-    var btn = this, label = btn.querySelector('.copy-label');
+    var cbtn = this, label = cbtn.querySelector('.copy-label');
     try { await navigator.clipboard.writeText(text); } catch (e) {
       var ta = document.createElement('textarea');
       ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
       document.body.appendChild(ta); ta.select();
       document.execCommand('copy'); document.body.removeChild(ta);
     }
-    btn.classList.add('copied'); label.textContent = 'Copied';
-    setTimeout(function () { btn.classList.remove('copied'); label.textContent = 'Copy'; }, 1800);
+    cbtn.classList.add('copied'); label.textContent = 'Copied';
+    setTimeout(function () { cbtn.classList.remove('copied'); label.textContent = 'Copy'; }, 1800);
   });
 }());
 </script>
