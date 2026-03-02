@@ -411,6 +411,26 @@
 
     .submit-row {
       justify-content: flex-end;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Ensure progress-wrap never blocks clicks when hidden */
+    .progress-wrap:not(.visible) {
+      pointer-events: none;
+      position: absolute;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+    }
+
+    /* Force the Recreate button to be interactive */
+    .submit.recreate-mode {
+      display: inline-block !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+      position: relative;
+      z-index: 5;
     }
 
     /* ── NEW: Collapsible input section ── */
@@ -539,6 +559,16 @@
     </div>
   </div>
 
+  <div class="submit-row" id="submitRow">
+    <div class="field-group">
+      <label>Model <span id="modelStatusLegacy" style="display:none;"></span></label>
+      <select id="modelLegacy" class="minimal-select" style="display:none;"></select>
+    </div>
+    <button class="submit" id="submitBtn" style="display:none;">Create</button>
+  </div>
+
+  <div id="history"></div>
+
   <div class="warn-banner" id="warnBanner">
     <strong>Local file detected.</strong> Browsers block API requests when a file is opened directly from disk (<code>file://</code>) due to CORS restrictions.<br>
     You need to serve this file over HTTP. The simplest way is to open a terminal in the same folder and run:<br>
@@ -546,7 +576,6 @@
     Then open <code>http://localhost:8080/index.html</code> in your browser.
   </div>
 
-  <!-- CHANGED: wrapped Title + Transcript cards in collapsible container -->
   <div class="input-section" id="inputSection">
     <div class="card">
       <span class="card-label">Title</span>
@@ -594,17 +623,6 @@
     <div class="progress-label">Processing transcript…</div>
     <div class="progress-track"><div class="progress-bar"></div></div>
   </div>
-
-  <div class="submit-row">
-    <div class="field-group">
-      <label>Model <span id="modelStatusLegacy" style="display:none;"></span></label>
-      <select id="modelLegacy" class="minimal-select" style="display:none;"></select>
-    </div>
-    <!-- CHANGED: hidden by default, shown by JS when transcript has content -->
-    <button class="submit" id="submitBtn" style="display:none;">Create</button>
-  </div>
-
-  <div id="history"></div>
 
   <div class="error-box" id="errorBox"></div>
 </main>
@@ -673,16 +691,19 @@
   // File drops use the auto-submit countdown instead.
   // After first generation, always show the Recreate button.
   function updateSubmitVisibility() {
-    if (hasGenerated) { btn.style.display = ''; return; }
+    if (hasGenerated) { btn.style.display = 'inline-block'; return; }
     var hasPastedContent = !loadedFileText && !!transcriptEl.value.trim();
-    btn.style.display = hasPastedContent ? '' : 'none';
+    btn.style.display = hasPastedContent ? 'inline-block' : 'none';
   }
 
   function collapseInputs() {
     inputSection.classList.add('collapsed');
     hasGenerated = true;
     btn.textContent = 'Recreate';
+    btn.classList.add('recreate-mode');
     btn.style.display = '';
+    btn.disabled = false;
+    btn.removeAttribute('disabled');
   }
 
   function expandInputs() {
@@ -956,6 +977,7 @@
     historyEl.innerHTML = '';
     document.querySelector('#results .results-header').textContent = 'Episode Copy';
     btn.textContent = 'Create';
+    btn.classList.remove('recreate-mode');
     updateSubmitVisibility();
 
     selectPreferredModel();
