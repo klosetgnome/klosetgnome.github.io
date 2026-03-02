@@ -551,6 +551,8 @@
 
     @media (max-width: 860px) {
       .columns-wrap { grid-template-columns: 1fr; }
+      .notes-actions-row { flex-direction: column; }
+      .actions-group { flex-direction: row; justify-content: flex-end; }
     }
 
     .segment-card {
@@ -680,8 +682,16 @@
     }
 
     /* ── Editor Notes ── */
-    .editor-notes-card {
+    /* ── Editor Notes + Action Buttons Row ── */
+    .notes-actions-row {
       width: 100%;
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+    }
+    .editor-notes-card {
+      flex: 1;
+      min-width: 0;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
@@ -709,14 +719,13 @@
       color: var(--text-muted);
     }
 
-    .bottom-bar {
-      width: 100%;
+    .actions-group {
       display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 12px;
+      flex-direction: column;
+      gap: 8px;
+      justify-content: center;
+      flex-shrink: 0;
     }
-    .btn-group { display: flex; gap: 12px; flex-shrink: 0; }
     .export-btn {
       font-family: var(--mono); font-size: 12px; font-weight: 500;
       letter-spacing: 2px; text-transform: uppercase;
@@ -765,8 +774,8 @@
   <h1><span>TIMECODE</span> HELPER</h1>
   <div class="header-center">
     <select id="categorySelect" class="minimal-select">
-      <option value="sport" selected>Sport</option>
-      <option value="news">News</option>
+      <option value="sport">Sport</option>
+      <option value="news" selected>News</option>
     </select>
   </div>
   <div class="header-actions">
@@ -845,6 +854,15 @@
           <div class="shortcut-row">
             <span class="shortcut-desc">Reset speed</span>
             <span class="shortcut-keys"><kbd>R</kbd></span>
+          </div>
+          <div class="shortcuts-divider"></div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Grab IN (News)</span>
+            <span class="shortcut-keys"><kbd>F2</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Grab OUT (News)</span>
+            <span class="shortcut-keys"><kbd>F3</kbd></span>
           </div>
         </div>
       </div>
@@ -949,13 +967,12 @@
       </div>
     </div>
 
-    <div class="editor-notes-card" id="editorNotesCard">
-      <span class="card-label">Editor Notes</span>
-      <textarea class="editor-notes-textarea" id="editorNotes" placeholder="Additional notes for the editor…"></textarea>
-    </div>
-
-    <div class="bottom-bar">
-      <div class="btn-group">
+    <div class="notes-actions-row">
+      <div class="editor-notes-card" id="editorNotesCard">
+        <span class="card-label">Editor Notes</span>
+        <textarea class="editor-notes-textarea" id="editorNotes" placeholder="Additional notes for the editor…"></textarea>
+      </div>
+      <div class="actions-group">
         <button class="export-btn secondary" id="clearAllBtn">Clear All</button>
         <button class="export-btn" id="copyAllBtn">Copy All</button>
       </div>
@@ -1058,7 +1075,7 @@
   var stemFiles = [];
   var mixedBlob = null;
   var mixedBuffer = null;
-  var activeCategory = 'sport';
+  var activeCategory = 'news';
   var autoTranscribeEnabled = true;
   var autoTranscribeTimer = null;
   var transcriptionWorker = null;
@@ -1198,11 +1215,8 @@
     },
     news: {
       addLabel: '+ Add Grab',
-      addPrefix: 'Extra Grab',
-      left: [
-        { id: 'grab1', label: 'Grab 1', hasQuotes: true },
-        { id: 'grab2', label: 'Grab 2', hasQuotes: true }
-      ],
+      addPrefix: 'Grab',
+      left: [],
       right: []
     }
   };
@@ -1423,7 +1437,9 @@
   function loadCategory(catId) {
     activeCategory = catId;
     var colLeft = document.getElementById('colLeft');
+    var colRight = document.getElementById('colRight');
     var rightFixed = document.getElementById('rightFixedSegments');
+    var addRow = document.querySelector('.add-pickup-row');
     colLeft.innerHTML = ''; rightFixed.innerHTML = '';
     document.getElementById('pickupsContainer').innerHTML = '';
     pickupCount = 0;
@@ -1433,6 +1449,17 @@
     (cat.right || []).forEach(function (seg) { rightFixed.appendChild(buildSegmentCard(seg)); });
 
     document.getElementById('addPickupBtn').textContent = cat.addLabel || '+ Add Pickup Point';
+
+    // In News mode: add button + grabs go in left column, right column hidden
+    if (catId === 'news') {
+      colLeft.appendChild(document.getElementById('pickupsContainer'));
+      colLeft.appendChild(addRow);
+      colRight.style.display = 'none';
+    } else {
+      colRight.style.display = '';
+      colRight.insertBefore(document.getElementById('pickupsContainer'), addRow);
+      colRight.appendChild(addRow);
+    }
 
     updateStampButtons();
   }
@@ -1772,6 +1799,92 @@
   });
   document.getElementById('btnSkipFwd').addEventListener('click', function () {
     if (wavesurfer && audioLoaded) wavesurfer.skip(5);
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // F2/F3 GRAB HOTKEYS (News mode only)
+  // ═══════════════════════════════════════════════════════════════
+  // F2 = Mark IN: finds the last grab card — if it has no IN yet,
+  //   stamp IN there; otherwise create a new grab and stamp IN.
+  // F3 = Mark OUT: finds the most recent grab with an IN but no OUT,
+  //   and stamps OUT there.
+
+  function createGrabCard() {
+    var cat = CATEGORIES[activeCategory];
+    var prefix = (cat && cat.addPrefix) ? cat.addPrefix : 'Grab';
+    pickupCount++;
+    var card = buildSegmentCard({ id: 'pickup-' + pickupCount, label: prefix + ' ' + pickupCount, hasQuotes: true });
+    var header = card.querySelector('.segment-header');
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-pickup'; removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', function () { card.remove(); });
+    header.appendChild(removeBtn);
+    document.getElementById('pickupsContainer').appendChild(card);
+    updateStampButtons();
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return card;
+  }
+
+  function stampGrabIn() {
+    if (!wavesurfer || !audioLoaded) return;
+    var tc = secondsToTimecode(wavesurfer.getCurrentTime());
+    var cards = document.querySelectorAll('#pickupsContainer .segment-card');
+    var lastCard = cards.length ? cards[cards.length - 1] : null;
+
+    // If no cards yet, or the last card already has an IN, create a new one
+    var targetCard;
+    if (!lastCard) {
+      targetCard = createGrabCard();
+    } else {
+      var startInput = lastCard.querySelector('.tc-input[data-tc-id$="-start"]');
+      if (startInput && startInput.value) {
+        // Last card already has IN — create new grab
+        targetCard = createGrabCard();
+      } else {
+        targetCard = lastCard;
+      }
+    }
+
+    var inField = targetCard.querySelector('.tc-input[data-tc-id$="-start"]');
+    if (inField) {
+      inField.value = tc;
+      inField.classList.remove('invalid');
+      autoPopulateQuote(inField);
+      checkCardCompletion(inField);
+      showToast('Grab IN: ' + tc);
+    }
+  }
+
+  function stampGrabOut() {
+    if (!wavesurfer || !audioLoaded) return;
+    var tc = secondsToTimecode(wavesurfer.getCurrentTime());
+    // Find the most recent grab with an IN but no OUT
+    var cards = Array.from(document.querySelectorAll('#pickupsContainer .segment-card'));
+    for (var i = cards.length - 1; i >= 0; i--) {
+      var startInput = cards[i].querySelector('.tc-input[data-tc-id$="-start"]');
+      var endInput = cards[i].querySelector('.tc-input[data-tc-id$="-end"]');
+      if (startInput && startInput.value && endInput && !endInput.value) {
+        endInput.value = tc;
+        endInput.classList.remove('invalid');
+        autoPopulateQuote(endInput);
+        checkCardCompletion(endInput);
+        showToast('Grab OUT: ' + tc);
+        return;
+      }
+    }
+    showToast('No open grab to mark OUT — press F2 first');
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (activeCategory !== 'news') return;
+    if (e.key === 'F2') {
+      e.preventDefault();
+      stampGrabIn();
+    }
+    if (e.key === 'F3') {
+      e.preventDefault();
+      stampGrabOut();
+    }
   });
 
   // ═══════════════════════════════════════════════════════════════
@@ -2168,7 +2281,7 @@
   // ═══════════════════════════════════════════════════════════════
   // INIT
   // ═══════════════════════════════════════════════════════════════
-  loadCategory('sport');
+  loadCategory('news');
 }());
 </script>
 </body>
