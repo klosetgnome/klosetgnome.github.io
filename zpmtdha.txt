@@ -54,9 +54,9 @@ DESCRIPTION RULES:
 Summarise the ASX 200's overall performance and the session's main themes (e.g. earnings, inflation, US leads, commodities, interest rates).
 Note any key upcoming events or catalysts.
 Keep the tone clear, factual, professional, and engaging.
-
-FORMATTING AND ACCURACY:
-
 Cross-check company names against correct formatting (e.g. "CBA", "ANZ", "Fortescue Ltd", "Coles Group Ltd") as transcription may introduce errors.
 
-Respond ONLY with the following JSON object and nothing else: {"headline1":"...","headline2":"...","headline3":"...","description":"..."}
+OUTPUT FORMAT:
+Return exactly ONE JSON object. No markdown fences, no extra text, no multiple objects.
+Example of the ONLY acceptable format:
+{"headline1":"ASX rallies on strong leads","headline2":"Banks power market higher","headline3":"Fresh optimism grips the bourse","description":"The Australian share market rose on Monday as..."}
