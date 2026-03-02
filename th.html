@@ -774,6 +774,13 @@
             <span class="toggle-track"></span>
           </label>
         </div>
+        <div class="setting-row" style="margin-top:10px;">
+          <span class="setting-label">Autoplay Keyword</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoplayKeywordToggle" checked />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
       </div>
     </div>
     <!-- Keyboard shortcuts -->
@@ -1053,6 +1060,24 @@
     if (saved !== null) {
       autoTranscribeEnabled = saved === '1';
       autoTranscribeToggle.checked = autoTranscribeEnabled;
+    }
+  })();
+
+  // ═══════════════════════════════════════════════════════════════
+  // AUTOPLAY KEYWORD TOGGLE
+  // ═══════════════════════════════════════════════════════════════
+  var autoplayKeywordEnabled = true;
+  var autoplayKeywordToggle = document.getElementById('autoplayKeywordToggle');
+  autoplayKeywordToggle.addEventListener('change', function () {
+    autoplayKeywordEnabled = this.checked;
+    localStorage.setItem('autoplayKeyword', autoplayKeywordEnabled ? '1' : '0');
+  });
+
+  (function () {
+    var saved = localStorage.getItem('autoplayKeyword');
+    if (saved !== null) {
+      autoplayKeywordEnabled = saved === '1';
+      autoplayKeywordToggle.checked = autoplayKeywordEnabled;
     }
   })();
 
@@ -1890,6 +1915,9 @@
     var d = wavesurfer.getDuration();
     if (d > 0 && !isNaN(start)) {
       wavesurfer.seekTo(start / d);
+      if (autoplayKeywordEnabled && !wavesurfer.isPlaying()) {
+        wavesurfer.play();
+      }
     }
   }
 
