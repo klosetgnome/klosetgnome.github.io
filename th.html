@@ -2143,37 +2143,62 @@
     return card;
   }
 
-  // ── Sport mode: stamp IN sequentially across segments ──
+  // ── Sport mode: stamp IN sequentially across segments, then pickups ──
   function sportStampIn() {
     if (!wavesurfer || !audioLoaded) return;
 
-    // If there's a pending segment waiting for OUT, show the overlay
+    // If there's a pending segment/pickup waiting for OUT, show the overlay
     if (sportPendingSegment) {
       showPendingOverlay(getSegmentLabel(sportPendingSegment));
       return;
     }
 
-    // Find next segment that needs an IN
-    if (sportStampIndex >= sportSegmentOrder.length) {
-      showToast('All segments have been stamped');
+    // Still working through predefined segments
+    if (sportStampIndex < sportSegmentOrder.length) {
+      var segId = sportSegmentOrder[sportStampIndex];
+      var card = document.getElementById('card-' + segId);
+      if (!card) return;
+
+      var tc = secondsToTimecode(wavesurfer.getCurrentTime());
+      var tcInputs = card.querySelectorAll('.tc-input');
+      var startInput = tcInputs.length ? tcInputs[0] : null;
+      if (startInput) {
+        startInput.value = tc;
+        startInput.classList.remove('invalid');
+        autoPopulateQuote(startInput);
+        checkCardCompletion(startInput);
+        sportPendingSegment = segId;
+        showToast(getSegmentLabel(segId) + ' IN: ' + tc);
+        updateSegmentVisuals();
+      }
       return;
     }
 
-    var segId = sportSegmentOrder[sportStampIndex];
-    var card = document.getElementById('card-' + segId);
-    if (!card) return;
+    // Predefined segments done — look for a pickup card that needs an IN
+    var pickupCards = Array.from(document.querySelectorAll('#pickupsContainer .segment-card'));
+    var targetCard = null;
+    for (var i = 0; i < pickupCards.length; i++) {
+      var firstTc = pickupCards[i].querySelector('.tc-input');
+      if (firstTc && !firstTc.value) {
+        targetCard = pickupCards[i];
+        break;
+      }
+    }
+
+    if (!targetCard) {
+      showToast('Add a Pickup Point first');
+      return;
+    }
 
     var tc = secondsToTimecode(wavesurfer.getCurrentTime());
-    // Use the first tc-input in the card (works for all segment types)
-    var tcInputs = card.querySelectorAll('.tc-input');
-    var startInput = tcInputs.length ? tcInputs[0] : null;
-    if (startInput) {
-      startInput.value = tc;
-      startInput.classList.remove('invalid');
-      autoPopulateQuote(startInput);
-      checkCardCompletion(startInput);
-      sportPendingSegment = segId;
-      showToast(getSegmentLabel(segId) + ' IN: ' + tc);
+    var inField = targetCard.querySelectorAll('.tc-input')[0];
+    if (inField) {
+      inField.value = tc;
+      inField.classList.remove('invalid');
+      autoPopulateQuote(inField);
+      checkCardCompletion(inField);
+      sportPendingSegment = targetCard.dataset.segId;
+      showToast(getSegmentLabel(targetCard.dataset.segId) + ' IN: ' + tc);
       updateSegmentVisuals();
     }
   }
@@ -2202,9 +2227,11 @@
       checkCardCompletion(endInput);
       showToast(getSegmentLabel(segId) + ' OUT: ' + tc);
 
-      // Clear pending, advance index
+      // Clear pending, advance index only for predefined segments
       sportPendingSegment = null;
-      sportStampIndex++;
+      if (sportStampIndex < sportSegmentOrder.length) {
+        sportStampIndex++;
+      }
       updateSegmentVisuals();
     }
   }
