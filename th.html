@@ -415,17 +415,16 @@
       width: 100%; animation: indeterminate 1.8s ease-in-out infinite;
     }
 
-    /* ── Transcript search ── */
-    .transcript-search-bar {
+    /* ── Transcript search (inline in transport) ── */
+    .transport-search {
       display: none;
-      justify-content: flex-end;
       align-items: center;
-      gap: 8px;
-      padding: 8px 20px 12px;
-      border-top: 1px solid var(--border);
+      gap: 6px;
+      margin-left: auto;
+      flex-shrink: 0;
     }
-    .transcript-search-bar.visible { display: flex; }
-    .transcript-search-input {
+    .transport-search.visible { display: flex; }
+    .transport-search-input {
       font-family: var(--mono);
       font-size: 11px;
       letter-spacing: 0.5px;
@@ -433,30 +432,32 @@
       background: var(--bg);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 6px 10px;
+      padding: 5px 10px;
       outline: none;
-      width: 220px;
-      max-width: 50%;
+      width: 160px;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .transcript-search-input::placeholder { color: var(--text-muted); }
-    .transcript-search-input:focus {
+    .transport-search-input::placeholder { color: var(--text-muted); }
+    .transport-search-input:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px var(--accent-glow);
     }
-    .transcript-search-count {
+    .transport-search-count {
       font-family: var(--mono);
       font-size: 10px;
       color: var(--text-muted);
       letter-spacing: 0.5px;
       flex-shrink: 0;
+      min-width: 40px;
+      text-align: right;
     }
-    .transcript-search-nav {
-      display: flex;
+    .transport-search-nav {
+      display: none;
       gap: 2px;
       flex-shrink: 0;
     }
-    .transcript-search-nav button {
+    .transport-search-nav.visible { display: flex; }
+    .transport-search-nav button {
       background: none;
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -470,12 +471,12 @@
       transition: all 0.2s;
       padding: 0;
     }
-    .transcript-search-nav button:hover {
+    .transport-search-nav button:hover {
       border-color: var(--accent);
       color: var(--accent);
       background: var(--accent-light);
     }
-    .transcript-search-nav button svg { width: 12px; height: 12px; }
+    .transport-search-nav button svg { width: 12px; height: 12px; }
     .ts-word.search-match {
       background: rgba(160, 120, 40, 0.2);
       border-radius: 2px;
@@ -894,20 +895,19 @@
         <span class="transport-duration" id="transportDuration">/ 00.00.00</span>
         <span class="speed-badge" id="speedBadge" title="Click to cycle speed (D faster, S slower, R reset)">1&times;</span>
         <span class="transport-spacer"></span>
+        <!-- Transcript search (appears after transcription) -->
+        <div class="transport-search" id="transportSearch">
+          <span class="transport-search-count" id="searchCount"></span>
+          <div class="transport-search-nav" id="searchNav">
+            <button id="searchPrev" title="Previous match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+            <button id="searchNext" title="Next match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></button>
+          </div>
+          <input type="text" class="transport-search-input" id="transcriptSearchInput" placeholder="Search transcript…" />
+        </div>
       </div>
     </div>
 
     <div class="transcript-display" id="transcriptDisplay"></div>
-
-    <!-- Transcript search -->
-    <div class="transcript-search-bar" id="transcriptSearchBar">
-      <span class="transcript-search-count" id="searchCount"></span>
-      <div class="transcript-search-nav" id="searchNav" style="display:none;">
-        <button id="searchPrev" title="Previous match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
-        <button id="searchNext" title="Next match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></button>
-      </div>
-      <input type="text" class="transcript-search-input" id="transcriptSearchInput" placeholder="Search transcript…" />
-    </div>
   </div>
 
   <!-- Content area: hidden until audio is loaded -->
@@ -1522,7 +1522,7 @@
     document.getElementById('transcribeProgressBar').classList.remove('indeterminate');
     document.getElementById('transcriptDisplay').classList.remove('visible');
     document.getElementById('transcriptDisplay').innerHTML = '';
-    document.getElementById('transcriptSearchBar').classList.remove('visible');
+    document.getElementById('transportSearch').classList.remove('visible');
     document.getElementById('transcriptSearchInput').value = '';
   }
 
@@ -1689,7 +1689,7 @@
     document.getElementById('waveformArea').classList.remove('visible');
     document.getElementById('transportTime').textContent = '00.00.00';
     document.getElementById('transportDuration').textContent = '/ 00.00.00';
-    document.getElementById('transcriptSearchBar').classList.remove('visible');
+    document.getElementById('transportSearch').classList.remove('visible');
     document.getElementById('transcriptSearchInput').value = '';
     hideWaveformLoading();
     hideContentArea();
@@ -1846,7 +1846,7 @@
     }
     container.innerHTML = html;
     container.classList.add('visible');
-    document.getElementById('transcriptSearchBar').classList.add('visible');
+    document.getElementById('transportSearch').classList.add('visible');
     container.querySelectorAll('.ts-word').forEach(function (el) {
       el.addEventListener('click', function () {
         if (wavesurfer && audioLoaded) {
@@ -1884,6 +1884,15 @@
   var searchMatches = [];
   var searchIdx     = -1;
 
+  function seekToWord(el) {
+    if (!wavesurfer || !audioLoaded) return;
+    var start = parseFloat(el.dataset.start);
+    var d = wavesurfer.getDuration();
+    if (d > 0 && !isNaN(start)) {
+      wavesurfer.seekTo(start / d);
+    }
+  }
+
   function doTranscriptSearch() {
     var query = searchInput.value.trim().toLowerCase();
 
@@ -1896,7 +1905,7 @@
 
     if (!query) {
       searchCountEl.textContent = '';
-      searchNavEl.style.display = 'none';
+      searchNavEl.classList.remove('visible');
       return;
     }
 
@@ -1912,11 +1921,12 @@
       searchIdx = 0;
       searchMatches[0].classList.add('search-active');
       scrollToSearchMatch(searchMatches[0]);
+      seekToWord(searchMatches[0]);
       searchCountEl.textContent = '1 / ' + searchMatches.length;
-      searchNavEl.style.display = 'flex';
+      searchNavEl.classList.add('visible');
     } else {
       searchCountEl.textContent = '0 results';
-      searchNavEl.style.display = 'none';
+      searchNavEl.classList.remove('visible');
     }
   }
 
@@ -1934,6 +1944,7 @@
     searchIdx = (searchIdx + dir + searchMatches.length) % searchMatches.length;
     searchMatches[searchIdx].classList.add('search-active');
     scrollToSearchMatch(searchMatches[searchIdx]);
+    seekToWord(searchMatches[searchIdx]);
     searchCountEl.textContent = (searchIdx + 1) + ' / ' + searchMatches.length;
   }
 
@@ -1943,7 +1954,6 @@
       e.preventDefault();
       searchNavigate(e.shiftKey ? -1 : 1);
     }
-    // Don't let search input trigger global shortcuts
     e.stopPropagation();
   });
 
