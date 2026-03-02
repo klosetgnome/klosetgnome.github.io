@@ -196,6 +196,62 @@
       background: var(--error-glow);
     }
 
+    /* ── Regenerating overlay inside results ── */
+    #results {
+      position: relative;
+    }
+
+    #results.regenerating .results-header,
+    #results.regenerating .result-row {
+      filter: blur(6px);
+      opacity: 0.35;
+      pointer-events: none;
+      transition: filter 0.4s ease, opacity 0.4s ease;
+    }
+
+    .regen-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: var(--surface-transparent, rgba(0,0,0,0.05));
+      border-radius: var(--radius-lg);
+    }
+    #results.regenerating .regen-overlay {
+      display: flex;
+    }
+
+    .regen-overlay .regen-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .regen-overlay .regen-track {
+      width: 60%;
+      max-width: 300px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .regen-overlay .regen-bar {
+      width: 40%;
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      animation: regenSlide 1.4s ease-in-out infinite;
+    }
+    @keyframes regenSlide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+
     /* ── Result rows ── */
     .result-row {
       display: flex;
@@ -456,6 +512,10 @@
 <main>
 
   <div class="results" id="results">
+    <div class="regen-overlay" id="regenOverlay">
+      <span class="regen-label">Recreating…</span>
+      <div class="regen-track"><div class="regen-bar"></div></div>
+    </div>
     <div class="results-header">Episode Copy</div>
     <div class="result-row headline">
       <div class="row-meta"><span class="row-tag">Headline 1</span></div>
@@ -885,6 +945,7 @@
     document.getElementById('titleInput').value = '';
     clearFile();
     document.getElementById('results').classList.remove('visible');
+    document.getElementById('results').classList.remove('regenerating');
     document.getElementById('errorBox').classList.remove('visible');
 
     // CHANGED: reset to fresh state on category switch
@@ -932,27 +993,33 @@
     var errorBox   = document.getElementById('errorBox');
     var progress   = document.getElementById('progressWrap');
     var results    = document.getElementById('results');
+    var isRecreate = hasGenerated;
 
     errorBox.classList.remove('visible');
 
-    // Save current results to history before clearing (on regenerate)
-    if (hasGenerated) {
+    // Save current results to history before regenerating
+    if (isRecreate) {
       saveToHistory();
+      // Blur existing results with overlay — keep them visible
+      results.classList.add('regenerating');
+    } else {
+      results.classList.remove('visible');
     }
-
-    results.classList.remove('visible');
 
     // Cancel any running countdown when submit fires
     cancelCountdown();
 
-    if (!transcript) { showError('Please drop a transcript file or paste text before submitting.'); return; }
-    if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); return; }
+    if (!transcript) { showError('Please drop a transcript file or paste text before submitting.'); results.classList.remove('regenerating'); return; }
+    if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); results.classList.remove('regenerating'); return; }
 
     var userMessage = '';
     if (titleVal) { userMessage = 'Suggested title: ' + titleVal + '\n\n'; }
     userMessage += transcript;
 
-    progress.classList.add('visible');
+    // Only show external progress bar on first create
+    if (!isRecreate) {
+      progress.classList.add('visible');
+    }
     btn.disabled = true;
 
     try {
@@ -996,9 +1063,10 @@
         .replace(/\n/g, '<br>');
       descEl.innerHTML = description;
 
+      results.classList.remove('regenerating');
       results.classList.add('visible');
       generationCount++;
-      document.querySelector('#results .results-header').textContent = 'Episode Copy — Generation ' + generationCount;
+      document.querySelector('#results .results-header').textContent = 'Episode Copy \u2014 Generation ' + generationCount;
       results.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
       // CHANGED: collapse inputs and switch to Recreate after success
@@ -1007,6 +1075,7 @@
       var msg = err.message || String(err);
       if (/failed to fetch|networkerror|load failed/i.test(msg))
         msg = 'Network error: could not reach the proxy worker.\nCheck WORKER_URL and ensure you are serving over HTTP.';
+      results.classList.remove('regenerating');
       showError(msg);
     } finally {
       progress.classList.remove('visible');
@@ -1019,6 +1088,7 @@
     box.textContent = msg;
     box.classList.add('visible');
     document.getElementById('progressWrap').classList.remove('visible');
+    document.getElementById('results').classList.remove('regenerating');
     document.getElementById('submitBtn').disabled = false;
   }
 
