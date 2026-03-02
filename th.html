@@ -322,54 +322,18 @@
     }
     .audio-prompt-text .browse:hover { text-decoration: underline; }
 
-    .stems-bar {
-      display: none;
-      flex-wrap: wrap;
-      gap: 6px;
-      padding: 10px 20px;
-      border-top: 1px solid var(--border);
-      align-items: center;
-    }
-    .stems-bar.visible { display: flex; }
-    .stems-bar-label {
-      font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
-      text-transform: uppercase; color: var(--text-muted); margin-right: 4px;
-    }
-    .stem-chip {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 4px 10px;
-      font-family: var(--mono); font-size: 11px; color: var(--text-primary);
-    }
-    .stem-chip .stem-remove {
-      background: none; border: none; cursor: pointer;
-      color: var(--text-muted); font-size: 14px; line-height: 1;
-      transition: color 0.2s; padding: 0;
-    }
-    .stem-chip .stem-remove:hover { color: var(--error); }
-    .stems-add-btn {
-      background: none; border: 1px dashed var(--border);
-      border-radius: var(--radius); padding: 4px 12px;
-      font-family: var(--mono); font-size: 11px; color: var(--text-muted);
-      cursor: pointer; transition: all 0.2s;
-    }
-    .stems-add-btn:hover {
-      border-color: var(--accent); color: var(--accent);
-      background: var(--accent-light); border-style: solid;
-    }
-    .stems-add-btn.disabled { opacity: 0.3; pointer-events: none; }
-
     /* ── Page-specific waveform overrides ── */
     .waveform-area { display: none; flex-direction: column; gap: 0; }
     .waveform-area.visible { display: flex; }
 
-    /* ── Audio top bar (dynamic label + clear) ── */
+    /* ── Audio top bar (dynamic: AUDIO label → STEMS with chips) ── */
     .audio-top-bar {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 14px 20px;
+      gap: 8px;
+      padding: 12px 20px;
       min-height: 46px;
+      flex-wrap: wrap;
     }
     .audio-top-bar-label {
       font-family: var(--mono);
@@ -379,20 +343,33 @@
       color: var(--text-secondary);
       flex-shrink: 0;
     }
-    .audio-top-bar-files {
-      flex: 1;
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+    .audio-top-bar-chips {
+      display: contents;
     }
-    .audio-top-bar-files .file-sep {
-      color: var(--border);
-      margin: 0 1px;
+    .audio-top-bar .stem-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 4px 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--text-primary);
     }
+    .audio-top-bar .stem-chip .stem-remove {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 14px; line-height: 1;
+      transition: color 0.2s; padding: 0;
+    }
+    .audio-top-bar .stem-chip .stem-remove:hover { color: var(--error); }
+    .audio-top-bar .stems-add-btn {
+      background: none; border: 1px dashed var(--border);
+      border-radius: var(--radius); padding: 4px 12px;
+      font-family: var(--mono); font-size: 11px; color: var(--text-muted);
+      cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+    }
+    .audio-top-bar .stems-add-btn:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light); border-style: solid;
+    }
+    .audio-top-bar .stems-add-btn.disabled { opacity: 0.3; pointer-events: none; }
+    .audio-top-bar-spacer { flex: 1; }
     .audio-top-bar-clear {
       display: none;
       flex-shrink: 0;
@@ -862,10 +839,11 @@
 <main>
 
   <div class="card" id="audioCard">
-    <!-- Dynamic top bar -->
+    <!-- Dynamic top bar: AUDIO → STEMS with chips when loaded -->
     <div class="audio-top-bar" id="audioTopBar">
       <span class="audio-top-bar-label" id="audioTopLabel">Audio</span>
-      <span class="audio-top-bar-files" id="audioTopFiles"></span>
+      <div class="audio-top-bar-chips" id="audioTopChips"></div>
+      <span class="audio-top-bar-spacer"></span>
       <button class="audio-top-bar-clear" id="audioTopClear">Clear</button>
     </div>
 
@@ -891,12 +869,6 @@
         </div>
       </div>
       <input type="file" id="audioFileInput" accept=".wav,.mp3,.m4a,.ogg,.flac,audio/*" multiple style="display:none;" />
-    </div>
-
-    <div class="stems-bar" id="stemsBar">
-      <span class="stems-bar-label">Stems:</span>
-      <div id="stemsChips"></div>
-      <button class="stems-add-btn" id="stemsAddBtn" title="Add another stem">+ Add</button>
       <input type="file" id="stemsAddInput" accept=".wav,.mp3,.m4a,.ogg,.flac,audio/*" multiple style="display:none;" />
     </div>
 
@@ -1433,10 +1405,8 @@
   var audioDropOverlay = document.getElementById('audioDropOverlay');
   var audioPrompt = document.getElementById('audioPrompt');
   var audioFileInput = document.getElementById('audioFileInput');
-  var stemsBar = document.getElementById('stemsBar');
-  var stemsChips = document.getElementById('stemsChips');
-  var stemsAddBtn = document.getElementById('stemsAddBtn');
   var stemsAddInput = document.getElementById('stemsAddInput');
+  var audioTopChips = document.getElementById('audioTopChips');
   var dragCounter = 0;
 
   audioDropZone.addEventListener('dragenter', function (e) {
@@ -1458,7 +1428,6 @@
   audioFileInput.addEventListener('change', function () {
     if (this.files.length) addStemFiles(Array.from(this.files)); this.value = '';
   });
-  stemsAddBtn.addEventListener('click', function () { stemsAddInput.click(); });
   stemsAddInput.addEventListener('change', function () {
     if (this.files.length) addStemFiles(Array.from(this.files)); this.value = '';
   });
@@ -1489,53 +1458,47 @@
     var ext = '';
     var dotIdx = name.lastIndexOf('.');
     if (dotIdx > 0) { ext = name.substring(dotIdx); name = name.substring(0, dotIdx); }
-    var available = maxLen - ext.length - 1; // 1 for ellipsis
+    var available = maxLen - ext.length - 1;
     if (available < 4) return name.substring(0, maxLen - 1) + '…';
     return name.substring(0, available) + '…' + ext;
   }
 
-  function updateTopBar() {
+  function renderStems() {
+    audioPrompt.classList.add('hidden');
     var label = document.getElementById('audioTopLabel');
-    var files = document.getElementById('audioTopFiles');
     var clearBtn = document.getElementById('audioTopClear');
 
-    if (!stemFiles.length) {
-      label.textContent = 'Audio';
-      files.textContent = '';
-      files.innerHTML = '';
-      clearBtn.classList.remove('visible');
-      return;
-    }
-
-    clearBtn.classList.add('visible');
+    // Build chips + add button into the top bar
+    audioTopChips.innerHTML = '';
 
     if (stemFiles.length === 1) {
       label.textContent = 'Audio';
-      var sep = ' \u2014 ';
-      files.textContent = sep + truncateFilename(stemFiles[0].name, 50);
     } else {
       label.textContent = 'Stems';
-      var sep = ' \u2014 ' + stemFiles.length + ' loaded \u2014 ';
-      var names = stemFiles.map(function (f) { return truncateFilename(f.name, 24); }).join(', ');
-      files.textContent = sep + names;
     }
-  }
 
-  function renderStems() {
-    audioPrompt.classList.add('hidden');
-    stemsBar.classList.add('visible');
-    stemsChips.innerHTML = '';
     stemFiles.forEach(function (f, i) {
       var chip = document.createElement('span');
       chip.className = 'stem-chip';
-      chip.innerHTML = '<span>' + escapeHtml(f.name) + '</span><button class="stem-remove" data-idx="' + i + '" title="Remove">&times;</button>';
-      stemsChips.appendChild(chip);
+      chip.innerHTML = '<span>' + escapeHtml(truncateFilename(f.name, 12)) + '</span><button class="stem-remove" data-idx="' + i + '" title="Remove">&times;</button>';
+      audioTopChips.appendChild(chip);
     });
-    stemsChips.querySelectorAll('.stem-remove').forEach(function (btn) {
+
+    // Add button (if room)
+    if (stemFiles.length < 5) {
+      var addBtn = document.createElement('button');
+      addBtn.className = 'stems-add-btn';
+      addBtn.textContent = '+ Add';
+      addBtn.title = 'Add another stem';
+      addBtn.addEventListener('click', function () { stemsAddInput.click(); });
+      audioTopChips.appendChild(addBtn);
+    }
+
+    audioTopChips.querySelectorAll('.stem-remove').forEach(function (btn) {
       btn.addEventListener('click', function () { removeStem(parseInt(btn.dataset.idx, 10)); });
     });
-    stemsAddBtn.classList.toggle('disabled', stemFiles.length >= 5);
-    updateTopBar();
+
+    clearBtn.classList.add('visible');
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1719,8 +1682,9 @@
     audioLoaded = false; stemFiles = [];
     mixedBlob = null; mixedBuffer = null;
     audioFileInput.value = '';
-    stemsBar.classList.remove('visible'); stemsChips.innerHTML = '';
-    updateTopBar();
+    audioTopChips.innerHTML = '';
+    document.getElementById('audioTopLabel').textContent = 'Audio';
+    document.getElementById('audioTopClear').classList.remove('visible');
     audioPrompt.classList.remove('hidden');
     document.getElementById('waveformArea').classList.remove('visible');
     document.getElementById('transportTime').textContent = '00.00.00';
