@@ -1057,7 +1057,7 @@
 
     <!-- URL Grab section (News mode only — visible when no audio loaded) -->
     <div class="url-grab-section" id="urlGrabSection">
-      <div class="url-grab-divider"><span>or paste a link</span></div>
+      <div class="url-grab-divider"><span>or paste a link</span><span class="url-server-status" id="urlServerStatus"><span class="url-server-dot" id="urlServerDot"></span><span id="urlServerLabel">Checking…</span></span></div>
       <div class="url-grab-row">
         <input type="text" class="url-grab-input" id="urlGrabInput"
                placeholder="https://www.youtube.com/watch?v=..."
@@ -2696,11 +2696,44 @@
   var urlCountdownNumber = document.getElementById('urlCountdownNumber');
   var urlRingFg          = document.getElementById('urlRingFg');
   var urlGrabCancel      = document.getElementById('urlGrabCancel');
+  var urlServerDot       = document.getElementById('urlServerDot');
+  var urlServerLabel     = document.getElementById('urlServerLabel');
+  var urlServerOnline    = false;
 
   function isUrl(text) { return URL_REGEX.test(text.trim()); }
 
+  function checkServerHealth() {
+    urlServerDot.className = 'url-server-dot checking';
+    urlServerLabel.textContent = 'Checking\u2026';
+    fetch(URL_GRAB_SERVER + '/api/health', { method: 'GET', mode: 'cors' })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.status === 'ok' || data.status === 'degraded') {
+          urlServerOnline = true;
+          urlServerDot.className = 'url-server-dot online';
+          urlServerLabel.textContent = 'Server online';
+          urlGrabBtn.disabled = false;
+          urlGrabInput.disabled = false;
+        } else {
+          serverOffline();
+        }
+      })
+      .catch(function () { serverOffline(); });
+  }
+
+  function serverOffline() {
+    urlServerOnline = false;
+    urlServerDot.className = 'url-server-dot offline';
+    urlServerLabel.textContent = 'Server offline';
+    urlGrabBtn.disabled = true;
+    urlGrabInput.disabled = true;
+  }
+
   function showUrlGrabSection() {
-    if (!audioLoaded) urlGrabSection.classList.add('visible');
+    if (!audioLoaded) {
+      urlGrabSection.classList.add('visible');
+      checkServerHealth();
+    }
   }
 
   function hideUrlGrabSection() {
@@ -2798,6 +2831,11 @@
     var url = urlGrabInput.value.trim();
     if (!url || !isUrl(url)) {
       showToast('Enter a valid URL');
+      return;
+    }
+    if (!urlServerOnline) {
+      showToast('Server is offline');
+      checkServerHealth();
       return;
     }
 
