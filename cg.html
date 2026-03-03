@@ -313,8 +313,8 @@
   }
 
   .btn {
-    font-family: var(--serif);
-    font-size: 14px;
+    font-family: var(--mono);
+    font-size: 13px;
     font-weight: 600;
     border: none;
     border-radius: var(--radius);
@@ -640,7 +640,7 @@
     <label for="urlInput">Content link</label>
     <div class="input-row">
       <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" spellcheck="false">
-      <button class="btn btn-fetch" id="fetchBtn" onclick="handleGrab()">Grab</button>
+      <button class="btn btn-fetch" id="fetchBtn" onclick="handleGrab()" style="display:none;">Grab</button>
     </div>
 
     <!-- Inline status bar — appears inside the input card -->
@@ -741,6 +741,12 @@
     if (e.key === 'Enter') handleGrab();
   });
 
+  // Show/hide Grab button based on input content
+  function updateGrabVisibility() {
+    fetchBtn.style.display = urlInput.value.trim() ? '' : 'none';
+  }
+  urlInput.addEventListener('input', updateGrabVisibility);
+
   // ── URL detection & auto-grab countdown ──
   const URL_REGEX = /^https?:\/\/[^\s]+$/i;
   const countdownRing   = document.getElementById('countdownRing');
@@ -808,6 +814,7 @@
   urlInput.addEventListener('paste', () => {
     setTimeout(() => {
       const val = urlInput.value.trim();
+      updateGrabVisibility();
       if (isUrl(val) && !working) {
         startAutoGrabCountdown();
       }
@@ -1029,6 +1036,7 @@
     hideError();
     emptyState.style.display = 'block';
     fetchBtn.disabled = false;
+    fetchBtn.style.display = 'none';
     statusAction.onclick = function () { resetAll(); };
     urlInput.focus();
   }
