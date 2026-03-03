@@ -602,6 +602,26 @@ button.submit:disabled {
   color: var(--text-muted);
 }
 
+.url-server-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: none;
+  color: var(--text-muted);
+}
+.url-server-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.url-server-dot.online { background: var(--success); }
+.url-server-dot.offline { background: var(--error); }
+.url-server-dot.checking {
+  background: var(--text-muted);
+  animation: pulse 1.2s ease infinite;
+}
+
 .url-grab-row {
   display: flex;
   gap: 8px;
