@@ -1040,7 +1040,7 @@
 
     <!-- URL Grab section (News mode only — visible when no audio loaded) -->
     <div class="url-grab-section" id="urlGrabSection">
-      <div class="url-grab-divider"><span>or paste a link</span><span class="url-server-status" id="urlServerStatus"><span class="url-server-dot" id="urlServerDot"></span><span id="urlServerLabel">Checking…</span></span></div>
+      <div class="url-grab-divider"><span>paste a link</span><span class="url-server-status" id="urlServerStatus"><span class="url-server-dot" id="urlServerDot"></span><span id="urlServerLabel">Checking…</span></span></div>
       <div class="url-grab-row">
         <input type="text" class="url-grab-input" id="urlGrabInput"
                placeholder="https://www.youtube.com/watch?v=..."
@@ -1052,7 +1052,7 @@
           </svg>
           <span class="url-countdown-number" id="urlCountdownNumber">3</span>
         </div>
-        <button class="url-grab-btn" id="urlGrabBtn">Grab</button>
+        <button class="url-grab-btn" id="urlGrabBtn" style="display:none;">Grab</button>
       </div>
       <div class="url-grab-status" id="urlGrabStatus">
         <span class="status-dot working" id="urlGrabDot"></span>
@@ -1828,6 +1828,9 @@
       colLeft.style.flexDirection = 'column';
     }
 
+    // CHANGE 2: Hide audio drop zone in News mode, show in Sport mode
+    audioDropZone.style.display = (catId === 'news') ? 'none' : '';
+
     // Show URL grab in News mode only (when no audio loaded)
     if (catId === 'news') showUrlGrabSection();
     else hideUrlGrabSection();
@@ -2152,6 +2155,8 @@
     document.getElementById('transcriptSearchInput').value = '';
     hideWaveformLoading();
     hideContentArea();
+    // CHANGE 2: Re-show drop zone only if in sport mode
+    audioDropZone.style.display = (activeCategory === 'news') ? 'none' : '';
     // Re-show URL grab if still in News mode
     if (activeCategory === 'news') showUrlGrabSection();
     speedReset();
@@ -2667,7 +2672,6 @@
           urlServerOnline = true;
           urlServerDot.className = 'url-server-dot online';
           urlServerLabel.textContent = 'Server online';
-          urlGrabBtn.disabled = false;
           urlGrabInput.disabled = false;
         } else {
           serverOffline();
@@ -2680,7 +2684,7 @@
     urlServerOnline = false;
     urlServerDot.className = 'url-server-dot offline';
     urlServerLabel.textContent = 'Server offline';
-    urlGrabBtn.disabled = true;
+    urlGrabBtn.style.display = 'none';
     urlGrabInput.disabled = true;
   }
 
@@ -2704,7 +2708,8 @@
       urlGrabCountdownTimer = null;
     }
     urlCountdownRing.style.display = 'none';
-    urlGrabBtn.style.display = '';
+    // CHANGE 3: Only show grab button if there's a valid URL
+    urlGrabBtn.style.display = isUrl(urlGrabInput.value.trim()) ? '' : 'none';
   }
 
   function startUrlCountdown() {
@@ -2731,6 +2736,8 @@
         return;
       }
       urlCountdownNumber.textContent = remaining;
+      countdownLabel_unused = 'Grabbing in ' + remaining + 's…';
+
       var offset = RING_CIRCUMFERENCE * ((3 - remaining) / 3);
       urlRingFg.style.strokeDashoffset = offset.toFixed(2);
     }, 1000);
@@ -2752,8 +2759,10 @@
     if (!e.key.startsWith('F')) e.stopPropagation();
   });
 
+  // CHANGE 3: Show/hide grab button based on valid URL input
   urlGrabInput.addEventListener('input', function () {
     cancelUrlCountdown();
+    urlGrabBtn.style.display = isUrl(urlGrabInput.value.trim()) ? '' : 'none';
   });
 
   urlGrabBtn.addEventListener('click', function () {
@@ -2771,8 +2780,9 @@
       urlGrabAbortController = null;
     }
     urlGrabStatus.classList.remove('visible');
-    urlGrabBtn.disabled = false;
     urlGrabInput.disabled = false;
+    // CHANGE 3: Only show grab button if there's a valid URL
+    urlGrabBtn.style.display = isUrl(urlGrabInput.value.trim()) ? '' : 'none';
   }
 
   var urlGrabMessages = [
@@ -2794,7 +2804,7 @@
       return;
     }
 
-    urlGrabBtn.disabled = true;
+    urlGrabBtn.style.display = 'none';
     urlGrabInput.disabled = true;
     urlGrabDot.className = 'status-dot working';
     urlGrabStatusText.textContent = urlGrabMessages[0];
@@ -2843,7 +2853,6 @@
       var audioFile = new File([audioBlob], filename, { type: 'audio/mpeg' });
 
       urlGrabStatus.classList.remove('visible');
-      urlGrabBtn.disabled = false;
       urlGrabInput.disabled = false;
       urlGrabAbortController = null;
 
@@ -2862,7 +2871,6 @@
     } catch (err) {
       clearInterval(msgTimer);
       urlGrabAbortController = null;
-      urlGrabBtn.disabled = false;
       urlGrabInput.disabled = false;
 
       if (err.name === 'AbortError') {
