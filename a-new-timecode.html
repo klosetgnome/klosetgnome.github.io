@@ -913,6 +913,129 @@
       .shortcuts-panel { min-width: 260px; right: -40px; }
       .settings-panel { min-width: 220px; right: -80px; }
     }
+
+    /* ── Card processing overlay (blur + status during URL grab / stem decode) ── */
+    #audioCard {
+      position: relative;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+
+    #audioCard.processing > *:not(.card-processing-overlay) {
+      filter: blur(6px);
+      opacity: 0.3;
+      pointer-events: none;
+      user-select: none;
+      transition: filter 0.4s ease, opacity 0.4s ease;
+    }
+
+    #audioCard.processing {
+      min-height: 180px;
+    }
+
+    .card-processing-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      z-index: 10;
+      padding: 24px;
+    }
+
+    #audioCard.processing .card-processing-overlay {
+      display: flex;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .card-processing-spinner {
+      width: 28px;
+      height: 28px;
+      border: 2.5px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .card-processing-status {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .card-processing-track {
+      width: 180px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .card-processing-track-fill {
+      height: 100%;
+      border-radius: 3px;
+      width: 100%;
+      background: var(--accent);
+      animation: indeterminate 1.8s ease-in-out infinite;
+    }
+
+    /* ── Info hero ── */
+    .info-hero {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      width: 100%;
+      padding: 28px 32px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      animation: fadeInUp 0.5s ease 0.2s both;
+    }
+    .info-hero.hidden { display: none; }
+    .info-hero-graphic {
+      flex-shrink: 0;
+      width: 80px;
+      height: 80px;
+      color: var(--accent);
+      opacity: 0.7;
+    }
+    .info-hero-graphic svg { width: 100%; height: 100%; }
+    .info-hero-content { flex: 1; min-width: 0; }
+    .info-hero-title {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    .info-hero-desc {
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      letter-spacing: 0.3px;
+    }
+    .info-hero-desc .hl { color: var(--accent); font-weight: 500; }
+
+    @media (max-width: 700px) {
+      .info-hero { flex-direction: column; text-align: center; padding: 24px 20px; gap: 16px; }
+      .info-hero-graphic { width: 60px; height: 60px; }
+    }
   </style>
 </head>
 <body>
@@ -954,13 +1077,6 @@
           <span class="setting-label">Seek to Word</span>
           <label class="toggle-switch">
             <input type="checkbox" id="seekToWordToggle" />
-            <span class="toggle-track"></span>
-          </label>
-        </div>
-        <div class="setting-row" style="margin-top:10px;">
-          <span class="setting-label">Local Transcribe</span>
-          <label class="toggle-switch">
-            <input type="checkbox" id="localTranscribeToggle" />
             <span class="toggle-track"></span>
           </label>
         </div>
@@ -1052,13 +1168,6 @@
         <input type="text" class="url-grab-input" id="urlGrabInput"
                placeholder="https://www.youtube.com/watch?v=..."
                autocomplete="off" spellcheck="false" />
-        <div class="url-countdown-ring" id="urlCountdownRing" style="display:none;">
-          <svg viewBox="0 0 20 20">
-            <circle class="ring-bg" cx="10" cy="10" r="8"/>
-            <circle class="ring-fg" id="urlRingFg" cx="10" cy="10" r="8"/>
-          </svg>
-          <span class="url-countdown-number" id="urlCountdownNumber">3</span>
-        </div>
         <button class="url-grab-btn" id="urlGrabBtn" style="display:none;">Grab</button>
       </div>
       <div class="url-grab-status" id="urlGrabStatus">
@@ -1108,6 +1217,60 @@
     </div>
 
     <div class="transcript-display" id="transcriptDisplay"></div>
+
+    <!-- Processing overlay (blur + status during URL grab / stem decode) -->
+    <div class="card-processing-overlay" id="cardProcessingOverlay">
+      <div class="card-processing-spinner" id="cardSpinner"></div>
+      <div class="card-processing-status" id="cardProcessingStatus">Downloading audio…</div>
+      <div class="card-processing-track">
+        <div class="card-processing-track-fill" id="cardTrackFill"></div>
+      </div>
+      <span class="cancel-link" id="cardProcessingCancel" style="display:none;">Cancel</span>
+    </div>
+  </div>
+
+  <!-- Info heroes -->
+  <div class="info-hero" id="infoHeroNews">
+    <div class="info-hero-graphic">
+      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="8" width="40" height="50" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <line x1="18" y1="18" x2="42" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="18" y1="26" x2="42" y2="26" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="18" y1="34" x2="34" y2="34" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="58" cy="28" r="12" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <polyline points="56,24 56,29 60,29" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M52 58 l0 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <polyline points="47,64 52,69 57,64" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="18" y1="44" x2="42" y2="44" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+        <line x1="18" y1="50" x2="36" y2="50" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.25"/>
+      </svg>
+    </div>
+    <div class="info-hero-content">
+      <div class="info-hero-title">Timecode — News</div>
+      <div class="info-hero-desc">
+        Paste a link to any news broadcast, interview or segment. <span class="hl">Timecode</span> will download the audio from the server, then automatically transcribe it with word-level timestamps. Press <span class="hl">F5</span> to mark a grab IN, <span class="hl">F6</span> to mark the OUT, and quotes are filled automatically from the transcript. Hit <span class="hl">Copy All</span> when you're done.
+      </div>
+    </div>
+  </div>
+
+  <div class="info-hero" id="infoHeroSport" style="display:none;">
+    <div class="info-hero-graphic">
+      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 56 L16 20 L64 20 L64 56 Z" stroke="currentColor" stroke-width="1.5" fill="none" rx="2"/>
+        <polygon points="34,30 34,46 48,38" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
+        <line x1="16" y1="58" x2="64" y2="58" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <rect x="20" y="62" width="40" height="4" rx="1" stroke="currentColor" stroke-width="1" fill="none" opacity="0.5"/>
+        <circle cx="28" cy="64" r="1.5" fill="currentColor" opacity="0.6"/>
+        <line x1="10" y1="68" x2="10" y2="48" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.3"/>
+        <line x1="70" y1="68" x2="70" y2="48" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.3"/>
+      </svg>
+    </div>
+    <div class="info-hero-content">
+      <div class="info-hero-title">Timecode — Sport</div>
+      <div class="info-hero-desc">
+        Drop your audio stems (up to 5 .wav files) and <span class="hl">Timecode</span> will mix and transcribe them on the server. Work through each segment in order — <span class="hl">F5</span> marks IN, <span class="hl">F6</span> marks OUT — and quotes auto-populate from the transcript. Use the search bar to find specific words.
+      </div>
+    </div>
   </div>
 
   <!-- Content area: hidden until audio is loaded -->
@@ -1269,6 +1432,7 @@
   var transcriptChunks = null;
   var pickupCount = 0;
   var isTranscribing = false;
+  var working = false;
   var stemFiles = [];
   var mixedBlob = null;
   var mixedBuffer = null;
@@ -1342,24 +1506,10 @@
   })();
 
   // ═══════════════════════════════════════════════════════════════
-  // LOCAL TRANSCRIBE TOGGLE (off by default = server transcription)
+  // LOCAL TRANSCRIBE — silent fallback only (no UI toggle)
   // ═══════════════════════════════════════════════════════════════
   var localTranscribeEnabled = false;
-  var localTranscribeToggle = document.getElementById('localTranscribeToggle');
   var lastProxyId = null;
-
-  localTranscribeToggle.addEventListener('change', function () {
-    localTranscribeEnabled = this.checked;
-    localStorage.setItem('localTranscribe', localTranscribeEnabled ? '1' : '0');
-  });
-
-  (function () {
-    var saved = localStorage.getItem('localTranscribe');
-    if (saved !== null) {
-      localTranscribeEnabled = saved === '1';
-      localTranscribeToggle.checked = localTranscribeEnabled;
-    }
-  })();
 
   // ═══════════════════════════════════════════════════════════════
   // TRANSCRIPTION WEB WORKER
@@ -1502,9 +1652,66 @@
   }
   function updateWaveformLoading(detail) {
     document.getElementById('waveformLoadingDetail').textContent = detail || '';
+    // Also update card overlay if visible
+    if (document.getElementById('audioCard').classList.contains('processing')) {
+      updateCardProcessing(detail || '');
+    }
   }
   function hideWaveformLoading() {
     document.getElementById('waveformLoading').classList.remove('visible');
+    hideCardProcessing();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // CARD PROCESSING OVERLAY (blur + status like Media Grab)
+  // ═══════════════════════════════════════════════════════════════
+  var cardProcessingMsgTimer = null;
+
+  function showCardProcessing(text, showCancel) {
+    var card = document.getElementById('audioCard');
+    var statusEl = document.getElementById('cardProcessingStatus');
+    var cancelEl = document.getElementById('cardProcessingCancel');
+    card.classList.add('processing');
+    statusEl.textContent = text || 'Processing…';
+    cancelEl.style.display = showCancel ? '' : 'none';
+    document.getElementById('cardSpinner').style.display = '';
+    document.getElementById('cardTrackFill').style.animation = '';
+  }
+
+  function updateCardProcessing(text) {
+    document.getElementById('cardProcessingStatus').textContent = text;
+  }
+
+  function hideCardProcessing() {
+    document.getElementById('audioCard').classList.remove('processing');
+    if (cardProcessingMsgTimer) { clearInterval(cardProcessingMsgTimer); cardProcessingMsgTimer = null; }
+  }
+
+  function startCardMessageCycle(messages, intervalMs) {
+    var idx = 0;
+    updateCardProcessing(messages[0]);
+    cardProcessingMsgTimer = setInterval(function () {
+      idx = Math.min(idx + 1, messages.length - 1);
+      updateCardProcessing(messages[idx]);
+    }, intervalMs || 4000);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // INFO HERO SHOW / HIDE
+  // ═══════════════════════════════════════════════════════════════
+  function updateInfoHeroes() {
+    var newsHero = document.getElementById('infoHeroNews');
+    var sportHero = document.getElementById('infoHeroSport');
+    if (audioLoaded) {
+      newsHero.classList.add('hidden');
+      sportHero.style.display = 'none';
+    } else if (activeCategory === 'news') {
+      newsHero.classList.remove('hidden');
+      sportHero.style.display = 'none';
+    } else {
+      newsHero.classList.add('hidden');
+      sportHero.style.display = '';
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1512,9 +1719,11 @@
   // ═══════════════════════════════════════════════════════════════
   function showContentArea() {
     document.getElementById('contentArea').classList.add('visible');
+    updateInfoHeroes();
   }
   function hideContentArea() {
     document.getElementById('contentArea').classList.remove('visible');
+    updateInfoHeroes();
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1869,11 +2078,8 @@
 
     updateStampButtons();
     updateSegmentVisuals();
+    updateInfoHeroes();
   }
-
-  // ═══════════════════════════════════════════════════════════════
-  // PICKUPS / EDIT POINTS
-  // ═══════════════════════════════════════════════════════════════
   document.getElementById('addPickupBtn').addEventListener('click', function () {
     var cat = CATEGORIES[activeCategory];
     var prefix = (cat && cat.addPrefix) ? cat.addPrefix : 'Pickup';
@@ -2035,6 +2241,7 @@
 
     document.getElementById('waveformArea').classList.add('visible');
     showWaveformLoading('Decoding ' + stemFiles.length + ' stem' + (stemFiles.length > 1 ? 's' : '') + '…');
+    showCardProcessing('Decoding ' + stemFiles.length + ' stem' + (stemFiles.length > 1 ? 's' : '') + '…');
 
     try {
       var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -2124,11 +2331,7 @@
         if (autoTranscribeEnabled && mixedBuffer) {
           autoTranscribeTimer = setTimeout(function () {
             if (thisMix === mixGeneration) {
-              if (localTranscribeEnabled) {
-                startTranscription(thisMix);
-              } else {
-                startServerTranscription(thisMix);
-              }
+              startServerTranscription(thisMix);
             }
           }, 300);
         }
@@ -2194,6 +2397,7 @@
     document.getElementById('transportSearch').classList.remove('visible');
     document.getElementById('transcriptSearchInput').value = '';
     hideWaveformLoading();
+    hideCardProcessing();
     hideContentArea();
     // Re-show drop zone only if in sport mode
     audioDropZone.style.display = (activeCategory === 'news') ? 'none' : '';
@@ -2535,10 +2739,13 @@
     progBar.classList.add('indeterminate');
 
     try {
+      var transcribeUrl;
       var fetchOpts = {};
 
       if (lastProxyId) {
         // Audio came from URL grab — reference by proxy_id (no re-upload)
+        // Goes through CF Worker (tiny JSON payload)
+        transcribeUrl = URL_GRAB_SERVER + '/api/transcribe';
         fetchOpts = {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2546,7 +2753,22 @@
         };
         status.textContent = 'Transcribing on server…';
       } else if (mixedBlob) {
-        // Audio was dropped/browsed — upload the mixed blob
+        // Audio was dropped/browsed — upload directly to Funnel (bypasses CF)
+        // Step 1: Get a signed upload URL from the worker (tiny request through CF)
+        status.textContent = 'Preparing upload…';
+        var tokenRes = await fetch(URL_GRAB_SERVER + '/api/transcribe-token');
+        if (!tokenRes.ok) throw new Error('Failed to get upload token');
+        var tokenData = await tokenRes.json();
+        if (tokenData.status !== 'ok' || !tokenData.upload_url) {
+          throw new Error('Invalid token response');
+        }
+
+        if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) {
+          isTranscribing = false; return;
+        }
+
+        // Step 2: Upload WAV directly to Funnel URL (bypasses Cloudflare entirely)
+        transcribeUrl = tokenData.upload_url;
         var formData = new FormData();
         formData.append('file', mixedBlob, 'audio.wav');
         fetchOpts = {
@@ -2558,7 +2780,7 @@
         throw new Error('No audio available for transcription');
       }
 
-      var res = await fetch(URL_GRAB_SERVER + '/api/transcribe', fetchOpts);
+      var res = await fetch(transcribeUrl, fetchOpts);
 
       if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) {
         isTranscribing = false;
@@ -2593,18 +2815,18 @@
 
     } catch (err) {
       console.error('Server transcription error:', err);
-      status.textContent = 'Server transcription failed: ' + (err.message || err);
+      status.textContent = 'Server failed — falling back to local…';
       isTranscribing = false;
-      setTimeout(function () { prog.classList.remove('visible'); }, 3000);
 
-      // Fall back to local transcription if server fails
-      if (mixedBuffer && !localTranscribeEnabled) {
-        status.textContent = 'Falling back to local transcription…';
+      // Silent fallback to local transcription
+      if (mixedBuffer) {
         setTimeout(function () {
           if (expectedGeneration === mixGeneration) {
             startTranscription(expectedGeneration);
           }
         }, 1000);
+      } else {
+        setTimeout(function () { prog.classList.remove('visible'); }, 3000);
       }
     }
   }
@@ -2771,13 +2993,11 @@
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // URL GRAB — News mode content link fetch
+  // URL GRAB — News mode content link fetch (instant paste, blur overlay)
   // ═══════════════════════════════════════════════════════════════
   var URL_GRAB_SERVER = '';
   var URL_REGEX = /^https?:\/\/[^\s]+$/i;
-  var urlGrabCountdownTimer = null;
   var urlGrabAbortController = null;
-  var RING_CIRCUMFERENCE = 2 * Math.PI * 8;
 
   var urlGrabSection     = document.getElementById('urlGrabSection');
   var urlGrabInput       = document.getElementById('urlGrabInput');
@@ -2785,9 +3005,6 @@
   var urlGrabStatus      = document.getElementById('urlGrabStatus');
   var urlGrabDot         = document.getElementById('urlGrabDot');
   var urlGrabStatusText  = document.getElementById('urlGrabStatusText');
-  var urlCountdownRing   = document.getElementById('urlCountdownRing');
-  var urlCountdownNumber = document.getElementById('urlCountdownNumber');
-  var urlRingFg          = document.getElementById('urlRingFg');
   var urlGrabCancel      = document.getElementById('urlGrabCancel');
   var urlServerDot       = document.getElementById('urlServerDot');
   var urlServerLabel     = document.getElementById('urlServerLabel');
@@ -2830,74 +3047,38 @@
 
   function hideUrlGrabSection() {
     urlGrabSection.classList.remove('visible');
-    cancelUrlCountdown();
     cancelUrlGrab();
     urlGrabInput.value = '';
   }
 
-  function cancelUrlCountdown() {
-    if (urlGrabCountdownTimer) {
-      clearInterval(urlGrabCountdownTimer);
-      urlGrabCountdownTimer = null;
-    }
-    urlCountdownRing.style.display = 'none';
-    urlGrabBtn.style.display = isUrl(urlGrabInput.value.trim()) ? '' : 'none';
-  }
-
-  function startUrlCountdown() {
-    cancelUrlCountdown();
-    var remaining = 3;
-
-    urlGrabBtn.style.display = 'none';
-    urlCountdownRing.style.display = '';
-    urlCountdownNumber.textContent = remaining;
-
-    urlRingFg.style.transition = 'none';
-    urlRingFg.style.strokeDashoffset = '0';
-
-    requestAnimationFrame(function () {
-      urlRingFg.style.transition = 'stroke-dashoffset 1s linear';
-      urlRingFg.style.strokeDashoffset = (RING_CIRCUMFERENCE / 3).toFixed(2);
-    });
-
-    urlGrabCountdownTimer = setInterval(function () {
-      remaining--;
-      if (remaining <= 0) {
-        cancelUrlCountdown();
-        handleUrlGrab();
-        return;
-      }
-      urlCountdownNumber.textContent = remaining;
-
-      var offset = RING_CIRCUMFERENCE * ((3 - remaining) / 3);
-      urlRingFg.style.strokeDashoffset = offset.toFixed(2);
-    }, 1000);
-  }
-
+  // ── Instant grab on paste (like Media Grab) ──
   urlGrabInput.addEventListener('paste', function () {
     setTimeout(function () {
       var val = urlGrabInput.value.trim();
-      if (isUrl(val)) startUrlCountdown();
-    }, 150);
+      if (isUrl(val) && !working) handleUrlGrab();
+    }, 100);
   });
 
   urlGrabInput.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
       e.preventDefault();
-      cancelUrlCountdown();
       handleUrlGrab();
     }
     if (!e.key.startsWith('F')) e.stopPropagation();
   });
 
   urlGrabInput.addEventListener('input', function () {
-    cancelUrlCountdown();
     urlGrabBtn.style.display = isUrl(urlGrabInput.value.trim()) ? '' : 'none';
   });
 
   urlGrabBtn.addEventListener('click', function () {
-    cancelUrlCountdown();
     handleUrlGrab();
+  });
+
+  // Card overlay cancel wired to URL grab abort
+  document.getElementById('cardProcessingCancel').addEventListener('click', function () {
+    cancelUrlGrab();
+    hideCardProcessing();
   });
 
   urlGrabCancel.addEventListener('click', function () {
@@ -2910,14 +3091,16 @@
       urlGrabAbortController = null;
     }
     urlGrabStatus.classList.remove('visible');
+    hideCardProcessing();
     urlGrabInput.disabled = false;
     urlGrabBtn.style.display = isUrl(urlGrabInput.value.trim()) ? '' : 'none';
+    working = false;
   }
 
   var urlGrabMessages = [
     'Connecting to server\u2026',
     'Downloading source audio\u2026',
-    'Transcoding to proxy (96k mono 48kHz)\u2026',
+    'Transcoding to proxy\u2026',
     'Almost there \u2014 streaming audio\u2026',
   ];
 
@@ -2933,17 +3116,18 @@
       return;
     }
 
+    working = true;
     urlGrabBtn.style.display = 'none';
     urlGrabInput.disabled = true;
+
+    // Show blur overlay on the audio card with cycling messages
+    showCardProcessing(urlGrabMessages[0], true);
+    startCardMessageCycle(urlGrabMessages, 5000);
+
+    // Also show small status bar as fallback
     urlGrabDot.className = 'status-dot working';
     urlGrabStatusText.textContent = urlGrabMessages[0];
     urlGrabStatus.classList.add('visible');
-
-    var msgIdx = 0;
-    var msgTimer = setInterval(function () {
-      msgIdx = Math.min(msgIdx + 1, urlGrabMessages.length - 1);
-      urlGrabStatusText.textContent = urlGrabMessages[msgIdx];
-    }, 5000);
 
     urlGrabAbortController = new AbortController();
 
@@ -2957,15 +3141,13 @@
         signal: urlGrabAbortController.signal,
       });
 
-      clearInterval(msgTimer);
-
       if (!res.ok) {
         var errData;
         try { errData = await res.json(); } catch (e) { errData = {}; }
         throw new Error(errData.error || 'Server returned ' + res.status);
       }
 
-      urlGrabStatusText.textContent = 'Loading into waveform\u2026';
+      updateCardProcessing('Loading into waveform\u2026');
 
       var proxyTitle = res.headers.get('X-Proxy-Title');
       if (proxyTitle) proxyTitle = decodeURIComponent(proxyTitle);
@@ -2983,8 +3165,10 @@
       var audioFile = new File([audioBlob], filename, { type: 'audio/mpeg' });
 
       urlGrabStatus.classList.remove('visible');
+      hideCardProcessing();
       urlGrabInput.disabled = false;
       urlGrabAbortController = null;
+      working = false;
 
       stemFiles = [];
       addStemFiles([audioFile]);
@@ -2999,9 +3183,10 @@
       }
 
     } catch (err) {
-      clearInterval(msgTimer);
+      hideCardProcessing();
       urlGrabAbortController = null;
       urlGrabInput.disabled = false;
+      working = false;
 
       if (err.name === 'AbortError') {
         urlGrabStatus.classList.remove('visible');
