@@ -420,8 +420,16 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .transport-status.working .transport-status-text {
+      color: var(--accent);
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+    @keyframes statusPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
     .transport-status-progress {
-      width: 60px; height: 3px; background: var(--border);
+      width: 80px; height: 3px; background: var(--border);
       border-radius: 3px; overflow: hidden; flex-shrink: 0;
       display: none;
     }
@@ -2251,6 +2259,7 @@
     isTranscribing = false;
     transcriptChunks = null;
     document.getElementById('transportStatus').classList.remove('visible');
+    document.getElementById('transportStatus').classList.remove('working');
     document.getElementById('transcribeProgress').classList.remove('visible');
     document.getElementById('transcribeStatus').textContent = '';
     document.getElementById('transcribeProgressBar').style.width = '0%';
@@ -2669,6 +2678,7 @@
     isTranscribing = true;
     document.getElementById('transportSearch').classList.remove('visible');
     statusBar.classList.add('visible');
+    statusBar.classList.add('working');
     status.textContent = 'Starting local transcription…';
     prog.classList.add('visible');
     progBar.classList.add('indeterminate');
@@ -2728,6 +2738,7 @@
         console.error('Worker error:', err);
         status.textContent = 'Transcription worker failed. Check browser console.';
         isTranscribing = false;
+        statusBar.classList.remove('working');
         setTimeout(function () { prog.classList.remove('visible'); }, 1000);
         transcriptionWorker = null;
       };
@@ -2738,6 +2749,7 @@
       console.error('Transcription setup error:', err);
       status.textContent = 'Failed to start transcription: ' + (err.message || err);
       isTranscribing = false;
+      statusBar.classList.remove('working');
       setTimeout(function () { prog.classList.remove('visible'); }, 1000);
     }
   }
@@ -2767,6 +2779,7 @@
     isTranscribing = true;
     document.getElementById('transportSearch').classList.remove('visible');
     statusBar.classList.add('visible');
+    statusBar.classList.add('working');
     status.textContent = 'Sending to server…';
     prog.classList.add('visible');
     progBar.classList.add('indeterminate');
@@ -2896,6 +2909,7 @@
           }
         }, 1000);
       } else {
+        statusBar.classList.remove('working');
         setTimeout(function () { prog.classList.remove('visible'); }, 3000);
       }
     }
@@ -2915,6 +2929,7 @@
     container.innerHTML = html;
     container.classList.add('visible');
     document.getElementById('transportStatus').classList.remove('visible');
+    document.getElementById('transportStatus').classList.remove('working');
     document.getElementById('transportSearch').classList.add('visible');
     container.querySelectorAll('.ts-word').forEach(function (el) {
       el.addEventListener('click', function () {
