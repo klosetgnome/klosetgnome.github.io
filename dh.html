@@ -429,6 +429,20 @@
       pointer-events: none;
     }
 
+    /* ── History heading ── */
+    .history-heading {
+      display: none;
+      width: 100%;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 4px 0 0;
+      animation: fadeInUp 0.3s ease;
+    }
+    .history-heading.visible { display: block; }
+
     /* ── History section ── */
     #history {
       display: flex;
@@ -539,13 +553,7 @@
     </div>
   </div>
 
-  <div class="submit-row" id="submitRow">
-    <div class="field-group">
-      <label>Model <span id="modelStatusLegacy" style="display:none;"></span></label>
-      <select id="modelLegacy" class="minimal-select" style="display:none;"></select>
-    </div>
-    <button class="submit" id="submitBtn" style="display:none;">Create</button>
-  </div>
+  <div class="history-heading" id="historyHeading">History</div>
 
   <div id="history"></div>
 
@@ -597,6 +605,14 @@
         <button class="countdown-cancel" id="countdownCancel">Cancel</button>
       </div>
     </div>
+  </div>
+
+  <div class="submit-row" id="submitRow">
+    <div class="field-group">
+      <label>Model <span id="modelStatusLegacy" style="display:none;"></span></label>
+      <select id="modelLegacy" class="minimal-select" style="display:none;"></select>
+    </div>
+    <button class="submit" id="submitBtn" style="display:none;">Create</button>
   </div>
 
   <div class="progress-wrap" id="progressWrap">
@@ -660,14 +676,18 @@
   var fileRemoveBtn = document.getElementById('fileRemove');
   var loadedFileText = null;
 
-  // ── NEW: Submit button + input collapse state ──
-  var btn          = document.getElementById('submitBtn');
-  var inputSection = document.getElementById('inputSection');
-  var historyEl    = document.getElementById('history');
-  var hasGenerated = false;
+  // ── Submit button + input collapse state ──
+  var btn            = document.getElementById('submitBtn');
+  var inputSection   = document.getElementById('inputSection');
+  var submitRow      = document.getElementById('submitRow');
+  var historyEl      = document.getElementById('history');
+  var historyHeading = document.getElementById('historyHeading');
+  var progressWrap   = document.getElementById('progressWrap');
+  var results        = document.getElementById('results');
+  var hasGenerated   = false;
   var generationCount = 0;
 
-  // CHANGED: Only show Create button for pasted text, not file drops.
+  // Only show Create button for pasted text, not file drops.
   // File drops use the auto-submit countdown instead.
   // After first generation, always show the Recreate button.
   function updateSubmitVisibility() {
@@ -682,10 +702,18 @@
     btn.textContent = 'Recreate';
     btn.style.display = 'inline-block';
     btn.disabled = false;
+    // Move submit row to just after results so Recreate sits beneath current generation
+    results.after(submitRow);
   }
 
   function expandInputs() {
     inputSection.classList.remove('collapsed');
+    // Move submit row back to after input section (before progress bar)
+    progressWrap.parentNode.insertBefore(submitRow, progressWrap);
+  }
+
+  function updateHistoryHeading() {
+    historyHeading.classList.toggle('visible', historyEl.children.length > 0);
   }
 
   function saveToHistory() {
@@ -754,6 +782,9 @@
     while (historyEl.children.length > 3) {
       historyEl.removeChild(historyEl.lastChild);
     }
+
+    // Show history heading
+    updateHistoryHeading();
   }
 
   // ── Countdown elements ──
@@ -948,11 +979,12 @@
     document.getElementById('results').classList.remove('regenerating');
     document.getElementById('errorBox').classList.remove('visible');
 
-    // CHANGED: reset to fresh state on category switch
+    // Reset to fresh state on category switch
     expandInputs();
     hasGenerated = false;
     generationCount = 0;
     historyEl.innerHTML = '';
+    historyHeading.classList.remove('visible');
     document.querySelector('#results .results-header').textContent = 'Episode Copy';
     btn.textContent = 'Create';
     updateSubmitVisibility();
@@ -1069,7 +1101,7 @@
       document.querySelector('#results .results-header').textContent = 'Episode Copy \u2014 Generation ' + generationCount;
       results.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-      // CHANGED: collapse inputs and switch to Recreate after success
+      // Collapse inputs and switch to Recreate after success
       collapseInputs();
     } catch (err) {
       var msg = err.message || String(err);
