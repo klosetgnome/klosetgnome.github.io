@@ -354,17 +354,12 @@
     }
 
     .tc-wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-    .tc-input {
+    .tc-display {
       font-family: var(--mono); font-size: 11px; font-weight: 500;
-      width: 86px; padding: 6px 6px; border: 1px solid var(--border);
+      min-width: 66px; padding: 6px 6px; border: 1px solid var(--border);
       border-radius: var(--radius); background: var(--bg); color: var(--text-primary);
-      text-align: center; letter-spacing: 1px; outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      text-align: center; letter-spacing: 1px; user-select: none;
     }
-    .tc-input::placeholder { color: var(--text-muted); font-weight: 400; }
-    .tc-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-    .tc-input.invalid { border-color: var(--error); box-shadow: 0 0 0 3px var(--error-glow); }
-
     .stamp-btn {
       background: none; border: 1px solid var(--border); border-radius: var(--radius);
       width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
@@ -374,6 +369,59 @@
       border-color: var(--accent); color: var(--accent); background: var(--accent-light);
     }
     .stamp-btn svg { width: 14px; height: 14px; }
+
+    /* ── Inline scrub slider ── */
+    .tc-scrub-group {
+      display: flex; align-items: center; gap: 0; flex: 1; min-width: 0;
+    }
+    .tc-nudge {
+      background: none; border: 1px solid var(--border); border-radius: var(--radius);
+      width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); transition: all 0.15s; flex-shrink: 0;
+      font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 0;
+    }
+    .tc-nudge:hover {
+      border-color: var(--accent); color: var(--accent); background: var(--accent-light);
+    }
+    .tc-nudge:active { transform: scale(0.92); }
+
+    .tc-scrub-track {
+      flex: 1; height: 26px; position: relative; cursor: ew-resize;
+      display: flex; align-items: center; min-width: 60px;
+      margin: 0 4px; user-select: none;
+    }
+    .tc-scrub-rail {
+      width: 100%; height: 3px; background: var(--border); border-radius: 2px;
+      position: relative; overflow: visible;
+    }
+    .tc-scrub-fill {
+      position: absolute; top: 0; left: 0; height: 100%;
+      background: var(--accent); border-radius: 2px;
+      transition: width 0.1s ease;
+      pointer-events: none;
+    }
+    .tc-scrub-fill.out-fill {
+      left: auto; right: 0;
+      background: var(--accent);
+    }
+    .tc-scrub-thumb {
+      position: absolute; top: 50%; width: 12px; height: 12px;
+      background: var(--accent); border: 2px solid var(--surface);
+      border-radius: 50%; transform: translate(-50%, -50%);
+      box-shadow: 0 1px 4px var(--shadow); pointer-events: none;
+      transition: left 0.1s ease;
+    }
+    .tc-scrub-track:hover .tc-scrub-thumb {
+      width: 14px; height: 14px;
+      box-shadow: 0 0 0 4px var(--accent-glow), 0 1px 4px var(--shadow);
+    }
+    .tc-scrub-track.dragging .tc-scrub-thumb {
+      width: 14px; height: 14px;
+      box-shadow: 0 0 0 6px var(--accent-glow), 0 1px 4px var(--shadow);
+      transition: none;
+    }
+    .tc-scrub-track.dragging .tc-scrub-fill { transition: none; }
+    .tc-scrub-track.dragging .tc-scrub-thumb { transition: none; }
 
     .bite-quote {
       flex: 1; min-width: 120px; font-family: var(--mono); font-size: 12px;
@@ -1508,6 +1556,11 @@
   var STOP_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>';
   var REMOVE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
 
+  // ═══════════════════════════════════════════════════════════════
+  // SCRUB RANGE — how many seconds each scrub track spans
+  // ═══════════════════════════════════════════════════════════════
+  var SCRUB_RANGE = 15; // each scrub track covers ±15s from original point
+
   function renderBites() {
     var container = document.getElementById('bitesContainer');
     container.innerHTML = '';
@@ -1518,26 +1571,48 @@
       card.id = bite.id;
       card.dataset.idx = idx;
 
+      var durSec = (bite.end - bite.start).toFixed(1);
+
       card.innerHTML =
         '<div class="bite-header" data-idx="' + idx + '">' +
           '<div class="header-left"><span>' + bite.label + '</span></div>' +
           '<div class="header-right">' +
-            '<span style="font-size:9px;letter-spacing:1px;color:var(--text-muted);">' +
-              (bite.end - bite.start).toFixed(1) + 's' +
-            '</span>' +
+            '<span style="font-size:9px;letter-spacing:1px;color:var(--text-muted);">' + durSec + 's</span>' +
           '</div>' +
         '</div>' +
         '<div class="bite-rationale">' + escapeHtml(bite.rationale) + '</div>' +
         '<div class="bite-row">' +
           '<span class="row-label">In</span>' +
           '<div class="tc-wrap">' +
-            '<input type="text" class="tc-input" data-field="start" data-idx="' + idx + '" value="' + secondsToTimecode(bite.start) + '" maxlength="8" />' +
+            '<span class="tc-display" id="tc-in-' + idx + '">' + secondsToTimecode(bite.start) + '</span>' +
             '<button class="stamp-btn" data-field="start" data-idx="' + idx + '" title="Stamp current time">' + CLOCK_SVG + '</button>' +
           '</div>' +
-          '<span class="row-label" style="width:auto;margin-left:8px;">Out</span>' +
+          '<div class="tc-scrub-group">' +
+            '<button class="tc-nudge" data-field="start" data-idx="' + idx + '" data-dir="-1" title="−1s">‹</button>' +
+            '<div class="tc-scrub-track" data-field="start" data-idx="' + idx + '">' +
+              '<div class="tc-scrub-rail">' +
+                '<div class="tc-scrub-fill" id="scrub-fill-in-' + idx + '"></div>' +
+                '<div class="tc-scrub-thumb" id="scrub-thumb-in-' + idx + '"></div>' +
+              '</div>' +
+            '</div>' +
+            '<button class="tc-nudge" data-field="start" data-idx="' + idx + '" data-dir="1" title="+1s">›</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="bite-row">' +
+          '<span class="row-label">Out</span>' +
           '<div class="tc-wrap">' +
-            '<input type="text" class="tc-input" data-field="end" data-idx="' + idx + '" value="' + secondsToTimecode(bite.end) + '" maxlength="8" />' +
+            '<span class="tc-display" id="tc-out-' + idx + '">' + secondsToTimecode(bite.end) + '</span>' +
             '<button class="stamp-btn" data-field="end" data-idx="' + idx + '" title="Stamp current time">' + CLOCK_SVG + '</button>' +
+          '</div>' +
+          '<div class="tc-scrub-group">' +
+            '<button class="tc-nudge" data-field="end" data-idx="' + idx + '" data-dir="-1" title="−1s">‹</button>' +
+            '<div class="tc-scrub-track" data-field="end" data-idx="' + idx + '">' +
+              '<div class="tc-scrub-rail">' +
+                '<div class="tc-scrub-fill out-fill" id="scrub-fill-out-' + idx + '"></div>' +
+                '<div class="tc-scrub-thumb" id="scrub-thumb-out-' + idx + '"></div>' +
+              '</div>' +
+            '</div>' +
+            '<button class="tc-nudge" data-field="end" data-idx="' + idx + '" data-dir="1" title="+1s">›</button>' +
           '</div>' +
         '</div>' +
         '<div class="bite-row">' +
@@ -1551,31 +1626,13 @@
 
       container.appendChild(card);
 
-      // Setup timecode inputs
-      card.querySelectorAll('.tc-input').forEach(function (inp) {
-        inp.addEventListener('input', function () {
-          var digits = this.value.replace(/[^\d]/g, '');
-          if (digits.length > 6) digits = digits.substring(0, 6);
-          var formatted = '';
-          for (var i = 0; i < digits.length; i++) {
-            if (i === 2 || i === 4) formatted += '.';
-            formatted += digits[i];
-          }
-          this.value = formatted;
-        });
-        inp.addEventListener('blur', function () {
-          if (this.value && !isValidTimecode(this.value)) this.classList.add('invalid');
-          else {
-            this.classList.remove('invalid');
-            var i = parseInt(this.dataset.idx, 10);
-            var field = this.dataset.field;
-            if (!isNaN(i) && bites[i]) {
-              bites[i][field] = timecodeToSeconds(this.value);
-            }
-          }
-        });
-        inp.addEventListener('focus', function () { this.classList.remove('invalid'); });
-      });
+      // Store original times for scrub range calculation
+      if (bite._origStart === undefined) bite._origStart = bite.start;
+      if (bite._origEnd === undefined) bite._origEnd = bite.end;
+
+      // Position scrub thumbs
+      updateScrubPosition(idx, 'start');
+      updateScrubPosition(idx, 'end');
 
       // Stamp buttons
       card.querySelectorAll('.stamp-btn').forEach(function (btn) {
@@ -1583,10 +1640,28 @@
           if (!wavesurfer || !audioLoaded) return;
           var i = parseInt(btn.dataset.idx, 10);
           var field = btn.dataset.field;
-          var tc = secondsToTimecode(wavesurfer.getCurrentTime());
-          var inp = card.querySelector('.tc-input[data-field="' + field + '"]');
-          if (inp) { inp.value = tc; inp.classList.remove('invalid'); bites[i][field] = wavesurfer.getCurrentTime(); }
-          showToast(bites[i].label + ' ' + field.toUpperCase() + ': ' + tc);
+          bites[i][field] = wavesurfer.getCurrentTime();
+          updateBiteDisplay(i);
+          showToast(bites[i].label + ' ' + field.toUpperCase() + ': ' + secondsToTimecode(wavesurfer.getCurrentTime()));
+        });
+      });
+
+      // Nudge buttons
+      card.querySelectorAll('.tc-nudge').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var i = parseInt(btn.dataset.idx, 10);
+          var field = btn.dataset.field;
+          var dir = parseInt(btn.dataset.dir, 10);
+          if (!bites[i]) return;
+          var newVal = bites[i][field] + dir;
+          var maxTime = audioBuffer ? audioBuffer.duration : 99999;
+          if (field === 'start') {
+            newVal = Math.max(0, Math.min(newVal, bites[i].end - 0.5));
+          } else {
+            newVal = Math.max(bites[i].start + 0.5, Math.min(newVal, maxTime));
+          }
+          bites[i][field] = newVal;
+          updateBiteDisplay(i);
         });
       });
 
@@ -1601,6 +1676,9 @@
         if (!isNaN(i) && bites[i]) bites[i].quote = this.value;
       });
     });
+
+    // Wire scrub tracks
+    initScrubTracks();
 
     // Wire preview/download/remove buttons
     container.querySelectorAll('.preview-btn').forEach(function (btn) {
@@ -1617,8 +1695,7 @@
       btn.addEventListener('click', function () {
         var i = parseInt(btn.dataset.idx, 10);
         bites.splice(i, 1);
-        // Re-label
-        bites.forEach(function (b, j) { b.id = 'bite-' + (j + 1); b.label = 'Bite ' + (j + 1); });
+        bites.forEach(function (b, j) { b.id = 'bite-' + (j + 1); b.label = 'Bite ' + (j + 1); b._origStart = undefined; b._origEnd = undefined; });
         renderBites();
         showToast('Bite removed');
       });
@@ -1626,6 +1703,128 @@
 
     document.getElementById('bottomActions').style.display = bites.length ? 'flex' : 'none';
     if (selectedBiteIndex >= 0 && selectedBiteIndex < bites.length) selectBite(selectedBiteIndex);
+  }
+
+  function updateBiteDisplay(idx) {
+    var bite = bites[idx];
+    if (!bite) return;
+    var inEl = document.getElementById('tc-in-' + idx);
+    var outEl = document.getElementById('tc-out-' + idx);
+    if (inEl) inEl.textContent = secondsToTimecode(bite.start);
+    if (outEl) outEl.textContent = secondsToTimecode(bite.end);
+    updateScrubPosition(idx, 'start');
+    updateScrubPosition(idx, 'end');
+    // Update duration in header
+    var card = document.getElementById(bite.id);
+    if (card) {
+      var durSpan = card.querySelector('.header-right span');
+      if (durSpan) durSpan.textContent = (bite.end - bite.start).toFixed(1) + 's';
+    }
+  }
+
+  function updateScrubPosition(idx, field) {
+    var bite = bites[idx];
+    if (!bite) return;
+    var orig = field === 'start' ? (bite._origStart || bite.start) : (bite._origEnd || bite.end);
+    var current = bite[field];
+    var maxTime = audioBuffer ? audioBuffer.duration : 99999;
+
+    // Scrub range: orig ± SCRUB_RANGE, clamped to 0..maxTime
+    var rangeMin = Math.max(0, orig - SCRUB_RANGE);
+    var rangeMax = Math.min(maxTime, orig + SCRUB_RANGE);
+    var range = rangeMax - rangeMin;
+    var pct = range > 0 ? ((current - rangeMin) / range) * 100 : 50;
+    pct = Math.max(0, Math.min(100, pct));
+
+    var thumb = document.getElementById('scrub-thumb-' + (field === 'start' ? 'in' : 'out') + '-' + idx);
+    var fill = document.getElementById('scrub-fill-' + (field === 'start' ? 'in' : 'out') + '-' + idx);
+    if (thumb) thumb.style.left = pct + '%';
+    if (fill) {
+      if (field === 'start') {
+        fill.style.width = pct + '%';
+      } else {
+        fill.style.width = (100 - pct) + '%';
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SCRUB TRACK DRAG HANDLING
+  // ═══════════════════════════════════════════════════════════════
+  var activeScrub = null;
+
+  function initScrubTracks() {
+    document.querySelectorAll('.tc-scrub-track').forEach(function (track) {
+      track.addEventListener('mousedown', startScrubDrag);
+      track.addEventListener('touchstart', startScrubDrag, { passive: false });
+    });
+  }
+
+  function startScrubDrag(e) {
+    e.preventDefault();
+    var track = e.currentTarget;
+    var idx = parseInt(track.dataset.idx, 10);
+    var field = track.dataset.field;
+    var bite = bites[idx];
+    if (!bite) return;
+
+    track.classList.add('dragging');
+    selectBite(idx);
+
+    activeScrub = { track: track, idx: idx, field: field };
+    applyScrubFromEvent(e);
+
+    document.addEventListener('mousemove', onScrubMove);
+    document.addEventListener('mouseup', onScrubEnd);
+    document.addEventListener('touchmove', onScrubMove, { passive: false });
+    document.addEventListener('touchend', onScrubEnd);
+  }
+
+  function onScrubMove(e) {
+    if (!activeScrub) return;
+    e.preventDefault();
+    applyScrubFromEvent(e);
+  }
+
+  function onScrubEnd() {
+    if (activeScrub) {
+      activeScrub.track.classList.remove('dragging');
+      activeScrub = null;
+    }
+    document.removeEventListener('mousemove', onScrubMove);
+    document.removeEventListener('mouseup', onScrubEnd);
+    document.removeEventListener('touchmove', onScrubMove);
+    document.removeEventListener('touchend', onScrubEnd);
+  }
+
+  function applyScrubFromEvent(e) {
+    if (!activeScrub) return;
+    var track = activeScrub.track;
+    var idx = activeScrub.idx;
+    var field = activeScrub.field;
+    var bite = bites[idx];
+    if (!bite) return;
+
+    var rect = track.getBoundingClientRect();
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var pct = (clientX - rect.left) / rect.width;
+    pct = Math.max(0, Math.min(1, pct));
+
+    var orig = field === 'start' ? (bite._origStart || bite.start) : (bite._origEnd || bite.end);
+    var maxTime = audioBuffer ? audioBuffer.duration : 99999;
+    var rangeMin = Math.max(0, orig - SCRUB_RANGE);
+    var rangeMax = Math.min(maxTime, orig + SCRUB_RANGE);
+    var newVal = rangeMin + pct * (rangeMax - rangeMin);
+
+    // Enforce constraints
+    if (field === 'start') {
+      newVal = Math.max(0, Math.min(newVal, bite.end - 0.5));
+    } else {
+      newVal = Math.max(bite.start + 0.5, Math.min(newVal, maxTime));
+    }
+
+    bite[field] = newVal;
+    updateBiteDisplay(idx);
   }
 
   function selectBite(idx) {
@@ -1820,22 +2019,18 @@
     if (e.key === 'F5') {
       e.preventDefault();
       if (wavesurfer && audioLoaded && selectedBiteIndex >= 0 && bites[selectedBiteIndex]) {
-        var tc = secondsToTimecode(wavesurfer.getCurrentTime());
         bites[selectedBiteIndex].start = wavesurfer.getCurrentTime();
-        var inp = document.querySelector('.tc-input[data-field="start"][data-idx="' + selectedBiteIndex + '"]');
-        if (inp) { inp.value = tc; inp.classList.remove('invalid'); }
-        showToast(bites[selectedBiteIndex].label + ' IN: ' + tc);
+        updateBiteDisplay(selectedBiteIndex);
+        showToast(bites[selectedBiteIndex].label + ' IN: ' + secondsToTimecode(wavesurfer.getCurrentTime()));
       }
       return;
     }
     if (e.key === 'F6') {
       e.preventDefault();
       if (wavesurfer && audioLoaded && selectedBiteIndex >= 0 && bites[selectedBiteIndex]) {
-        var tc2 = secondsToTimecode(wavesurfer.getCurrentTime());
         bites[selectedBiteIndex].end = wavesurfer.getCurrentTime();
-        var inp2 = document.querySelector('.tc-input[data-field="end"][data-idx="' + selectedBiteIndex + '"]');
-        if (inp2) { inp2.value = tc2; inp2.classList.remove('invalid'); }
-        showToast(bites[selectedBiteIndex].label + ' OUT: ' + tc2);
+        updateBiteDisplay(selectedBiteIndex);
+        showToast(bites[selectedBiteIndex].label + ' OUT: ' + secondsToTimecode(wavesurfer.getCurrentTime()));
       }
       return;
     }
