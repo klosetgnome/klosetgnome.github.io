@@ -252,6 +252,25 @@
       100% { transform: translateX(350%); }
     }
 
+    .regen-overlay .regen-cancel {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding: 6px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .regen-overlay .regen-cancel:hover {
+      border-color: var(--error);
+      color: var(--error);
+      background: var(--error-glow);
+    }
+
     /* ── Result rows ── */
     .result-row {
       display: flex;
@@ -527,8 +546,9 @@
 
   <div class="results" id="results">
     <div class="regen-overlay" id="regenOverlay">
-      <span class="regen-label">Recreating…</span>
+      <span class="regen-label" id="regenLabel">Creating…</span>
       <div class="regen-track"><div class="regen-bar"></div></div>
+      <button class="regen-cancel" id="regenCancel">Cancel</button>
     </div>
     <div class="results-header">Episode Copy</div>
     <div class="result-row headline">
@@ -686,6 +706,17 @@
   var results        = document.getElementById('results');
   var hasGenerated   = false;
   var generationCount = 0;
+  var apiAbort       = null;
+
+  var regenLabel  = document.getElementById('regenLabel');
+  var regenCancel = document.getElementById('regenCancel');
+
+  regenCancel.addEventListener('click', function () {
+    if (apiAbort) { apiAbort.abort(); apiAbort = null; }
+    results.classList.remove('regenerating');
+    if (!hasGenerated) { results.classList.remove('visible'); }
+    btn.disabled = false;
+  });
 
   // Only show Create button for pasted text, not file drops.
   // File drops use the auto-submit countdown instead.
@@ -1023,7 +1054,6 @@
     var transcript = loadedFileText ? loadedFileText.trim() : transcriptEl.value.trim();
     var model      = modelEl.value;
     var errorBox   = document.getElementById('errorBox');
-    var progress   = document.getElementById('progressWrap');
     var results    = document.getElementById('results');
     var isRecreate = hasGenerated;
 
@@ -1032,32 +1062,39 @@
     // Save current results to history before regenerating
     if (isRecreate) {
       saveToHistory();
-      // Blur existing results with overlay — keep them visible
+      regenLabel.textContent = 'Recreating…';
       results.classList.add('regenerating');
     } else {
-      results.classList.remove('visible');
+      // First create: show empty results with creating overlay
+      regenLabel.textContent = 'Creating…';
+      document.getElementById('h1').textContent = '';
+      document.getElementById('h2').textContent = '';
+      document.getElementById('h3').textContent = '';
+      document.getElementById('desc').innerHTML = '';
+      results.classList.add('visible');
+      results.classList.add('regenerating');
     }
 
     // Cancel any running countdown when submit fires
     cancelCountdown();
 
-    if (!transcript) { showError('Please drop a transcript file or paste text before submitting.'); results.classList.remove('regenerating'); return; }
-    if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); results.classList.remove('regenerating'); return; }
+    if (!transcript) { showError('Please drop a transcript file or paste text before submitting.'); results.classList.remove('regenerating'); if (!isRecreate) results.classList.remove('visible'); return; }
+    if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); results.classList.remove('regenerating'); if (!isRecreate) results.classList.remove('visible'); return; }
 
     var userMessage = '';
     if (titleVal) { userMessage = 'Suggested title: ' + titleVal + '\n\n'; }
     userMessage += transcript;
 
-    // Only show external progress bar on first create
-    if (!isRecreate) {
-      progress.classList.add('visible');
-    }
     btn.disabled = true;
+
+    if (apiAbort) apiAbort.abort();
+    apiAbort = new AbortController();
 
     try {
       var res = await fetch(WORKER_URL + '/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: apiAbort.signal,
         body: JSON.stringify({
           model: model, max_tokens: 1024,
           messages: [
@@ -1104,13 +1141,15 @@
       // Collapse inputs and switch to Recreate after success
       collapseInputs();
     } catch (err) {
+      if (err.name === 'AbortError') return;
       var msg = err.message || String(err);
       if (/failed to fetch|networkerror|load failed/i.test(msg))
         msg = 'Network error: could not reach the proxy worker.\nCheck WORKER_URL and ensure you are serving over HTTP.';
       results.classList.remove('regenerating');
+      if (!isRecreate) results.classList.remove('visible');
       showError(msg);
     } finally {
-      progress.classList.remove('visible');
+      apiAbort = null;
       btn.disabled = false;
     }
   });
@@ -1119,7 +1158,6 @@
     var box = document.getElementById('errorBox');
     box.textContent = msg;
     box.classList.add('visible');
-    document.getElementById('progressWrap').classList.remove('visible');
     document.getElementById('results').classList.remove('regenerating');
     document.getElementById('submitBtn').disabled = false;
   }
