@@ -2639,8 +2639,7 @@
   // ═══════════════════════════════════════════════════════════════
   // URL GRAB — News mode content link fetch
   // ═══════════════════════════════════════════════════════════════
-  var URL_GRAB_SERVER = 'https://mac-mini.tail257f46.ts.net';
-  var URL_GRAB_API_KEY = null;
+  var URL_GRAB_SERVER = '';
   var URL_REGEX = /^https?:\/\/[^\s]+$/i;
   var urlGrabCountdownTimer = null;
   var urlGrabAbortController = null;
@@ -2820,7 +2819,6 @@
 
     try {
       var headers = { 'Content-Type': 'application/json' };
-      if (URL_GRAB_API_KEY) headers['X-API-Key'] = URL_GRAB_API_KEY;
 
       var res = await fetch(URL_GRAB_SERVER + '/api/proxy', {
         method: 'POST',
