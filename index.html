@@ -6,7 +6,6 @@
     <meta name="robots" content="noindex, nofollow">
     <script src="/analytics.js"></script>
     <title>DEV.NIALFERNANDES.COM</title>
-    <!-- Prevent flash of wrong theme -->
     <script>
         (function() {
             var saved = localStorage.getItem('theme');
@@ -18,11 +17,7 @@
         })();
     </script>
     <link rel="stylesheet" href="astyle.css">
-    <script src="credentials.js"></script>
     <style>
-        /* ── Page-specific: DEV.NIALFERNANDES.COM (index.html) ── */
-
-        /* Override shared main for directory layout */
         main {
             max-width: 960px;
             margin: 80px auto;
@@ -31,7 +26,6 @@
             flex: 1;
         }
 
-        /* ── Blurb Rule ── */
         .blurb-rule {
             width: 80px;
             border: none;
@@ -122,174 +116,13 @@
             color: var(--text-muted);
             line-height: 1.4;
             opacity: 0.55;
-            transform: translateY(0);
             transition: all 0.25s ease;
         }
 
         .tool-pod:hover .pod-desc {
             opacity: 1;
-            transform: translateY(0);
         }
 
-        /* ── Auth Gate ── */
-        .tools-wrapper {
-            position: relative;
-        }
-
-        .tools-wrapper.locked .icon-garden {
-            filter: blur(8px);
-            pointer-events: none;
-            user-select: none;
-        }
-
-        .tools-wrapper.locked .icon-garden .tool-pod {
-            pointer-events: none;
-        }
-
-        .auth-overlay {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            /* Let blurred tools show through */
-            background: transparent;
-        }
-
-        .auth-box {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 36px 32px 32px;
-            width: 320px;
-            max-width: 90vw;
-            box-shadow: 0 8px 40px var(--shadow), 0 0 0 1px var(--border);
-            text-align: center;
-            position: relative;
-        }
-
-        .auth-box::before {
-            content: "";
-            position: absolute;
-            inset: -1px;
-            border-radius: 17px;
-            background: linear-gradient(135deg, var(--accent), transparent 60%);
-            opacity: 0.08;
-            z-index: -1;
-        }
-
-        .auth-lock-icon {
-            width: 36px;
-            height: 36px;
-            margin: 0 auto 16px;
-            color: var(--text-muted);
-            opacity: 0.6;
-        }
-
-        .auth-title {
-            font-family: var(--mono);
-            font-size: 11px;
-            font-weight: 500;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            color: var(--text-primary);
-            margin: 0 0 20px;
-        }
-
-        .auth-field {
-            display: block;
-            width: 100%;
-            padding: 10px 14px;
-            margin-bottom: 10px;
-            font-family: var(--mono);
-            font-size: 13px;
-            color: var(--text-primary);
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            outline: none;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-            box-sizing: border-box;
-        }
-
-        .auth-field::placeholder {
-            color: var(--text-muted);
-            opacity: 0.5;
-        }
-
-        .auth-field:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
-        }
-
-        .auth-submit {
-            display: block;
-            width: 100%;
-            padding: 10px 14px;
-            margin-top: 16px;
-            font-family: var(--mono);
-            font-size: 11px;
-            font-weight: 500;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            color: #fff;
-            background: var(--accent);
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: opacity 0.2s ease, transform 0.1s ease;
-        }
-
-        .auth-submit:hover {
-            opacity: 0.85;
-        }
-
-        .auth-submit:active {
-            transform: scale(0.98);
-        }
-
-        .auth-error {
-            font-family: var(--mono);
-            font-size: 11px;
-            color: #e74c3c;
-            margin-top: 12px;
-            min-height: 16px;
-            transition: opacity 0.2s ease;
-        }
-
-        /* Authenticated state */
-        .tools-wrapper.unlocked .auth-overlay {
-            display: none;
-        }
-
-        .tools-wrapper.unlocked .icon-garden {
-            filter: none;
-            pointer-events: auto;
-            user-select: auto;
-        }
-
-        /* Unlock transition */
-        @keyframes unlockReveal {
-            from { filter: blur(8px); opacity: 0.6; }
-            to   { filter: blur(0px); opacity: 1; }
-        }
-
-        .tools-wrapper.unlocking .icon-garden {
-            animation: unlockReveal 0.5s ease forwards;
-        }
-
-        @keyframes overlayFade {
-            from { opacity: 1; }
-            to   { opacity: 0; }
-        }
-
-        .tools-wrapper.unlocking .auth-overlay {
-            animation: overlayFade 0.3s ease forwards;
-            pointer-events: none;
-        }
-
-        /* Sign out link */
         .sign-out {
             font-family: var(--mono);
             font-size: 10px;
@@ -308,63 +141,34 @@
             color: var(--accent);
         }
 
-        /* ── Responsive: tablet ── */
+        /* ── Responsive ── */
         @media (max-width: 768px) {
-            .site-header {
-                padding: 24px 20px;
-            }
-
-            main {
-                margin: 56px auto;
-            }
-
+            main { margin: 56px auto; }
             .tool-pod {
                 width: calc((100% - 24px) / 3);
                 padding: 28px 14px 24px;
             }
-
-            footer {
-                padding: 24px 20px;
-            }
         }
 
-        /* ── Responsive: mobile ── */
         @media (max-width: 480px) {
             main {
                 margin: 40px auto;
                 padding: 0 12px;
             }
-
             .tool-pod {
                 width: calc((100% - 12px) / 2);
                 padding: 24px 10px 20px;
             }
-
-            .pod-desc {
-                opacity: 1;
-            }
-
-            .auth-box {
-                padding: 28px 20px 24px;
-            }
+            .pod-desc { opacity: 1; }
         }
 
         /* ── Staggered entrance ── */
         @keyframes podIn {
-            from {
-                opacity: 0;
-                transform: translateY(12px) scale(0.96);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+            from { opacity: 0; transform: translateY(12px) scale(0.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        .tool-pod {
-            animation: podIn 0.4s ease both;
-        }
-
+        .tool-pod { animation: podIn 0.4s ease both; }
         .tool-pod:nth-child(1) { animation-delay: 0.05s; }
         .tool-pod:nth-child(2) { animation-delay: 0.1s; }
         .tool-pod:nth-child(3) { animation-delay: 0.15s; }
@@ -381,11 +185,9 @@
     <header class="site-header">
         <h1><span>DEV.</span>NIALFERNANDES.COM</h1>
         <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
-            <!-- Moon: shown in light mode -->
             <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
             </svg>
-            <!-- Sun: shown in dark mode -->
             <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="4"/>
                 <path d="M12 2v2"/><path d="M12 20v2"/>
@@ -401,158 +203,140 @@
 
         <hr class="blurb-rule">
 
-        <div class="tools-wrapper locked" id="toolsWrapper">
+        <div class="icon-garden">
 
-            <!-- Auth Overlay -->
-            <div class="auth-overlay" id="authOverlay">
-                <div class="auth-box">
-                    <svg class="auth-lock-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            <!-- 1. Copy Helper -->
+            <a href="ch.html" class="tool-pod">
+                <div class="pod-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                        <path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>
                     </svg>
-                    <div class="auth-title">Authorised Access</div>
-                    <input type="text" class="auth-field" id="authUser" placeholder="Username" autocomplete="username" spellcheck="false">
-                    <input type="password" class="auth-field" id="authPass" placeholder="Password" autocomplete="current-password">
-                    <button class="auth-submit" id="authSubmit">Sign In</button>
-                    <div class="auth-error" id="authError"></div>
                 </div>
-            </div>
+                <div class="pod-text">
+                    <div class="pod-name">Copy Helper</div>
+                    <div class="pod-desc">Summarise &amp; draft</div>
+                </div>
+            </a>
 
-            <div class="icon-garden">
+            <!-- 2. Timecode Helper -->
+            <a href="th.html" class="tool-pod">
+                <div class="pod-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16.5 12"/>
+                    </svg>
+                </div>
+                <div class="pod-text">
+                    <div class="pod-name">Timecode Helper</div>
+                    <div class="pod-desc">Set timecodes</div>
+                </div>
+            </a>
 
-                <!-- 1. Copy Helper (ch) -->
-                <a href="ch.html" class="tool-pod">
-                    <div class="pod-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>
-                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-                            <path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>
-                        </svg>
-                    </div>
-                    <div class="pod-text">
-                        <div class="pod-name">Copy Helper</div>
-                        <div class="pod-desc">Summarise &amp; draft</div>
-                    </div>
-                </a>
+            <!-- 3. Content Grabber -->
+            <a href="cg.html" class="tool-pod">
+                <div class="pod-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/>
+                        <rect x="2" y="6" width="14" height="12" rx="2"/>
+                    </svg>
+                </div>
+                <div class="pod-text">
+                    <div class="pod-name">Content Grabber</div>
+                    <div class="pod-desc">Download &amp; convert</div>
+                </div>
+            </a>
 
-                <!-- 2. Timecode Helper (th) -->
-                <a href="th.html" class="tool-pod">
-                    <div class="pod-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12 6 12 12 16.5 12"/>
-                        </svg>
-                    </div>
-                    <div class="pod-text">
-                        <div class="pod-name">Timecode Helper</div>
-                        <div class="pod-desc">Set timecodes</div>
-                    </div>
-                </a>
+            <!-- 4. Description Helper -->
+            <a href="dh.html" class="tool-pod">
+                <div class="pod-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>
+                    </svg>
+                </div>
+                <div class="pod-text">
+                    <div class="pod-name">Description Helper</div>
+                    <div class="pod-desc">Copy &amp; headlines</div>
+                </div>
+            </a>
 
-                <!-- 3. Content Grabber (cg) -->
-                <a href="cg.html" class="tool-pod">
-                    <div class="pod-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/>
-                            <rect x="2" y="6" width="14" height="12" rx="2"/>
-                        </svg>
-                    </div>
-                    <div class="pod-text">
-                        <div class="pod-name">Content Grabber</div>
-                        <div class="pod-desc">Download &amp; convert</div>
-                    </div>
-                </a>
+            <!-- 5. Content Edit -->
+            <a href="ce.html" class="tool-pod">
+                <div class="pod-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
+                        <line x1="20" y1="4" x2="8.12" y2="15.88"/>
+                        <line x1="14.47" y1="14.48" x2="20" y2="20"/>
+                        <line x1="8.12" y1="8.12" x2="12" y2="12"/>
+                    </svg>
+                </div>
+                <div class="pod-text">
+                    <div class="pod-name">Content Edit</div>
+                    <div class="pod-desc">Trim &amp; adjust</div>
+                </div>
+            </a>
 
-                <!-- 4. Description Helper (dh) -->
-                <a href="dh.html" class="tool-pod">
-                    <div class="pod-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>
-                        </svg>
-                    </div>
-                    <div class="pod-text">
-                        <div class="pod-name">Description Helper</div>
-                        <div class="pod-desc">Copy &amp; headlines</div>
-                    </div>
-                </a>
+            <!-- 6. Download Manager -->
+            <a href="dm.html" class="tool-pod">
+                <div class="pod-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 17V3"/><path d="m6 11 6 6 6-6"/>
+                        <path d="M19 21H5"/>
+                    </svg>
+                </div>
+                <div class="pod-text">
+                    <div class="pod-name">Download Manager</div>
+                    <div class="pod-desc">Managed downloads</div>
+                </div>
+            </a>
 
-                <!-- 5. Content Edit (ce) -->
-                <a href="ce.html" class="tool-pod">
-                    <div class="pod-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
-                            <line x1="20" y1="4" x2="8.12" y2="15.88"/>
-                            <line x1="14.47" y1="14.48" x2="20" y2="20"/>
-                            <line x1="8.12" y1="8.12" x2="12" y2="12"/>
-                        </svg>
-                    </div>
-                    <div class="pod-text">
-                        <div class="pod-name">Content Edit</div>
-                        <div class="pod-desc">Trim &amp; adjust</div>
-                    </div>
-                </a>
+            <!-- 7. Daily Calendar -->
+            <a href="dc.html" class="tool-pod">
+                <div class="pod-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M8 2v4"/><path d="M16 2v4"/>
+                        <rect width="18" height="18" x="3" y="4" rx="2"/>
+                        <path d="M3 10h18"/>
+                        <path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/>
+                        <path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/>
+                    </svg>
+                </div>
+                <div class="pod-text">
+                    <div class="pod-name">Daily Calendar</div>
+                    <div class="pod-desc">Schedule &amp; tasks</div>
+                </div>
+            </a>
 
-                <!-- 6. Download Manager (dm) -->
-                <a href="dm.html" class="tool-pod">
-                    <div class="pod-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M12 17V3"/><path d="m6 11 6 6 6-6"/>
-                            <path d="M19 21H5"/>
-                        </svg>
-                    </div>
-                    <div class="pod-text">
-                        <div class="pod-name">Download Manager</div>
-                        <div class="pod-desc">Managed downloads</div>
-                    </div>
-                </a>
+            <!-- 8. Vibe Calculator -->
+            <a href="vc.html" class="tool-pod">
+                <div class="pod-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+                    </svg>
+                </div>
+                <div class="pod-text">
+                    <div class="pod-name">Vibe Calculator</div>
+                    <div class="pod-desc">Calculate the vibe</div>
+                </div>
+            </a>
 
-                <!-- 7. Daily Calendar (dc) -->
-                <a href="dc.html" class="tool-pod">
-                    <div class="pod-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M8 2v4"/><path d="M16 2v4"/>
-                            <rect width="18" height="18" x="3" y="4" rx="2"/>
-                            <path d="M3 10h18"/>
-                            <path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/>
-                            <path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/>
-                        </svg>
-                    </div>
-                    <div class="pod-text">
-                        <div class="pod-name">Daily Calendar</div>
-                        <div class="pod-desc">Schedule &amp; tasks</div>
-                    </div>
-                </a>
+            <!-- 9. User Admin -->
+            <a href="/admin" class="tool-pod">
+                <div class="pod-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </div>
+                <div class="pod-text">
+                    <div class="pod-name">User Admin</div>
+                    <div class="pod-desc">Manage access</div>
+                </div>
+            </a>
 
-                <!-- 8. Vibe Calculator (vc) -->
-                <a href="vc.html" class="tool-pod">
-                    <div class="pod-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
-                        </svg>
-                    </div>
-                    <div class="pod-text">
-                        <div class="pod-name">Vibe Calculator</div>
-                        <div class="pod-desc">Calculate the vibe</div>
-                    </div>
-                </a>
-
-                <!-- 9. User Admin -->
-                <a href="/admin" class="tool-pod">
-                    <div class="pod-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                            <circle cx="9" cy="7" r="4"/>
-                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                        </svg>
-                    </div>
-                    <div class="pod-text">
-                        <div class="pod-name">User Admin</div>
-                        <div class="pod-desc">Manage access</div>
-                    </div>
-                </a>
-
-            </div>
         </div>
 
         <a class="sign-out" href="/auth/signout">sign out</a>
@@ -565,83 +349,12 @@
     </footer>
 
     <script>
-        /* ── Theme toggle ── */
-        const toggle = document.querySelector('.theme-toggle');
-        toggle.addEventListener('click', function() {
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const next = isDark ? 'light' : 'dark';
+        document.querySelector('.theme-toggle').addEventListener('click', function() {
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            var next = isDark ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
         });
-
-        /* ── Auth gate (client-side fallback) ── */
-        const wrapper   = document.getElementById('toolsWrapper');
-        const overlay   = document.getElementById('authOverlay');
-        const userField = document.getElementById('authUser');
-        const passField = document.getElementById('authPass');
-        const submitBtn = document.getElementById('authSubmit');
-        const errorMsg  = document.getElementById('authError');
-
-        // Check for remembered auth on load
-        if (isRemembered()) {
-            unlock(false);
-        }
-
-        // Handle sign-in
-        submitBtn.addEventListener('click', handleLogin);
-        passField.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') handleLogin();
-        });
-        userField.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') passField.focus();
-        });
-
-        async function handleLogin() {
-            const username = userField.value.trim();
-            const password = passField.value;
-
-            if (!username || !password) {
-                showError('Please enter both fields.');
-                return;
-            }
-
-            submitBtn.textContent = '...';
-            submitBtn.disabled = true;
-
-            const hash = await hashCredentials(username, password);
-            const valid = AUTHORISED_HASHES.includes(hash);
-
-            if (valid) {
-                rememberAuth(hash);
-                errorMsg.textContent = '';
-                unlock(true);
-            } else {
-                showError('Invalid credentials.');
-                submitBtn.textContent = 'Sign In';
-                submitBtn.disabled = false;
-                passField.value = '';
-                passField.focus();
-            }
-        }
-
-        function unlock(animate) {
-            if (animate) {
-                wrapper.classList.remove('locked');
-                wrapper.classList.add('unlocking');
-                setTimeout(function() {
-                    wrapper.classList.remove('unlocking');
-                    wrapper.classList.add('unlocked');
-                }, 500);
-            } else {
-                wrapper.classList.remove('locked');
-                wrapper.classList.add('unlocked');
-            }
-        }
-
-        function showError(msg) {
-            errorMsg.textContent = msg;
-            errorMsg.style.opacity = '1';
-        }
     </script>
 
 </body>
