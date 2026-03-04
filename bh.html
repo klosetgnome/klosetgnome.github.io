@@ -499,6 +499,68 @@
       background: var(--accent-light); border-style: solid;
     }
 
+    /* ── Analysis error + regenerate ── */
+    .analysis-error {
+      display: none; width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden; animation: fadeInUp 0.3s ease;
+    }
+    .analysis-error.visible { display: block; }
+    .analysis-error-inner {
+      display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px 24px;
+      text-align: center;
+    }
+    .analysis-error-icon { color: var(--error); }
+    .analysis-error-icon svg { width: 24px; height: 24px; }
+    .analysis-error-text {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.5px;
+      color: var(--text-secondary); line-height: 1.6; max-width: 400px;
+    }
+    .analysis-error-detail {
+      font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+      letter-spacing: 0.3px; line-height: 1.4; max-width: 500px;
+      word-break: break-word; padding: 8px 12px; background: var(--bg);
+      border-radius: var(--radius); border: 1px solid var(--border);
+    }
+    .regenerate-btn {
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      background: var(--accent); color: #fff; border: none;
+      border-radius: var(--radius); padding: 10px 20px; cursor: pointer;
+      transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .regenerate-btn:hover { background: #d4623e; transform: translateY(-1px); }
+    .regenerate-btn:active { transform: translateY(0); }
+    .regenerate-btn svg { width: 14px; height: 14px; }
+
+    /* ── Info hero section ── */
+    .info-hero {
+      display: flex; align-items: center; gap: 24px; width: 100%;
+      padding: 28px 32px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); animation: fadeInUp 0.5s ease both;
+    }
+    .info-hero.hidden { display: none; }
+    .info-hero-graphic {
+      flex-shrink: 0; width: 80px; height: 80px;
+      color: var(--accent); opacity: 0.7;
+    }
+    .info-hero-graphic svg { width: 100%; height: 100%; }
+    .info-hero-content { flex: 1; min-width: 0; }
+    .info-hero-title {
+      font-family: var(--mono); font-size: 13px; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    .info-hero-desc {
+      font-family: var(--mono); font-size: 11px; line-height: 1.8;
+      color: var(--text-secondary); letter-spacing: 0.3px;
+    }
+    .info-hero-desc .hl { color: var(--accent); font-weight: 500; }
+
+    @media (max-width: 700px) {
+      .info-hero { flex-direction: column; text-align: center; padding: 24px 20px; gap: 16px; }
+      .info-hero-graphic { width: 60px; height: 60px; }
+    }
+
     /* ── Toast ── */
     .toast {
       position: fixed; top: 12px; left: 50%;
@@ -644,8 +706,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
         </div>
         <div class="audio-prompt-text">
-          Drag &amp; drop a podcast or radio audio file here<br>
-          or <span class="browse" id="audioBrowse">browse to select</span>
+          Drag &amp; drop an audio file here or <span class="browse" id="audioBrowse">browse to select</span>
         </div>
       </div>
       <input type="file" id="audioFileInput" accept=".wav,.mp3,.m4a,.ogg,.flac,audio/*" style="display:none;" />
@@ -656,7 +717,7 @@
       <div class="url-grab-divider"><span>paste a link</span><span class="url-server-status" id="urlServerStatus"><span class="url-server-dot" id="urlServerDot"></span><span id="urlServerLabel">Checking…</span></span></div>
       <div class="url-grab-row">
         <input type="text" class="url-grab-input" id="urlGrabInput"
-               placeholder="https://www.youtube.com/watch?v=..."
+               placeholder="https://podcasts.apple.com/au/podcast/..."
                autocomplete="off" spellcheck="false" />
         <div class="url-countdown-ring" id="urlCountdownRing" style="display:none;">
           <svg viewBox="0 0 20 20">
@@ -716,6 +777,42 @@
     <div class="transcript-display" id="transcriptDisplay"></div>
   </div>
 
+  <!-- ═══════ INFO HERO ═══════ -->
+  <div class="info-hero" id="infoHero">
+    <div class="info-hero-graphic">
+      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Radio/microphone graphic -->
+        <circle cx="40" cy="40" r="38" stroke="currentColor" stroke-width="1" opacity="0.15"/>
+        <circle cx="40" cy="40" r="28" stroke="currentColor" stroke-width="1" opacity="0.1"/>
+        <!-- Microphone body -->
+        <rect x="33" y="18" width="14" height="24" rx="7" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <!-- Mic grille lines -->
+        <line x1="36" y1="24" x2="44" y2="24" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+        <line x1="36" y1="28" x2="44" y2="28" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+        <line x1="36" y1="32" x2="44" y2="32" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+        <!-- Mic arc -->
+        <path d="M27 36 C27 46, 53 46, 53 36" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <!-- Mic stand -->
+        <line x1="40" y1="46" x2="40" y2="54" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="34" y1="54" x2="46" y2="54" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <!-- Sound waves left -->
+        <path d="M22 28 C18 32, 18 38, 22 42" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" opacity="0.5"/>
+        <path d="M17 25 C11 31, 11 39, 17 45" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.3"/>
+        <!-- Sound waves right -->
+        <path d="M58 28 C62 32, 62 38, 58 42" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" opacity="0.5"/>
+        <path d="M63 25 C69 31, 69 39, 63 45" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.3"/>
+        <!-- Waveform at bottom -->
+        <polyline points="16,64 20,60 24,66 28,58 32,65 36,61 40,56 44,63 48,59 52,66 56,60 60,64 64,62" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+      </svg>
+    </div>
+    <div class="info-hero-content">
+      <div class="info-hero-title">Bite Helper</div>
+      <div class="info-hero-desc">
+        Drop in a podcast or radio show and <span class="hl">Bite Helper</span> will transcribe it, then use AI to find the most compelling quotes and moments for use in on-air promos. Preview each bite, fine-tune the in and out points, and download broadcast-ready clips.
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════ CONTENT AREA ═══════ -->
   <div class="content-area" id="contentArea">
     <div class="analysis-bar" id="analysisBar">
@@ -723,6 +820,20 @@
         <div class="analysis-spinner"></div>
         <span class="analysis-bar-text" id="analysisText">Analysing transcript for promo-worthy bites…</span>
         <div class="analysis-bar-progress"><div class="analysis-bar-progress-fill" id="analysisProgressFill"></div></div>
+      </div>
+    </div>
+
+    <div class="analysis-error" id="analysisError">
+      <div class="analysis-error-inner">
+        <div class="analysis-error-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="analysis-error-text">Analysis didn't return usable results. This can happen with free models — try a different one or have another go.</div>
+        <div class="analysis-error-detail" id="analysisErrorDetail"></div>
+        <button class="regenerate-btn" id="regenerateBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Try Again
+        </button>
       </div>
     </div>
 
@@ -1117,6 +1228,7 @@
       wavesurfer.on('ready', function () {
         audioLoaded = true;
         document.getElementById('contentArea').classList.add('visible');
+        document.getElementById('infoHero').classList.add('hidden');
         document.getElementById('transportDuration').textContent = '/ ' + secondsToTimecode(wavesurfer.getDuration());
         wavesurfer.setPlaybackRate(SPEED_STEPS[speedIndex]);
         hideWaveformLoading();
@@ -1161,6 +1273,7 @@
     document.getElementById('transportDuration').textContent = '/ 00.00.00';
     document.getElementById('transportSearch').classList.remove('visible');
     document.getElementById('contentArea').classList.remove('visible');
+    document.getElementById('infoHero').classList.remove('hidden');
     document.getElementById('urlGrabSection').classList.add('visible');
     clearBites();
     hideWaveformLoading();
@@ -1176,6 +1289,7 @@
     document.getElementById('bitesContainer').innerHTML = '';
     document.getElementById('bottomActions').style.display = 'none';
     document.getElementById('analysisBar').classList.remove('visible');
+    document.getElementById('analysisError').classList.remove('visible');
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1481,6 +1595,7 @@
     if (!promptLoaded || !PROMPT) { showError('Prompt file not loaded yet.'); return; }
 
     isAnalysing = true;
+    hideAnalysisError();
     clearBites();
     document.getElementById('analysisBar').classList.add('visible');
     document.getElementById('analysisText').textContent = 'Analysing transcript for promo-worthy bites…';
@@ -1540,12 +1655,26 @@
         throw new Error('Unexpected response format from model.');
       }
     } catch (err) {
-      showError('Analysis failed: ' + (err.message || err));
+      showAnalysisError(err.message || String(err));
     } finally {
       isAnalysing = false;
       document.getElementById('analysisBar').classList.remove('visible');
     }
   }
+
+  function showAnalysisError(msg) {
+    document.getElementById('analysisErrorDetail').textContent = msg;
+    document.getElementById('analysisError').classList.add('visible');
+  }
+
+  function hideAnalysisError() {
+    document.getElementById('analysisError').classList.remove('visible');
+  }
+
+  document.getElementById('regenerateBtn').addEventListener('click', function () {
+    hideAnalysisError();
+    startAnalysis();
+  });
 
   // ═══════════════════════════════════════════════════════════════
   // RENDER BITE CARDS
