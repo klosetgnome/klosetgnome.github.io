@@ -35,6 +35,12 @@
     .site-header h1 { flex-shrink: 0; }
     .theme-toggle { flex-shrink: 0; }
 
+    /* ── Category select accent color ── */
+    #categorySelect {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
     /* ── Header actions (settings + shortcuts + theme toggle) ── */
     .header-actions {
       display: flex;
@@ -1163,7 +1169,7 @@
 
     <!-- URL Grab section (News mode only — visible when no audio loaded) -->
     <div class="url-grab-section" id="urlGrabSection">
-      <div class="url-grab-divider"><span>paste a link</span><span class="url-server-status" id="urlServerStatus"><span class="url-server-dot" id="urlServerDot"></span><span id="urlServerLabel">Checking…</span></span></div>
+      <div class="url-grab-divider"><span>drop audio or paste a link</span><span class="url-server-status" id="urlServerStatus"><span class="url-server-dot" id="urlServerDot"></span><span id="urlServerLabel">Checking…</span></span></div>
       <div class="url-grab-row">
         <input type="text" class="url-grab-input" id="urlGrabInput"
                placeholder="https://www.youtube.com/watch?v=..."
@@ -2069,8 +2075,8 @@
       colLeft.style.flexDirection = 'column';
     }
 
-    // Hide audio drop zone in News mode, show in Sport mode
-    audioDropZone.style.display = (catId === 'news') ? 'none' : '';
+    // Show audio drop zone in all modes
+    audioDropZone.style.display = '';
 
     // Show URL grab in News mode only (when no audio loaded)
     if (catId === 'news') showUrlGrabSection();
@@ -2399,8 +2405,8 @@
     hideWaveformLoading();
     hideCardProcessing();
     hideContentArea();
-    // Re-show drop zone only if in sport mode
-    audioDropZone.style.display = (activeCategory === 'news') ? 'none' : '';
+    // Re-show drop zone in all modes
+    audioDropZone.style.display = '';
     // Re-show URL grab if still in News mode
     if (activeCategory === 'news') showUrlGrabSection();
     speedReset();
