@@ -208,14 +208,16 @@
       display: flex;
     }
 
-    .regen-overlay .regen-label {
+    .regen-overlay .regen-label,
+    .creating-overlay .regen-label {
       font-family: var(--mono);
       font-size: 11px;
       letter-spacing: 3px;
       text-transform: uppercase;
       color: var(--text-secondary);
     }
-    .regen-overlay .regen-track {
+    .regen-overlay .regen-track,
+    .creating-overlay .regen-track {
       width: 60%;
       max-width: 300px;
       height: 3px;
@@ -223,7 +225,8 @@
       border-radius: 2px;
       overflow: hidden;
     }
-    .regen-overlay .regen-bar {
+    .regen-overlay .regen-bar,
+    .creating-overlay .regen-bar {
       width: 40%;
       height: 100%;
       background: var(--accent);
@@ -235,7 +238,8 @@
       100% { transform: translateX(350%); }
     }
 
-    .regen-overlay .regen-cancel {
+    .regen-overlay .regen-cancel,
+    .creating-overlay .regen-cancel {
       background: none;
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -248,7 +252,8 @@
       cursor: pointer;
       transition: all 0.2s;
     }
-    .regen-overlay .regen-cancel:hover {
+    .regen-overlay .regen-cancel:hover,
+    .creating-overlay .regen-cancel:hover {
       border-color: var(--error);
       color: var(--error);
       background: var(--error-glow);
