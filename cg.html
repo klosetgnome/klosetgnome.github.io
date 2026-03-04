@@ -289,7 +289,8 @@
 
   .input-row {
     display: flex;
-    gap: 10px;
+    gap: 8px;
+    align-items: center;
   }
 
   .input-row input[type="text"] {
@@ -297,10 +298,10 @@
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 12px 16px;
+    padding: 10px 14px;
     color: var(--text-primary);
     font-family: var(--mono);
-    font-size: 13px;
+    font-size: 12px;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s, background 0.3s;
   }
@@ -312,25 +313,24 @@
     box-shadow: 0 0 0 3px var(--accent-glow);
   }
 
-  .btn {
+  .btn-fetch {
     font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
     border: none;
     border-radius: var(--radius);
-    padding: 12px 20px;
+    padding: 10px 18px;
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
-    text-decoration: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-  }
-
-  .btn-fetch {
     background: var(--accent);
     color: #fff;
+    flex-shrink: 0;
   }
 
   .btn-fetch:hover {
@@ -351,14 +351,14 @@
 
   /* ── Countdown ring (auto-grab) ── */
   .countdown-ring {
-    width: 22px;
-    height: 22px;
+    width: 30px;
+    height: 30px;
     flex-shrink: 0;
     position: relative;
   }
   .countdown-ring svg {
-    width: 22px;
-    height: 22px;
+    width: 30px;
+    height: 30px;
     transform: rotate(-90deg);
   }
   .countdown-ring .ring-bg {
@@ -381,7 +381,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 600;
     color: var(--accent);
     font-family: var(--mono);
@@ -544,6 +544,7 @@
   @media (max-width: 600px) {
     .container { padding: 32px 16px 60px; }
     .input-row { flex-direction: column; }
+    .btn-fetch { width: 100%; }
     .settings-panel { min-width: 260px; right: -40px; }
     .settings-row { grid-template-columns: 1fr; }
   }
@@ -640,7 +641,7 @@
     <label for="urlInput">Content link</label>
     <div class="input-row">
       <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" spellcheck="false">
-      <button class="btn btn-fetch" id="fetchBtn" onclick="handleGrab()" style="display:none;">Grab</button>
+      <button class="btn-fetch" id="fetchBtn" onclick="handleGrab()" style="display:none;">Grab</button>
     </div>
 
     <!-- Inline status bar — appears inside the input card -->
