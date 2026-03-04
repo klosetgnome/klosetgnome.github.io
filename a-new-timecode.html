@@ -2786,8 +2786,7 @@
         };
         status.textContent = 'Transcribing on server…';
       } else if (mixedBlob) {
-        // Audio was dropped/browsed — upload via CF Worker
-        // Downsample to 16kHz mono first — Whisper wants this anyway, and it's ~6x smaller
+        // Audio was dropped/browsed — downsample to 16kHz mono first (~6x smaller)
         status.textContent = 'Preparing audio…';
         var audio16k = await getMixedAudio16k();
 
@@ -2799,19 +2798,58 @@
         uploadBuffer.copyToChannel(audio16k, 0);
         var uploadBlob = audioBufferToWav(uploadBuffer);
 
-        transcribeUrl = URL_GRAB_SERVER + '/api/transcribe';
+        // Get a signed upload URL (tiny request through CF Worker)
+        status.textContent = 'Preparing upload…';
+        var tokenRes = await fetch(URL_GRAB_SERVER + '/api/transcribe-token');
+        var tokenOk = false;
+        var directUrl = null;
+        if (tokenRes.ok) {
+          var tokenData = await tokenRes.json();
+          if (tokenData.status === 'ok' && tokenData.upload_url) {
+            directUrl = tokenData.upload_url;
+            tokenOk = true;
+          }
+        }
+
+        if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) {
+          isTranscribing = false; return;
+        }
+
         var formData = new FormData();
         formData.append('file', uploadBlob, 'audio.wav');
-        fetchOpts = {
-          method: 'POST',
-          body: formData,
-        };
+
+        // Try direct Funnel upload first (bypasses CF for external users)
+        // Falls back to CF Worker if PNA blocks it (dev on local network)
+        if (tokenOk) {
+          status.textContent = 'Uploading audio…';
+          try {
+            var directRes = await fetch(directUrl, { method: 'POST', body: formData });
+            if (directRes.ok) {
+              transcribeUrl = null;  // signal we already have the response
+              res = directRes;
+            } else {
+              throw new Error('Direct upload failed');
+            }
+          } catch (directErr) {
+            console.log('Direct Funnel upload blocked (PNA), falling back to CF Worker');
+            formData = new FormData();
+            formData.append('file', uploadBlob, 'audio.wav');
+            transcribeUrl = URL_GRAB_SERVER + '/api/transcribe';
+            fetchOpts = { method: 'POST', body: formData };
+          }
+        } else {
+          transcribeUrl = URL_GRAB_SERVER + '/api/transcribe';
+          fetchOpts = { method: 'POST', body: formData };
+        }
         status.textContent = 'Uploading audio…';
       } else {
         throw new Error('No audio available for transcription');
       }
 
-      var res = await fetch(transcribeUrl, fetchOpts);
+      var res;
+      if (transcribeUrl) {
+        res = await fetch(transcribeUrl, fetchOpts);
+      }
 
       if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) {
         isTranscribing = false;
