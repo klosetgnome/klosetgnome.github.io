@@ -278,6 +278,81 @@
     }
     .content-area.visible { display: flex; }
 
+    /* ── Transcription progress card ── */
+    .transcription-card {
+      display: none; width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden; animation: fadeInUp 0.4s ease both;
+    }
+    .transcription-card.visible { display: block; }
+
+    .transcription-card-inner {
+      display: flex; flex-direction: column; align-items: center; padding: 40px 24px 32px;
+    }
+
+    /* Progress ring */
+    .tc-ring-wrap {
+      position: relative; width: 120px; height: 120px; margin-bottom: 20px;
+    }
+    .tc-ring-wrap svg { width: 120px; height: 120px; transform: rotate(-90deg); }
+    .tc-ring-bg {
+      fill: none; stroke: var(--border); stroke-width: 4;
+    }
+    .tc-ring-fg {
+      fill: none; stroke: var(--accent); stroke-width: 4;
+      stroke-linecap: round;
+      stroke-dasharray: 326.73;
+      stroke-dashoffset: 326.73;
+      transition: stroke-dashoffset 0.6s ease;
+    }
+    .tc-ring-pct {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .tc-ring-pct-number {
+      font-family: var(--mono); font-size: 28px; font-weight: 600;
+      color: var(--text-primary); letter-spacing: -1px; line-height: 1;
+    }
+    .tc-ring-pct-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-muted); margin-top: 4px;
+    }
+
+    /* Status text */
+    .tc-status {
+      font-family: var(--mono); font-size: 13px; color: var(--text-secondary);
+      letter-spacing: 0.5px; margin-bottom: 4px; text-align: center;
+    }
+    .tc-parts {
+      font-family: var(--mono); font-size: 11px; color: var(--text-muted);
+      letter-spacing: 0.5px; margin-bottom: 24px; text-align: center;
+    }
+
+    /* Live transcript preview */
+    .tc-live-transcript {
+      width: 100%; max-height: 180px; overflow-y: auto; padding: 16px 20px;
+      border-top: 1px solid var(--border); background: var(--bg);
+      font-family: var(--mono); font-size: 11px; line-height: 1.8;
+      color: var(--text-secondary);
+    }
+    .tc-live-transcript .tc-live-placeholder {
+      color: var(--text-muted); font-style: italic; text-align: center;
+      padding: 12px 0;
+    }
+    .tc-live-transcript .tc-live-text {
+      animation: fadeIn 0.3s ease;
+    }
+
+    /* Tip bar */
+    .tc-tip {
+      width: 100%; padding: 12px 20px; border-top: 1px solid var(--border);
+      font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+      letter-spacing: 0.3px; text-align: center; line-height: 1.5;
+      transition: opacity 0.3s ease; min-height: 38px;
+    }
+    .tc-tip .tip-icon {
+      display: inline; opacity: 0.5; margin-right: 4px;
+    }
+
     /* ── Analysis progress overlay ── */
     .analysis-bar {
       display: none; width: 100%; background: var(--surface); border: 1px solid var(--border);
@@ -423,14 +498,28 @@
     .tc-scrub-track.dragging .tc-scrub-fill { transition: none; }
     .tc-scrub-track.dragging .tc-scrub-thumb { transition: none; }
 
+    .bite-quote-row {
+      display: flex; align-items: flex-start; gap: 8px; flex: 1; min-width: 0;
+    }
     .bite-quote {
-      flex: 1; min-width: 120px; font-family: var(--mono); font-size: 12px;
+      flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px;
       line-height: 1.6; padding: 8px 10px; border: 1px solid var(--border);
       border-radius: var(--radius); background: var(--bg); color: var(--text-primary);
-      outline: none; transition: border-color 0.2s, box-shadow 0.2s; resize: none;
-      min-height: 32px; max-height: 80px; overflow-y: auto;
+      max-height: 80px; overflow-y: auto; user-select: text;
     }
-    .bite-quote:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .bite-copy-btn {
+      background: none; border: 1px solid var(--border); border-radius: var(--radius);
+      width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); transition: all 0.2s; flex-shrink: 0;
+      margin-top: 4px;
+    }
+    .bite-copy-btn:hover {
+      border-color: var(--accent); color: var(--accent); background: var(--accent-light);
+    }
+    .bite-copy-btn.copied {
+      border-color: var(--success); color: var(--success); background: var(--success-light);
+    }
+    .bite-copy-btn svg { width: 14px; height: 14px; }
 
     /* ── Bite action buttons ── */
     .bite-actions {
@@ -815,6 +904,30 @@
 
   <!-- ═══════ CONTENT AREA ═══════ -->
   <div class="content-area" id="contentArea">
+    <div class="transcription-card" id="transcriptionCard">
+      <div class="transcription-card-inner">
+        <div class="tc-ring-wrap">
+          <svg viewBox="0 0 120 120">
+            <circle class="tc-ring-bg" cx="60" cy="60" r="52"/>
+            <circle class="tc-ring-fg" id="tcRingFg" cx="60" cy="60" r="52"/>
+          </svg>
+          <div class="tc-ring-pct">
+            <span class="tc-ring-pct-number" id="tcPctNumber">0%</span>
+            <span class="tc-ring-pct-label">complete</span>
+          </div>
+        </div>
+        <div class="tc-status" id="tcStatus">Preparing your audio…</div>
+        <div class="tc-parts" id="tcParts"></div>
+      </div>
+      <div class="tc-live-transcript" id="tcLiveTranscript">
+        <div class="tc-live-placeholder">Transcript will appear here as your audio is processed…</div>
+      </div>
+      <div class="tc-tip" id="tcTip">
+        <span class="tip-icon">💡</span>
+        <span id="tcTipText">You can scrub the waveform and listen to your audio while it's being transcribed.</span>
+      </div>
+    </div>
+
     <div class="analysis-bar" id="analysisBar">
       <div class="analysis-bar-inner">
         <div class="analysis-spinner"></div>
@@ -1124,7 +1237,7 @@
   var workerScript = function () {
     self.onmessage = async function (e) {
       try {
-        self.postMessage({ type: 'status', text: 'Loading transcription library…' });
+        self.postMessage({ type: 'phase', phase: 'loading-lib' });
         var transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
         var modelId = 'onnx-community/whisper-base';
         var device = 'wasm';
@@ -1134,7 +1247,7 @@
             if (adapter) { device = 'webgpu'; }
           } catch (ignored) {}
         }
-        self.postMessage({ type: 'status', text: 'Loading model (' + (device === 'webgpu' ? 'GPU' : 'WASM') + ')…' });
+        self.postMessage({ type: 'phase', phase: 'loading-model', device: device });
         var transcriber = await transformers.pipeline(
           'automatic-speech-recognition', modelId,
           { dtype: device === 'webgpu' ? 'fp32' : 'q8', device: device }
@@ -1143,19 +1256,18 @@
         var chunkSec = 30;
         var totalChunks = Math.max(1, Math.ceil(audioLengthSec / chunkSec));
         var chunksProcessed = 0;
-        self.postMessage({ type: 'status', text: 'Transcribing…' });
-        self.postMessage({ type: 'progress', value: 5 });
+        self.postMessage({ type: 'phase', phase: 'transcribing' });
+        self.postMessage({ type: 'progress', value: 5, done: 0, total: totalChunks });
         var result = await transcriber(e.data.audio, {
           return_timestamps: true, chunk_length_s: chunkSec, stride_length_s: 5,
           language: 'en', task: 'transcribe',
           callback_function: function () {
             chunksProcessed++;
             var pct = Math.min(95, Math.round((chunksProcessed / totalChunks) * 95));
-            self.postMessage({ type: 'progress', value: pct });
-            self.postMessage({ type: 'status', text: 'Transcribing… chunk ' + chunksProcessed + '/' + totalChunks });
+            self.postMessage({ type: 'progress', value: pct, done: chunksProcessed, total: totalChunks });
           }
         });
-        self.postMessage({ type: 'progress', value: 100 });
+        self.postMessage({ type: 'progress', value: 100, done: totalChunks, total: totalChunks });
         self.postMessage({ type: 'result', data: result });
       } catch (err) {
         self.postMessage({ type: 'error', text: err.message || String(err) });
@@ -1290,6 +1402,7 @@
     document.getElementById('bottomActions').style.display = 'none';
     document.getElementById('analysisBar').classList.remove('visible');
     document.getElementById('analysisError').classList.remove('visible');
+    hideTranscriptionCard();
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1432,10 +1545,71 @@
   // ═══════════════════════════════════════════════════════════════
   // TRANSCRIPTION
   // ═══════════════════════════════════════════════════════════════
+  var TC_RING_CIRCUMFERENCE = 2 * Math.PI * 52; // r=52
+  var TIPS = [
+    'You can scrub the waveform and listen to your audio while it\u2019s being transcribed.',
+    'Use F2 and F4 to skip back and forward by one second.',
+    'Longer audio takes more time \u2014 a 60-minute file may take several minutes.',
+    'GPU-accelerated browsers (Chrome, Edge) transcribe significantly faster.',
+    'Once bites are suggested, you can fine-tune each one with the scrub sliders.',
+    'F5 and F6 set the in and out points on the currently selected bite.',
+    'You can preview each bite to hear exactly what will be exported.',
+    'Try a different AI model in settings if the first analysis doesn\u2019t hit the mark.'
+  ];
+  var tipIndex = 0;
+  var tipTimer = null;
+
+  function showTranscriptionCard() {
+    var card = document.getElementById('transcriptionCard');
+    card.classList.add('visible');
+    document.getElementById('tcPctNumber').textContent = '0%';
+    document.getElementById('tcRingFg').style.strokeDashoffset = TC_RING_CIRCUMFERENCE;
+    document.getElementById('tcStatus').textContent = 'Preparing your audio\u2026';
+    document.getElementById('tcParts').textContent = '';
+    document.getElementById('tcLiveTranscript').innerHTML = '<div class="tc-live-placeholder">Transcript will appear here as your audio is processed\u2026</div>';
+    // Start tip rotation
+    tipIndex = Math.floor(Math.random() * TIPS.length);
+    document.getElementById('tcTipText').textContent = TIPS[tipIndex];
+    tipTimer = setInterval(function () {
+      tipIndex = (tipIndex + 1) % TIPS.length;
+      var tipEl = document.getElementById('tcTip');
+      tipEl.style.opacity = '0';
+      setTimeout(function () {
+        document.getElementById('tcTipText').textContent = TIPS[tipIndex];
+        tipEl.style.opacity = '1';
+      }, 300);
+    }, 8000);
+  }
+
+  function hideTranscriptionCard() {
+    document.getElementById('transcriptionCard').classList.remove('visible');
+    if (tipTimer) { clearInterval(tipTimer); tipTimer = null; }
+  }
+
+  function updateTranscriptionProgress(pct, done, total) {
+    var offset = TC_RING_CIRCUMFERENCE * (1 - pct / 100);
+    document.getElementById('tcRingFg').style.strokeDashoffset = offset;
+    document.getElementById('tcPctNumber').textContent = pct + '%';
+    if (done > 0 && total > 0) {
+      document.getElementById('tcParts').textContent = done + ' of ' + total + ' parts done';
+    }
+  }
+
+  function setTranscriptionStatus(text) {
+    document.getElementById('tcStatus').textContent = text;
+  }
+
+  function showLiveTranscriptText(text) {
+    var container = document.getElementById('tcLiveTranscript');
+    container.innerHTML = '<div class="tc-live-text">' + escapeHtml(text) + '</div>';
+    container.scrollTop = container.scrollHeight;
+  }
+
   function cancelTranscription() {
     if (transcriptionWorker) { transcriptionWorker.terminate(); transcriptionWorker = null; }
     isTranscribing = false;
     transcriptChunks = null;
+    hideTranscriptionCard();
     document.getElementById('transportStatus').classList.remove('visible');
     document.getElementById('transcribeProgress').classList.remove('visible');
     document.getElementById('transcriptDisplay').classList.remove('visible');
@@ -1447,6 +1621,7 @@
     if (isTranscribing || !audioBuffer) return;
     isTranscribing = true;
 
+    // Small transport bar status (secondary indicator)
     var statusBar = document.getElementById('transportStatus');
     var status = document.getElementById('transcribeStatus');
     var prog = document.getElementById('transcribeProgress');
@@ -1454,11 +1629,15 @@
 
     document.getElementById('transportSearch').classList.remove('visible');
     statusBar.classList.add('visible');
-    status.textContent = 'Starting transcription…';
+    status.textContent = 'Transcribing\u2026';
     prog.classList.add('visible');
     progBar.classList.add('indeterminate');
 
+    // Show the big progress card
+    showTranscriptionCard();
+
     try {
+      setTranscriptionStatus('Preparing your audio\u2026');
       var targetLen = Math.ceil(audioBuffer.duration * 16000);
       var offline = new OfflineAudioContext(1, targetLen, 16000);
       var src = offline.createBufferSource();
@@ -1469,11 +1648,28 @@
       transcriptionWorker = new Worker(workerUrl, { type: 'module' });
       transcriptionWorker.onmessage = function (e) {
         var msg = e.data;
-        if (msg.type === 'status') status.textContent = msg.text;
+
+        if (msg.type === 'phase') {
+          if (msg.phase === 'loading-lib') {
+            setTranscriptionStatus('Loading transcription engine\u2026');
+          } else if (msg.phase === 'loading-model') {
+            var accel = msg.device === 'webgpu' ? 'GPU accelerated' : 'using your CPU';
+            setTranscriptionStatus('Loading speech model (' + accel + ')\u2026');
+          } else if (msg.phase === 'transcribing') {
+            setTranscriptionStatus('Listening to your audio\u2026');
+          }
+        }
+
         if (msg.type === 'progress') {
           progBar.classList.remove('indeterminate');
           progBar.style.width = msg.value + '%';
+          updateTranscriptionProgress(msg.value, msg.done || 0, msg.total || 0);
+          if (msg.value > 5) {
+            setTranscriptionStatus('Listening to your audio\u2026');
+          }
+          status.textContent = 'Transcribing\u2026 ' + msg.value + '%';
         }
+
         if (msg.type === 'result') {
           var result = msg.data;
           if (result && result.chunks && result.chunks.length) {
@@ -1483,25 +1679,48 @@
           } else if (result && result.text) {
             transcriptChunks = [{ start: 0, end: audioBuffer.duration, text: result.text }];
           }
-          displayTranscript();
-          isTranscribing = false;
-          setTimeout(function () { prog.classList.remove('visible'); }, 1000);
-          transcriptionWorker.terminate(); transcriptionWorker = null;
-          if (autoAnalyseEnabled) setTimeout(startAnalysis, 500);
+
+          // Show complete transcript in the progress card briefly
+          if (transcriptChunks && transcriptChunks.length) {
+            var fullText = transcriptChunks.map(function (c) { return c.text.trim(); }).join(' ');
+            showLiveTranscriptText(fullText);
+          }
+
+          updateTranscriptionProgress(100, 0, 0);
+          setTranscriptionStatus('Transcript ready \u2714');
+          document.getElementById('tcParts').textContent = '';
+
+          // Transition: hide progress card, show transcript and start analysis
+          setTimeout(function () {
+            hideTranscriptionCard();
+            displayTranscript();
+            isTranscribing = false;
+            statusBar.classList.remove('visible');
+            prog.classList.remove('visible');
+            transcriptionWorker = null;
+            if (autoAnalyseEnabled) setTimeout(startAnalysis, 400);
+          }, 1200);
+
+          if (transcriptionWorker) { transcriptionWorker.terminate(); }
         }
+
         if (msg.type === 'error') {
-          status.textContent = 'Transcription failed: ' + msg.text;
+          setTranscriptionStatus('Transcription failed');
+          document.getElementById('tcParts').textContent = msg.text || '';
+          status.textContent = 'Failed';
           isTranscribing = false;
-          transcriptionWorker.terminate(); transcriptionWorker = null;
+          if (transcriptionWorker) { transcriptionWorker.terminate(); transcriptionWorker = null; }
         }
       };
       transcriptionWorker.onerror = function (err) {
-        status.textContent = 'Transcription worker failed.';
+        setTranscriptionStatus('Transcription failed');
+        status.textContent = 'Failed';
         isTranscribing = false; transcriptionWorker = null;
       };
       transcriptionWorker.postMessage({ audio: audioData, audioDuration: audioBuffer.duration }, [audioData.buffer]);
     } catch (err) {
-      status.textContent = 'Failed: ' + (err.message || err);
+      setTranscriptionStatus('Failed: ' + (err.message || err));
+      status.textContent = 'Failed';
       isTranscribing = false;
     }
   }
@@ -1745,7 +1964,12 @@
           '</div>' +
         '</div>' +
         '<div class="bite-row">' +
-          '<textarea class="bite-quote" data-idx="' + idx + '" rows="2">' + escapeHtml(bite.quote) + '</textarea>' +
+          '<div class="bite-quote-row">' +
+            '<div class="bite-quote" id="bite-quote-' + idx + '">' + escapeHtml(bite.quote) + '</div>' +
+            '<button class="bite-copy-btn" data-idx="' + idx + '" title="Copy to clipboard">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+            '</button>' +
+          '</div>' +
         '</div>' +
         '<div class="bite-actions">' +
           '<button class="bite-btn preview-btn" data-idx="' + idx + '">' + PLAY_SVG + ' Preview</button>' +
@@ -1799,10 +2023,22 @@
         selectBite(idx);
       });
 
-      // Quote input
-      card.querySelector('.bite-quote').addEventListener('input', function () {
+      // Copy button
+      card.querySelector('.bite-copy-btn').addEventListener('click', function () {
         var i = parseInt(this.dataset.idx, 10);
-        if (!isNaN(i) && bites[i]) bites[i].quote = this.value;
+        var quoteEl = document.getElementById('bite-quote-' + i);
+        if (!quoteEl) return;
+        var text = quoteEl.textContent;
+        navigator.clipboard.writeText(text).then(function () {
+          var btn = card.querySelector('.bite-copy-btn');
+          btn.classList.add('copied');
+          btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+          showToast('Copied to clipboard');
+          setTimeout(function () {
+            btn.classList.remove('copied');
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+          }, 1500);
+        });
       });
     });
 
@@ -1849,6 +2085,26 @@
       var durSpan = card.querySelector('.header-right span');
       if (durSpan) durSpan.textContent = (bite.end - bite.start).toFixed(1) + 's';
     }
+    // Update quote text from transcript
+    var newQuote = getTranscriptTextForRange(bite.start, bite.end);
+    if (newQuote) {
+      bite.quote = newQuote;
+      var quoteEl = document.getElementById('bite-quote-' + idx);
+      if (quoteEl) quoteEl.textContent = newQuote;
+    }
+  }
+
+  function getTranscriptTextForRange(startTime, endTime) {
+    if (!transcriptChunks || !transcriptChunks.length) return '';
+    var parts = [];
+    for (var i = 0; i < transcriptChunks.length; i++) {
+      var c = transcriptChunks[i];
+      // Include chunk if it overlaps with the range
+      if (c.end > startTime && c.start < endTime) {
+        parts.push(c.text.trim());
+      }
+    }
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
   }
 
   function updateScrubPosition(idx, field) {
@@ -1971,27 +2227,33 @@
   // ═══════════════════════════════════════════════════════════════
   // PREVIEW BITE
   // ═══════════════════════════════════════════════════════════════
+  var previewCheckInterval = null;
+
+  function stopCurrentPreview() {
+    if (previewCheckInterval) { clearInterval(previewCheckInterval); previewCheckInterval = null; }
+    if (previewTimeout) { clearTimeout(previewTimeout); previewTimeout = null; }
+    document.querySelectorAll('.bite-card.previewing').forEach(function (c) { c.classList.remove('previewing'); });
+    document.querySelectorAll('.preview-btn.previewing').forEach(function (b) {
+      b.innerHTML = PLAY_SVG + ' Preview'; b.classList.remove('previewing');
+    });
+  }
+
   function previewBite(idx) {
     if (!wavesurfer || !audioLoaded || !bites[idx]) return;
     var bite = bites[idx];
     var card = document.getElementById(bite.id);
     var btn = card ? card.querySelector('.preview-btn') : null;
 
-    // If already previewing, stop
+    // If clicking the same bite that's already previewing, stop it
     if (card && card.classList.contains('previewing')) {
       wavesurfer.pause();
-      card.classList.remove('previewing');
-      if (btn) { btn.innerHTML = PLAY_SVG + ' Preview'; btn.classList.remove('previewing'); }
-      if (previewTimeout) { clearTimeout(previewTimeout); previewTimeout = null; }
+      stopCurrentPreview();
       return;
     }
 
-    // Clear any other previewing state
-    document.querySelectorAll('.bite-card.previewing').forEach(function (c) { c.classList.remove('previewing'); });
-    document.querySelectorAll('.preview-btn.previewing').forEach(function (b) {
-      b.innerHTML = PLAY_SVG + ' Preview'; b.classList.remove('previewing');
-    });
-    if (previewTimeout) { clearTimeout(previewTimeout); previewTimeout = null; }
+    // Stop any current preview first
+    wavesurfer.pause();
+    stopCurrentPreview();
 
     selectBite(idx);
     var dur = wavesurfer.getDuration();
@@ -2002,18 +2264,14 @@
     if (btn) { btn.innerHTML = STOP_SVG + ' Stop'; btn.classList.add('previewing'); }
 
     // Stop when reaching end time
-    var checkInterval = setInterval(function () {
+    previewCheckInterval = setInterval(function () {
       if (!wavesurfer || !wavesurfer.isPlaying()) {
-        clearInterval(checkInterval);
-        if (card) card.classList.remove('previewing');
-        if (btn) { btn.innerHTML = PLAY_SVG + ' Preview'; btn.classList.remove('previewing'); }
+        stopCurrentPreview();
         return;
       }
       if (wavesurfer.getCurrentTime() >= bite.end) {
         wavesurfer.pause();
-        clearInterval(checkInterval);
-        if (card) card.classList.remove('previewing');
-        if (btn) { btn.innerHTML = PLAY_SVG + ' Preview'; btn.classList.remove('previewing'); }
+        stopCurrentPreview();
       }
     }, 100);
   }
