@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow">
+  <script src="/analytics.js"></script>
+  <title>Bite Helper</title>
+  <script>
+    (function() {
+      var saved = localStorage.getItem('theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="astyle.css">
+  <script src="https://unpkg.com/wavesurfer.js@7"></script>
+  <style>
+    /* ── Page-specific tokens ── */
+    :root {
+      --success-light: rgba(74, 140, 63, 0.08);
+      --success-border: rgba(74, 140, 63, 0.35);
+    }
+    [data-theme="dark"] {
+      --success-light: rgba(94, 168, 82, 0.08);
+      --success-border: rgba(94, 168, 82, 0.35);
+    }
+
+    /* ── Header actions ── */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* ── Settings gear ── */
+    .settings-wrap { position: relative; }
+    .settings-toggle {
+      background: none; border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px; cursor: pointer; color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.25s ease; width: 38px; height: 38px; flex-shrink: 0;
+    }
+    .settings-toggle:hover { color: var(--accent); border-color: var(--accent); }
+    .settings-toggle.active {
+      color: var(--accent); border-color: var(--accent); background: var(--accent-light);
+    }
+    .settings-toggle svg { width: 18px; height: 18px; stroke-width: 1.5; transition: transform 0.4s ease; }
+    .settings-toggle:hover svg, .settings-toggle.active svg { transform: rotate(60deg); }
+
+    .settings-panel {
+      display: none; position: absolute; top: calc(100% + 10px); right: 0; z-index: 100;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      box-shadow: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow-sm);
+      padding: 16px 20px; min-width: 280px; animation: fadeInDown 0.2s ease;
+    }
+    .settings-panel.visible { display: block; }
+    .settings-panel-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px;
+    }
+    .setting-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .setting-row + .setting-row { margin-top: 10px; }
+    .setting-label {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.5px; color: var(--text-secondary);
+    }
+
+    /* Toggle switch */
+    .toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute; inset: 0; background: var(--border); border-radius: 11px;
+      cursor: pointer; transition: background 0.25s ease;
+    }
+    .toggle-track::after {
+      content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+      background: var(--surface); border-radius: 50%; transition: transform 0.25s ease;
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+    .toggle-switch input:checked + .toggle-track { background: var(--accent); }
+    .toggle-switch input:checked + .toggle-track::after { transform: translateX(18px); }
+
+    .settings-divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+    .settings-panel select.minimal-select {
+      width: 100%; font-size: 12px; letter-spacing: 1px; padding: 8px 24px 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-panel .model-status {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+      color: var(--text-muted); margin-top: 8px;
+    }
+    .settings-panel .model-status .status-live { color: var(--success); }
+    .settings-panel .model-status .status-fallback { color: var(--warning); }
+
+    /* ── Shortcuts panel ── */
+    .shortcuts-wrap { position: relative; }
+    .shortcuts-toggle {
+      background: none; border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px; cursor: pointer; color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.25s ease; width: 38px; height: 38px; flex-shrink: 0;
+    }
+    .shortcuts-toggle:hover { color: var(--accent); border-color: var(--accent); }
+    .shortcuts-toggle.active {
+      color: var(--accent); border-color: var(--accent); background: var(--accent-light);
+    }
+    .shortcuts-toggle svg { width: 18px; height: 18px; stroke-width: 1.5; transition: transform 0.2s ease; }
+    .shortcuts-toggle:hover svg, .shortcuts-toggle.active svg { transform: scale(1.08); }
+
+    .shortcuts-panel {
+      display: none; position: absolute; top: calc(100% + 10px); right: 0; z-index: 100;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      box-shadow: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow-sm);
+      padding: 16px 20px; min-width: 300px; animation: fadeInDown 0.2s ease;
+    }
+    .shortcuts-panel.visible { display: block; }
+    .shortcuts-panel-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px;
+    }
+    .shortcuts-panel-list { display: flex; flex-direction: column; gap: 8px; }
+    .shortcut-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .shortcut-keys { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .shortcut-keys kbd {
+      display: inline-block; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 4px; padding: 2px 7px; font-family: var(--mono); font-size: 10px;
+      font-weight: 500; color: var(--text-secondary); min-width: 22px; text-align: center; line-height: 1.4;
+    }
+    .shortcut-desc {
+      font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+      letter-spacing: 0.5px; text-align: right;
+    }
+    .shortcuts-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+    /* ── Main layout ── */
+    main {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      max-width: 1120px; margin: 0 auto; padding: 48px 24px 80px; gap: 20px; width: 100%;
+    }
+
+    /* ── Audio drop zone ── */
+    .audio-drop-zone { position: relative; width: 100%; }
+    .audio-drop-overlay {
+      display: none; position: absolute; inset: 0; z-index: 10;
+      background: var(--accent-light); border: 2px dashed var(--accent);
+      border-radius: var(--radius); align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .audio-drop-overlay.active { display: flex; }
+    .audio-drop-overlay span {
+      font-family: var(--mono); font-size: 12px; font-weight: 500;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--accent);
+    }
+    .audio-prompt {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px; padding: 36px 20px; min-height: 140px; text-align: center;
+    }
+    .audio-prompt.hidden { display: none; }
+    .audio-prompt-icon { color: var(--text-muted); opacity: 0.5; }
+    .audio-prompt-icon svg { width: 36px; height: 36px; }
+    .audio-prompt-text {
+      font-family: var(--mono); font-size: 12px; color: var(--text-secondary); line-height: 1.9;
+    }
+    .audio-prompt-text .browse { color: var(--accent); cursor: pointer; transition: opacity 0.2s; }
+    .audio-prompt-text .browse:hover { text-decoration: underline; }
+
+    /* ── Audio top bar ── */
+    .audio-top-bar {
+      display: flex; align-items: center; gap: 8px; padding: 12px 20px; min-height: 46px; flex-wrap: wrap;
+    }
+    .audio-top-bar-label {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--text-secondary); flex-shrink: 0;
+    }
+    .audio-top-bar-spacer { flex: 1; }
+    .audio-top-bar-clear {
+      display: none; flex-shrink: 0; background: none; border: 1px solid var(--border);
+      border-radius: var(--radius); font-family: var(--mono); font-size: 10px;
+      letter-spacing: 1px; text-transform: uppercase; color: var(--text-secondary);
+      padding: 4px 10px; cursor: pointer; transition: all 0.2s;
+    }
+    .audio-top-bar-clear.visible { display: inline-flex; }
+    .audio-top-bar-clear:hover {
+      border-color: var(--error); color: var(--error); background: var(--error-glow);
+    }
+    .audio-top-bar .audio-filename {
+      font-family: var(--mono); font-size: 11px; color: var(--text-primary); font-weight: 500;
+    }
+
+    /* ── Waveform ── */
+    .waveform-area { display: none; flex-direction: column; gap: 0; }
+    .waveform-area.visible { display: flex; }
+
+    /* ── Transcription / analysis status ── */
+    .transport-status {
+      display: none; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 1;
+      min-width: 0; overflow: hidden;
+    }
+    .transport-status.visible { display: flex; }
+    .transport-status-text {
+      font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+      letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .transport-status-progress {
+      width: 60px; height: 3px; background: var(--border); border-radius: 3px;
+      overflow: hidden; flex-shrink: 0; display: none;
+    }
+    .transport-status-progress.visible { display: block; }
+    .transport-status-progress-bar {
+      height: 100%; width: 0%; background: var(--accent); transition: width 0.3s ease;
+    }
+    .transport-status-progress-bar.indeterminate {
+      width: 100%; animation: indeterminate 1.8s ease-in-out infinite;
+    }
+    @keyframes indeterminate {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    /* ── Transcript search ── */
+    .transport-search {
+      display: none; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0;
+    }
+    .transport-search.visible { display: flex; }
+    .transport-search-input {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.5px;
+      color: var(--text-primary); background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 5px 10px; outline: none; width: 160px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .transport-search-input::placeholder { color: var(--text-muted); }
+    .transport-search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .transport-search-count {
+      font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+      letter-spacing: 0.5px; flex-shrink: 0; min-width: 40px; text-align: right;
+    }
+    .transport-search-nav { display: none; gap: 2px; flex-shrink: 0; }
+    .transport-search-nav.visible { display: flex; }
+    .transport-search-nav button {
+      background: none; border: 1px solid var(--border); border-radius: var(--radius);
+      width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); transition: all 0.2s; padding: 0;
+    }
+    .transport-search-nav button:hover {
+      border-color: var(--accent); color: var(--accent); background: var(--accent-light);
+    }
+    .transport-search-nav button svg { width: 12px; height: 12px; }
+
+    /* ── Transcript display ── */
+    .transcript-display {
+      display: none; max-height: 160px; overflow-y: auto; padding: 12px 20px 16px;
+      border-top: 1px solid var(--border); font-family: var(--mono); font-size: 11px;
+      line-height: 1.8; color: var(--text-secondary);
+    }
+    .transcript-display.visible { display: block; }
+    .transcript-display .ts-word {
+      cursor: pointer; padding: 1px 0; border-radius: 2px; transition: background 0.15s;
+    }
+    .transcript-display .ts-word:hover { background: var(--accent-light); color: var(--accent); }
+    .transcript-display .ts-word.highlight { background: rgba(192, 81, 45, 0.15); color: var(--accent); }
+    .ts-word.search-match { background: rgba(160, 120, 40, 0.2); border-radius: 2px; }
+    .ts-word.search-active {
+      background: var(--accent-light); color: var(--accent);
+      outline: 1px solid var(--accent); border-radius: 2px;
+    }
+
+    /* ── Content area ── */
+    .content-area {
+      display: none; flex-direction: column; gap: 20px; width: 100%;
+      animation: fadeInUp 0.5s ease both;
+    }
+    .content-area.visible { display: flex; }
+
+    /* ── Analysis progress overlay ── */
+    .analysis-bar {
+      display: none; width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden; animation: fadeInUp 0.3s ease;
+    }
+    .analysis-bar.visible { display: block; }
+    .analysis-bar-inner {
+      display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+    }
+    .analysis-spinner {
+      width: 18px; height: 18px; border: 2px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.8s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .analysis-bar-text {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.5px; color: var(--text-secondary);
+    }
+    .analysis-bar-progress {
+      flex: 1; height: 3px; background: var(--border); border-radius: 3px; overflow: hidden;
+    }
+    .analysis-bar-progress-fill {
+      height: 100%; background: var(--accent); width: 0%;
+      animation: analysisProgress 8s ease-out forwards;
+    }
+    @keyframes analysisProgress {
+      0% { width: 0%; } 70% { width: 60%; } 100% { width: 85%; }
+    }
+
+    /* ── Bite cards ── */
+    #bitesContainer {
+      display: flex; flex-direction: column; gap: 16px; width: 100%;
+    }
+    #bitesContainer:empty { display: none; }
+
+    .bite-card {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+      animation: fadeInUp 0.4s ease both; transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .bite-card.selected {
+      border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow), 0 4px 20px var(--accent-glow);
+    }
+    .bite-card.previewing {
+      border-color: var(--success-border); box-shadow: 0 0 0 2px rgba(74, 140, 63, 0.2);
+    }
+
+    .bite-header {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--text-muted);
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      transition: color 0.3s; cursor: pointer;
+    }
+    .bite-card.selected .bite-header { color: var(--accent); }
+    .bite-header .header-left { display: flex; align-items: center; gap: 8px; }
+    .bite-header .header-right { display: flex; align-items: center; gap: 6px; }
+
+    .bite-rationale {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.5px;
+      color: var(--text-muted); padding: 8px 16px; border-bottom: 1px solid var(--border);
+      font-style: italic; line-height: 1.5;
+    }
+
+    .bite-row {
+      display: flex; align-items: center; gap: 8px; padding: 10px 16px;
+      border-bottom: 1px solid var(--border); flex-wrap: wrap;
+    }
+    .bite-row:last-child { border-bottom: none; }
+
+    .row-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-muted); width: 44px; flex-shrink: 0;
+    }
+
+    .tc-wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .tc-input {
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      width: 86px; padding: 6px 6px; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--bg); color: var(--text-primary);
+      text-align: center; letter-spacing: 1px; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .tc-input::placeholder { color: var(--text-muted); font-weight: 400; }
+    .tc-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .tc-input.invalid { border-color: var(--error); box-shadow: 0 0 0 3px var(--error-glow); }
+
+    .stamp-btn {
+      background: none; border: 1px solid var(--border); border-radius: var(--radius);
+      width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); transition: all 0.2s; flex-shrink: 0;
+    }
+    .stamp-btn:hover {
+      border-color: var(--accent); color: var(--accent); background: var(--accent-light);
+    }
+    .stamp-btn svg { width: 14px; height: 14px; }
+
+    .bite-quote {
+      flex: 1; min-width: 120px; font-family: var(--mono); font-size: 12px;
+      line-height: 1.6; padding: 8px 10px; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--bg); color: var(--text-primary);
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s; resize: none;
+      min-height: 32px; max-height: 80px; overflow-y: auto;
+    }
+    .bite-quote:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+    /* ── Bite action buttons ── */
+    .bite-actions {
+      display: flex; gap: 6px; padding: 10px 16px; border-top: 1px solid var(--border);
+    }
+    .bite-btn {
+      font-family: var(--mono); font-size: 10px; font-weight: 500;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      background: none; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 8px 14px; cursor: pointer; color: var(--text-secondary);
+      transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+    }
+    .bite-btn:hover {
+      border-color: var(--accent); color: var(--accent); background: var(--accent-light);
+    }
+    .bite-btn svg { width: 14px; height: 14px; }
+    .bite-btn.previewing {
+      border-color: var(--success-border); color: var(--success); background: var(--success-light);
+    }
+    .bite-btn.primary {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+    .bite-btn.primary:hover { background: #d4623e; }
+    .bite-btn.remove {
+      margin-left: auto;
+    }
+    .bite-btn.remove:hover {
+      border-color: var(--error); color: var(--error); background: var(--error-glow);
+    }
+
+    /* ── Bottom actions row ── */
+    .bottom-actions {
+      display: flex; gap: 12px; align-items: center; justify-content: flex-end; width: 100%;
+    }
+    .export-btn {
+      font-family: var(--mono); font-size: 12px; font-weight: 500;
+      letter-spacing: 2px; text-transform: uppercase;
+      border: none; border-radius: var(--radius); padding: 12px 24px;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+      background: var(--accent); color: #fff;
+    }
+    .export-btn:hover {
+      background: #d4623e; transform: translateY(-1px);
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+    .export-btn:active { transform: translateY(0); }
+    .export-btn:disabled { opacity: 0.4; pointer-events: none; }
+    .export-btn.secondary {
+      background: var(--surface); color: var(--text-primary); border: 1px solid var(--border);
+    }
+    .export-btn.secondary:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light); box-shadow: none;
+    }
+
+    /* ── Reanalyse button ── */
+    .reanalyse-btn {
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      background: var(--surface); border: 1px dashed var(--border);
+      border-radius: var(--radius); padding: 12px 24px; cursor: pointer;
+      color: var(--text-secondary); transition: all 0.2s; width: 100%;
+    }
+    .reanalyse-btn:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light); border-style: solid;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; top: 12px; left: 50%;
+      transform: translateX(-50%) translateY(-80px);
+      font-family: var(--mono); font-size: 12px; letter-spacing: 1px;
+      background: var(--text-primary); color: var(--bg);
+      padding: 12px 24px; border-radius: var(--radius);
+      opacity: 0; transition: all 0.3s ease; z-index: 100; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      main { padding: 32px 16px 60px; }
+      .bite-row { padding: 10px 12px; gap: 6px; }
+      .tc-input { width: 80px; font-size: 11px; }
+      .shortcuts-panel { min-width: 260px; right: -40px; }
+      .settings-panel { min-width: 240px; right: -80px; }
+      .bottom-actions { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1><span>BITE</span> HELPER</h1>
+  <div class="header-center"></div>
+  <div class="header-actions">
+    <!-- Settings gear -->
+    <div class="settings-wrap">
+      <button class="settings-toggle" id="settingsToggle" aria-label="Settings" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+      <div class="settings-panel" id="settingsPanel">
+        <div class="settings-panel-label">Settings</div>
+        <div class="setting-row">
+          <span class="setting-label">Server Mode</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="serverModeToggle" checked />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Auto-Analyse</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoAnalyseToggle" checked />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="settings-divider"></div>
+        <div class="settings-panel-label">Model</div>
+        <select id="modelSelect" class="minimal-select"></select>
+        <div class="model-status" id="modelStatus">(loading…)</div>
+        <div class="settings-divider"></div>
+        <div class="settings-panel-label">Server</div>
+        <div class="model-status" id="serverStatus">
+          <span class="url-server-dot" id="serverDot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text-muted);margin-right:6px;vertical-align:middle;"></span>
+          <span id="serverLabel">Checking…</span>
+        </div>
+      </div>
+    </div>
+    <!-- Keyboard shortcuts -->
+    <div class="shortcuts-wrap">
+      <button class="shortcuts-toggle" id="shortcutsToggle" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2" ry="2"/>
+          <path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/>
+          <path d="M6 12h.001"/><path d="M10 12h.001"/><path d="M14 12h.001"/><path d="M18 12h.001"/>
+          <path d="M8 16h8"/>
+        </svg>
+      </button>
+      <div class="shortcuts-panel" id="shortcutsPanel">
+        <div class="shortcuts-panel-label">Keyboard Shortcuts</div>
+        <div class="shortcuts-panel-list">
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Skip back 1s</span>
+            <span class="shortcut-keys"><kbd>F2</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Play / Pause</span>
+            <span class="shortcut-keys"><kbd>F3</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Skip fwd 1s</span>
+            <span class="shortcut-keys"><kbd>F4</kbd></span>
+          </div>
+          <div class="shortcuts-divider"></div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Mark IN (selected bite)</span>
+            <span class="shortcut-keys"><kbd>F5</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Mark OUT (selected bite)</span>
+            <span class="shortcut-keys"><kbd>F6</kbd></span>
+          </div>
+          <div class="shortcuts-divider"></div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Select prev bite</span>
+            <span class="shortcut-keys"><kbd>↑</kbd></span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Select next bite</span>
+            <span class="shortcut-keys"><kbd>↓</kbd></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+      <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+      </svg>
+      <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2"/><path d="M12 20v2"/>
+        <path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+        <path d="M2 12h2"/><path d="M20 12h2"/>
+        <path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ═══════ AUDIO CARD ═══════ -->
+  <div class="card" id="audioCard">
+    <div class="audio-top-bar" id="audioTopBar">
+      <span class="audio-top-bar-label" id="audioTopLabel">Audio</span>
+      <span class="audio-filename" id="audioFilename"></span>
+      <span class="audio-top-bar-spacer"></span>
+      <button class="audio-top-bar-clear" id="audioTopClear">Clear</button>
+    </div>
+
+    <div class="audio-drop-zone" id="audioDropZone">
+      <div class="audio-drop-overlay" id="audioDropOverlay">
+        <span>Drop audio file here</span>
+      </div>
+      <div class="audio-prompt" id="audioPrompt">
+        <div class="audio-prompt-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <div class="audio-prompt-text">
+          Drag &amp; drop a podcast or radio audio file here<br>
+          or <span class="browse" id="audioBrowse">browse to select</span>
+        </div>
+      </div>
+      <input type="file" id="audioFileInput" accept=".wav,.mp3,.m4a,.ogg,.flac,audio/*" style="display:none;" />
+    </div>
+
+    <!-- URL Grab section -->
+    <div class="url-grab-section" id="urlGrabSection">
+      <div class="url-grab-divider"><span>paste a link</span><span class="url-server-status" id="urlServerStatus"><span class="url-server-dot" id="urlServerDot"></span><span id="urlServerLabel">Checking…</span></span></div>
+      <div class="url-grab-row">
+        <input type="text" class="url-grab-input" id="urlGrabInput"
+               placeholder="https://www.youtube.com/watch?v=..."
+               autocomplete="off" spellcheck="false" />
+        <div class="url-countdown-ring" id="urlCountdownRing" style="display:none;">
+          <svg viewBox="0 0 20 20">
+            <circle class="ring-bg" cx="10" cy="10" r="8"/>
+            <circle class="ring-fg" id="urlRingFg" cx="10" cy="10" r="8"/>
+          </svg>
+          <span class="url-countdown-number" id="urlCountdownNumber">3</span>
+        </div>
+        <button class="url-grab-btn" id="urlGrabBtn" style="display:none;">Grab</button>
+      </div>
+      <div class="url-grab-status" id="urlGrabStatus">
+        <span class="status-dot working" id="urlGrabDot"></span>
+        <span id="urlGrabStatusText">Downloading audio…</span>
+        <span class="cancel-link" id="urlGrabCancel">Cancel</span>
+      </div>
+    </div>
+
+    <div class="waveform-area" id="waveformArea">
+      <div class="waveform-loading" id="waveformLoading">
+        <span class="waveform-loading-label">Processing audio…</span>
+        <div class="waveform-loading-track"><div class="waveform-loading-bar"></div></div>
+        <span class="waveform-loading-detail" id="waveformLoadingDetail">Decoding audio</span>
+      </div>
+      <div class="waveform-container"><div id="waveform"></div></div>
+      <div class="transport">
+        <button class="transport-btn" id="btnSkipBack" title="Skip back 5s">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+        </button>
+        <button class="transport-btn" id="btnPlayPause" title="Play / Pause (F3)">
+          <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6,4 20,12 6,20"/></svg>
+          <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none"><rect x="5" y="4" width="4" height="16"/><rect x="15" y="4" width="4" height="16"/></svg>
+        </button>
+        <button class="transport-btn" id="btnSkipFwd" title="Skip forward 5s">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+        </button>
+        <span class="transport-time" id="transportTime">00.00.00</span>
+        <span class="transport-duration" id="transportDuration">/ 00.00.00</span>
+        <span class="speed-badge" id="speedBadge" title="Click to cycle speed">1&times;</span>
+        <span class="transport-spacer"></span>
+        <div class="transport-status" id="transportStatus">
+          <span class="transport-status-text" id="transcribeStatus"></span>
+          <div class="transport-status-progress" id="transcribeProgress">
+            <div class="transport-status-progress-bar" id="transcribeProgressBar"></div>
+          </div>
+        </div>
+        <div class="transport-search" id="transportSearch">
+          <span class="transport-search-count" id="searchCount"></span>
+          <div class="transport-search-nav" id="searchNav">
+            <button id="searchPrev" title="Previous match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+            <button id="searchNext" title="Next match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></button>
+          </div>
+          <input type="text" class="transport-search-input" id="transcriptSearchInput" placeholder="Search transcript…" />
+        </div>
+      </div>
+    </div>
+
+    <div class="transcript-display" id="transcriptDisplay"></div>
+  </div>
+
+  <!-- ═══════ CONTENT AREA ═══════ -->
+  <div class="content-area" id="contentArea">
+    <div class="analysis-bar" id="analysisBar">
+      <div class="analysis-bar-inner">
+        <div class="analysis-spinner"></div>
+        <span class="analysis-bar-text" id="analysisText">Analysing transcript for promo-worthy bites…</span>
+        <div class="analysis-bar-progress"><div class="analysis-bar-progress-fill" id="analysisProgressFill"></div></div>
+      </div>
+    </div>
+
+    <div id="bitesContainer"></div>
+
+    <div class="bottom-actions" id="bottomActions" style="display:none;">
+      <button class="reanalyse-btn" id="reanalyseBtn">Re-analyse Transcript</button>
+      <button class="export-btn" id="downloadAllBtn">Download All</button>
+    </div>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+</main>
+
+<footer>
+  <a href="index.html"><span style="color: var(--accent);">dev.</span>nialfernandes.com</a>
+  <span style="color: var(--text-muted); margin: 0 8px;">|</span>
+  <a href="privacy.html">Privacy Policy</a>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ═══════════════════════════════════════════════════════════════
+  // CONSTANTS
+  // ═══════════════════════════════════════════════════════════════
+  var SPEED_STEPS = [1, 1.5, 2, 2.5];
+  var speedIndex = 0;
+  var URL_GRAB_SERVER = 'https://mac-mini.tail257f46.ts.net';
+  var WORKER_URL = 'https://ddg-proxy.klosetgnome.workers.dev';
+  var RING_CIRCUMFERENCE = 2 * Math.PI * 8;
+  var URL_REGEX = /^https?:\/\/[^\s]+$/i;
+
+  // ═══════════════════════════════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════════════════════════════
+  var wavesurfer = null;
+  var audioLoaded = false;
+  var audioBuffer = null;
+  var transcriptChunks = null;
+  var isTranscribing = false;
+  var isAnalysing = false;
+  var transcriptionWorker = null;
+  var selectedBiteIndex = -1;
+  var bites = [];
+  var previewTimeout = null;
+  var serverOnline = false;
+  var serverModeEnabled = true;
+  var autoAnalyseEnabled = true;
+  var PROMPT = '';
+  var promptLoaded = false;
+
+  // ═══════════════════════════════════════════════════════════════
+  // THEME TOGGLE
+  // ═══════════════════════════════════════════════════════════════
+  document.querySelector('.theme-toggle').addEventListener('click', function () {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    if (wavesurfer && audioLoaded) {
+      var s = getComputedStyle(document.documentElement);
+      wavesurfer.setOptions({
+        waveColor: s.getPropertyValue('--waveform-wave').trim(),
+        progressColor: s.getPropertyValue('--waveform-progress').trim(),
+        cursorColor: s.getPropertyValue('--waveform-cursor').trim()
+      });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // SETTINGS PANEL
+  // ═══════════════════════════════════════════════════════════════
+  var settingsToggle = document.getElementById('settingsToggle');
+  var settingsPanel = document.getElementById('settingsPanel');
+  var shortcutsToggleBtn = document.getElementById('shortcutsToggle');
+  var shortcutsPanel = document.getElementById('shortcutsPanel');
+
+  settingsToggle.addEventListener('click', function (e) {
+    e.stopPropagation();
+    settingsPanel.classList.toggle('visible');
+    settingsToggle.classList.toggle('active');
+    shortcutsPanel.classList.remove('visible');
+    shortcutsToggleBtn.classList.remove('active');
+  });
+
+  shortcutsToggleBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    shortcutsPanel.classList.toggle('visible');
+    shortcutsToggleBtn.classList.toggle('active');
+    settingsPanel.classList.remove('visible');
+    settingsToggle.classList.remove('active');
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!shortcutsPanel.contains(e.target) && e.target !== shortcutsToggleBtn) {
+      shortcutsPanel.classList.remove('visible');
+      shortcutsToggleBtn.classList.remove('active');
+    }
+    if (!settingsPanel.contains(e.target) && e.target !== settingsToggle) {
+      settingsPanel.classList.remove('visible');
+      settingsToggle.classList.remove('active');
+    }
+  });
+
+  // Server mode toggle
+  document.getElementById('serverModeToggle').addEventListener('change', function () {
+    serverModeEnabled = this.checked;
+    localStorage.setItem('biteServerMode', serverModeEnabled ? '1' : '0');
+  });
+  (function () {
+    var saved = localStorage.getItem('biteServerMode');
+    if (saved !== null) {
+      serverModeEnabled = saved === '1';
+      document.getElementById('serverModeToggle').checked = serverModeEnabled;
+    }
+  })();
+
+  // Auto-analyse toggle
+  document.getElementById('autoAnalyseToggle').addEventListener('change', function () {
+    autoAnalyseEnabled = this.checked;
+    localStorage.setItem('biteAutoAnalyse', autoAnalyseEnabled ? '1' : '0');
+  });
+  (function () {
+    var saved = localStorage.getItem('biteAutoAnalyse');
+    if (saved !== null) {
+      autoAnalyseEnabled = saved === '1';
+      document.getElementById('autoAnalyseToggle').checked = autoAnalyseEnabled;
+    }
+  })();
+
+  // ═══════════════════════════════════════════════════════════════
+  // HELPERS
+  // ═══════════════════════════════════════════════════════════════
+  function secondsToTimecode(s) {
+    var total = Math.round(s);
+    return String(Math.floor(total / 3600)).padStart(2, '0') + '.' +
+           String(Math.floor((total % 3600) / 60)).padStart(2, '0') + '.' +
+           String(total % 60).padStart(2, '0');
+  }
+
+  function timecodeToSeconds(tc) {
+    var p = tc.split('.');
+    if (p.length !== 3) return NaN;
+    var hh = parseInt(p[0], 10), mm = parseInt(p[1], 10), ss = parseInt(p[2], 10);
+    if (isNaN(hh) || isNaN(mm) || isNaN(ss) || mm > 59 || ss > 59) return NaN;
+    return hh * 3600 + mm * 60 + ss;
+  }
+
+  function isValidTimecode(tc) {
+    return /^\d{1,2}\.\d{1,2}\.\d{1,2}$/.test(tc) && !isNaN(timecodeToSeconds(tc));
+  }
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function () { t.classList.remove('show'); }, 2200);
+  }
+
+  function showError(msg) {
+    var box = document.getElementById('errorBox');
+    box.textContent = msg; box.classList.add('visible');
+    setTimeout(function () { box.classList.remove('visible'); }, 8000);
+  }
+
+  function escapeHtml(s) {
+    var d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+  }
+
+  function getWaveformColors() {
+    var s = getComputedStyle(document.documentElement);
+    return {
+      wave: s.getPropertyValue('--waveform-wave').trim(),
+      progress: s.getPropertyValue('--waveform-progress').trim(),
+      cursor: s.getPropertyValue('--waveform-cursor').trim()
+    };
+  }
+
+  function showWaveformLoading(detail) {
+    document.getElementById('waveformLoadingDetail').textContent = detail || '';
+    document.getElementById('waveformLoading').classList.add('visible');
+  }
+  function hideWaveformLoading() {
+    document.getElementById('waveformLoading').classList.remove('visible');
+  }
+
+  function isUrl(text) { return URL_REGEX.test(text.trim()); }
+
+  // ═══════════════════════════════════════════════════════════════
+  // LOAD PROMPT
+  // ═══════════════════════════════════════════════════════════════
+  fetch('zpmtbh.txt')
+    .then(function (r) { if (!r.ok) throw new Error(); return r.text(); })
+    .then(function (t) { PROMPT = t; promptLoaded = true; })
+    .catch(function () { showError('Failed to load prompt file.'); });
+
+  // ═══════════════════════════════════════════════════════════════
+  // MODEL DROPDOWN (same pattern as Description Helper)
+  // ═══════════════════════════════════════════════════════════════
+  var modelEl = document.getElementById('modelSelect');
+  var modelStatusEl = document.getElementById('modelStatus');
+
+  var FALLBACK_MODELS = [
+    ['google/gemini-2.0-flash-exp:free','Google: Gemini 2.0 Flash Exp (free)'],
+    ['google/gemini-flash-1.5:free','Google: Gemini 1.5 Flash (free)'],
+    ['google/gemini-pro-1.5:free','Google: Gemini 1.5 Pro (free)'],
+    ['meta-llama/llama-3.3-70b-instruct:free','Meta: Llama 3.3 70B (free)'],
+    ['deepseek/deepseek-chat:free','DeepSeek: V3 Chat (free)'],
+    ['qwen/qwen-2.5-72b-instruct:free','Qwen: 2.5 72B (free)'],
+    ['mistralai/mistral-small-3.1-24b-instruct:free','Mistral: Small 3.1 24B (free)'],
+    ['nousresearch/hermes-3-llama-3.1-405b:free','Nous: Hermes 3 405B (free)']
+  ];
+
+  var PREFERRED_MODEL = 'google/gemini-2.0-flash-exp:free';
+
+  function populateModels(models, src) {
+    modelEl.innerHTML = models.map(function (m) {
+      return '<option value="' + m[0] + '">' + m[1] + '</option>';
+    }).join('');
+    var dot = '<span class="status-' + src + '">\u25CF</span> ';
+    modelStatusEl.innerHTML = dot + models.length + ' free model' + (models.length !== 1 ? 's' : '') + ' \u2014 ' + src;
+    // Select preferred
+    for (var o = 0; o < modelEl.options.length; o++) {
+      if (modelEl.options[o].value === PREFERRED_MODEL) { modelEl.value = PREFERRED_MODEL; break; }
+    }
+  }
+
+  populateModels(FALLBACK_MODELS, 'fallback');
+
+  (async function () {
+    try {
+      var res = await fetch(WORKER_URL + '/models');
+      if (!res.ok) throw new Error();
+      var data = await res.json();
+      var free = (data.data || []).filter(function (m) { return m.id && m.id.endsWith(':free'); });
+      if (!free.length) throw new Error();
+      free.sort(function (a, b) { return (a.name || a.id).localeCompare(b.name || b.id); });
+      populateModels(free.map(function (m) {
+        var l = m.name || m.id; if (!/\bfree\b/i.test(l)) l += ' (free)'; return [m.id, l];
+      }), 'live');
+    } catch (e) { /* keep fallback */ }
+  })();
+
+  // ═══════════════════════════════════════════════════════════════
+  // SERVER HEALTH CHECK
+  // ═══════════════════════════════════════════════════════════════
+  function checkServerHealth() {
+    var dot = document.getElementById('serverDot');
+    var label = document.getElementById('serverLabel');
+    var urlDot = document.getElementById('urlServerDot');
+    var urlLabel = document.getElementById('urlServerLabel');
+    dot.style.background = 'var(--text-muted)'; label.textContent = 'Checking…';
+    if (urlDot) { urlDot.className = 'url-server-dot checking'; }
+    if (urlLabel) { urlLabel.textContent = 'Checking…'; }
+
+    fetch(URL_GRAB_SERVER + '/api/health', { method: 'GET', mode: 'cors' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.status === 'ok' || d.status === 'degraded') {
+          serverOnline = true;
+          dot.style.background = '#4a8c3f'; label.textContent = 'Server online';
+          if (urlDot) urlDot.className = 'url-server-dot online';
+          if (urlLabel) urlLabel.textContent = 'Server online';
+        } else { setServerOffline(); }
+      })
+      .catch(function () { setServerOffline(); });
+  }
+
+  function setServerOffline() {
+    serverOnline = false;
+    var dot = document.getElementById('serverDot');
+    var label = document.getElementById('serverLabel');
+    dot.style.background = '#c0392b'; label.textContent = 'Server offline';
+    var urlDot = document.getElementById('urlServerDot');
+    var urlLabel = document.getElementById('urlServerLabel');
+    if (urlDot) urlDot.className = 'url-server-dot offline';
+    if (urlLabel) urlLabel.textContent = 'Server offline';
+  }
+
+  checkServerHealth();
+
+  // ═══════════════════════════════════════════════════════════════
+  // WHISPER WEB WORKER (browser-based, same as Timecode Helper)
+  // ═══════════════════════════════════════════════════════════════
+  var workerScript = function () {
+    self.onmessage = async function (e) {
+      try {
+        self.postMessage({ type: 'status', text: 'Loading transcription library…' });
+        var transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
+        var modelId = 'onnx-community/whisper-base';
+        var device = 'wasm';
+        if (typeof navigator !== 'undefined' && navigator.gpu) {
+          try {
+            var adapter = await navigator.gpu.requestAdapter();
+            if (adapter) { device = 'webgpu'; }
+          } catch (ignored) {}
+        }
+        self.postMessage({ type: 'status', text: 'Loading model (' + (device === 'webgpu' ? 'GPU' : 'WASM') + ')…' });
+        var transcriber = await transformers.pipeline(
+          'automatic-speech-recognition', modelId,
+          { dtype: device === 'webgpu' ? 'fp32' : 'q8', device: device }
+        );
+        var audioLengthSec = e.data.audioDuration || 0;
+        var chunkSec = 30;
+        var totalChunks = Math.max(1, Math.ceil(audioLengthSec / chunkSec));
+        var chunksProcessed = 0;
+        self.postMessage({ type: 'status', text: 'Transcribing…' });
+        self.postMessage({ type: 'progress', value: 5 });
+        var result = await transcriber(e.data.audio, {
+          return_timestamps: true, chunk_length_s: chunkSec, stride_length_s: 5,
+          language: 'en', task: 'transcribe',
+          callback_function: function () {
+            chunksProcessed++;
+            var pct = Math.min(95, Math.round((chunksProcessed / totalChunks) * 95));
+            self.postMessage({ type: 'progress', value: pct });
+            self.postMessage({ type: 'status', text: 'Transcribing… chunk ' + chunksProcessed + '/' + totalChunks });
+          }
+        });
+        self.postMessage({ type: 'progress', value: 100 });
+        self.postMessage({ type: 'result', data: result });
+      } catch (err) {
+        self.postMessage({ type: 'error', text: err.message || String(err) });
+      }
+    };
+  };
+  var workerBlob = new Blob(['(' + workerScript.toString() + ')()'], { type: 'application/javascript' });
+  var workerUrl = URL.createObjectURL(workerBlob);
+
+  // ═══════════════════════════════════════════════════════════════
+  // AUDIO LOADING
+  // ═══════════════════════════════════════════════════════════════
+  var audioDropZone = document.getElementById('audioDropZone');
+  var audioPrompt = document.getElementById('audioPrompt');
+  var audioFileInput = document.getElementById('audioFileInput');
+  var dragCounter = 0;
+
+  audioDropZone.addEventListener('dragenter', function (e) {
+    e.preventDefault(); e.stopPropagation(); dragCounter++;
+    document.getElementById('audioDropOverlay').classList.add('active');
+  });
+  audioDropZone.addEventListener('dragover', function (e) { e.preventDefault(); e.stopPropagation(); });
+  audioDropZone.addEventListener('dragleave', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    if (--dragCounter <= 0) { dragCounter = 0; document.getElementById('audioDropOverlay').classList.remove('active'); }
+  });
+  audioDropZone.addEventListener('drop', function (e) {
+    e.preventDefault(); e.stopPropagation(); dragCounter = 0;
+    document.getElementById('audioDropOverlay').classList.remove('active');
+    if (e.dataTransfer && e.dataTransfer.files.length) loadAudioFile(e.dataTransfer.files[0]);
+  });
+
+  document.getElementById('audioBrowse').addEventListener('click', function () { audioFileInput.click(); });
+  audioFileInput.addEventListener('change', function () {
+    if (this.files.length) loadAudioFile(this.files[0]); this.value = '';
+  });
+  document.getElementById('audioTopClear').addEventListener('click', clearAudio);
+
+  async function loadAudioFile(file) {
+    if (!file.type.startsWith('audio/') && !/\.(wav|mp3|m4a|ogg|flac)$/i.test(file.name)) {
+      showError('Please drop an audio file.'); return;
+    }
+
+    clearBites();
+    document.getElementById('waveformArea').classList.add('visible');
+    showWaveformLoading('Decoding audio…');
+    audioPrompt.classList.add('hidden');
+    document.getElementById('audioFilename').textContent = file.name.length > 30 ? file.name.substring(0, 27) + '…' : file.name;
+    document.getElementById('audioTopClear').classList.add('visible');
+    document.getElementById('urlGrabSection').classList.remove('visible');
+
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var ab = await file.arrayBuffer();
+      audioBuffer = await ctx.decodeAudioData(ab);
+      ctx.close();
+
+      showWaveformLoading('Rendering waveform…');
+
+      if (wavesurfer) wavesurfer.destroy();
+      var colors = getWaveformColors();
+      wavesurfer = WaveSurfer.create({
+        container: '#waveform', waveColor: colors.wave, progressColor: colors.progress,
+        cursorColor: colors.cursor, cursorWidth: 1, barWidth: 2, barGap: 1, barRadius: 2,
+        height: 50, normalize: true
+      });
+
+      wavesurfer.loadBlob(file);
+
+      wavesurfer.on('ready', function () {
+        audioLoaded = true;
+        document.getElementById('contentArea').classList.add('visible');
+        document.getElementById('transportDuration').textContent = '/ ' + secondsToTimecode(wavesurfer.getDuration());
+        wavesurfer.setPlaybackRate(SPEED_STEPS[speedIndex]);
+        hideWaveformLoading();
+        startTranscription();
+      });
+      wavesurfer.on('audioprocess', updateTransportTime);
+      wavesurfer.on('seeking', updateTransportTime);
+      wavesurfer.on('interaction', updateTransportTime);
+      wavesurfer.on('play', function () {
+        document.getElementById('iconPlay').style.display = 'none';
+        document.getElementById('iconPause').style.display = '';
+        document.getElementById('btnPlayPause').classList.add('active');
+      });
+      wavesurfer.on('pause', function () {
+        document.getElementById('iconPlay').style.display = '';
+        document.getElementById('iconPause').style.display = 'none';
+        document.getElementById('btnPlayPause').classList.remove('active');
+      });
+    } catch (err) {
+      showError('Error processing audio: ' + (err.message || err));
+      hideWaveformLoading();
+    }
+  }
+
+  function updateTransportTime() {
+    if (!wavesurfer) return;
+    document.getElementById('transportTime').textContent = secondsToTimecode(wavesurfer.getCurrentTime());
+    highlightTranscriptAtTime(wavesurfer.getCurrentTime());
+    updateBiteHighlights(wavesurfer.getCurrentTime());
+  }
+
+  function clearAudio() {
+    cancelTranscription();
+    if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
+    audioLoaded = false; audioBuffer = null;
+    audioFileInput.value = '';
+    document.getElementById('audioFilename').textContent = '';
+    document.getElementById('audioTopClear').classList.remove('visible');
+    audioPrompt.classList.remove('hidden');
+    document.getElementById('waveformArea').classList.remove('visible');
+    document.getElementById('transportTime').textContent = '00.00.00';
+    document.getElementById('transportDuration').textContent = '/ 00.00.00';
+    document.getElementById('transportSearch').classList.remove('visible');
+    document.getElementById('contentArea').classList.remove('visible');
+    document.getElementById('urlGrabSection').classList.add('visible');
+    clearBites();
+    hideWaveformLoading();
+    speedIndex = 0;
+    document.getElementById('speedBadge').textContent = '1×';
+    document.getElementById('speedBadge').classList.remove('modified');
+    checkServerHealth();
+  }
+
+  function clearBites() {
+    bites = [];
+    selectedBiteIndex = -1;
+    document.getElementById('bitesContainer').innerHTML = '';
+    document.getElementById('bottomActions').style.display = 'none';
+    document.getElementById('analysisBar').classList.remove('visible');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // URL GRAB (same as Timecode Helper)
+  // ═══════════════════════════════════════════════════════════════
+  var urlGrabSection = document.getElementById('urlGrabSection');
+  var urlGrabInput = document.getElementById('urlGrabInput');
+  var urlGrabBtn = document.getElementById('urlGrabBtn');
+  var urlGrabStatus = document.getElementById('urlGrabStatus');
+  var urlCountdownRing = document.getElementById('urlCountdownRing');
+  var urlCountdownNumber = document.getElementById('urlCountdownNumber');
+  var urlRingFg = document.getElementById('urlRingFg');
+  var urlGrabAbortController = null;
+  var urlGrabCountdownTimer = null;
+
+  urlGrabSection.classList.add('visible');
+
+  function cancelUrlCountdown() {
+    if (urlGrabCountdownTimer) { clearInterval(urlGrabCountdownTimer); urlGrabCountdownTimer = null; }
+    urlCountdownRing.style.display = 'none';
+    urlGrabBtn.style.display = isUrl(urlGrabInput.value.trim()) ? '' : 'none';
+  }
+
+  function startUrlCountdown() {
+    cancelUrlCountdown();
+    var remaining = 3;
+    urlGrabBtn.style.display = 'none';
+    urlCountdownRing.style.display = '';
+    urlCountdownNumber.textContent = remaining;
+    urlRingFg.style.transition = 'none';
+    urlRingFg.style.strokeDashoffset = '0';
+    requestAnimationFrame(function () {
+      urlRingFg.style.transition = 'stroke-dashoffset 1s linear';
+      urlRingFg.style.strokeDashoffset = (RING_CIRCUMFERENCE / 3).toFixed(2);
+    });
+    urlGrabCountdownTimer = setInterval(function () {
+      remaining--;
+      if (remaining <= 0) { cancelUrlCountdown(); handleUrlGrab(); return; }
+      urlCountdownNumber.textContent = remaining;
+      var offset = RING_CIRCUMFERENCE * ((3 - remaining) / 3);
+      urlRingFg.style.strokeDashoffset = offset.toFixed(2);
+    }, 1000);
+  }
+
+  urlGrabInput.addEventListener('paste', function () {
+    setTimeout(function () { if (isUrl(urlGrabInput.value.trim())) startUrlCountdown(); }, 150);
+  });
+  urlGrabInput.addEventListener('input', function () {
+    cancelUrlCountdown();
+    urlGrabBtn.style.display = isUrl(urlGrabInput.value.trim()) ? '' : 'none';
+  });
+  urlGrabInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); cancelUrlCountdown(); handleUrlGrab(); }
+    if (!e.key.startsWith('F')) e.stopPropagation();
+  });
+  urlGrabBtn.addEventListener('click', function () { cancelUrlCountdown(); handleUrlGrab(); });
+  document.getElementById('urlGrabCancel').addEventListener('click', function () {
+    if (urlGrabAbortController) { urlGrabAbortController.abort(); urlGrabAbortController = null; }
+    urlGrabStatus.classList.remove('visible');
+    urlGrabInput.disabled = false;
+    urlGrabBtn.style.display = isUrl(urlGrabInput.value.trim()) ? '' : 'none';
+  });
+
+  var urlGrabMessages = [
+    'Connecting to server\u2026', 'Downloading source audio\u2026',
+    'Transcoding to proxy (96k mono 48kHz)\u2026', 'Almost there \u2014 streaming audio\u2026'
+  ];
+
+  async function handleUrlGrab() {
+    var url = urlGrabInput.value.trim();
+    if (!url || !isUrl(url)) { showToast('Enter a valid URL'); return; }
+    if (!serverOnline) { showToast('Server is offline'); checkServerHealth(); return; }
+
+    urlGrabBtn.style.display = 'none';
+    urlGrabInput.disabled = true;
+    document.getElementById('urlGrabDot').className = 'status-dot working';
+    document.getElementById('urlGrabStatusText').textContent = urlGrabMessages[0];
+    urlGrabStatus.classList.add('visible');
+
+    var msgIdx = 0;
+    var msgTimer = setInterval(function () {
+      msgIdx = Math.min(msgIdx + 1, urlGrabMessages.length - 1);
+      document.getElementById('urlGrabStatusText').textContent = urlGrabMessages[msgIdx];
+    }, 5000);
+
+    urlGrabAbortController = new AbortController();
+    try {
+      var res = await fetch(URL_GRAB_SERVER + '/api/proxy', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url }), signal: urlGrabAbortController.signal
+      });
+      clearInterval(msgTimer);
+      if (!res.ok) { var errD; try { errD = await res.json(); } catch (e) { errD = {}; } throw new Error(errD.error || 'Server returned ' + res.status); }
+
+      document.getElementById('urlGrabStatusText').textContent = 'Loading into waveform…';
+      var proxyTitle = res.headers.get('X-Proxy-Title');
+      if (proxyTitle) proxyTitle = decodeURIComponent(proxyTitle);
+
+      var audioBlob = await res.blob();
+      var filename = (proxyTitle || 'proxy-audio').replace(/[^a-zA-Z0-9_\-\s]/g, '').substring(0, 40).trim() + '.mp3';
+      var audioFile = new File([audioBlob], filename, { type: 'audio/mpeg' });
+
+      urlGrabStatus.classList.remove('visible');
+      urlGrabInput.disabled = false;
+      urlGrabAbortController = null;
+      loadAudioFile(audioFile);
+      if (proxyTitle) showToast('Loaded: ' + (proxyTitle.length > 40 ? proxyTitle.substring(0, 37) + '…' : proxyTitle));
+    } catch (err) {
+      clearInterval(msgTimer);
+      urlGrabAbortController = null;
+      urlGrabInput.disabled = false;
+      if (err.name === 'AbortError') { urlGrabStatus.classList.remove('visible'); return; }
+      document.getElementById('urlGrabDot').className = 'status-dot error';
+      document.getElementById('urlGrabStatusText').textContent = err.message || 'Download failed';
+      setTimeout(function () { urlGrabStatus.classList.remove('visible'); }, 5000);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // TRANSPORT CONTROLS
+  // ═══════════════════════════════════════════════════════════════
+  document.getElementById('btnPlayPause').addEventListener('click', function () {
+    if (wavesurfer && audioLoaded) wavesurfer.playPause();
+  });
+  document.getElementById('btnSkipBack').addEventListener('click', function () {
+    if (wavesurfer && audioLoaded) wavesurfer.skip(-5);
+  });
+  document.getElementById('btnSkipFwd').addEventListener('click', function () {
+    if (wavesurfer && audioLoaded) wavesurfer.skip(5);
+  });
+
+  document.getElementById('speedBadge').addEventListener('click', function () {
+    speedIndex = (speedIndex + 1) % SPEED_STEPS.length;
+    var rate = SPEED_STEPS[speedIndex];
+    this.textContent = rate + '×';
+    this.classList.toggle('modified', rate !== 1);
+    if (wavesurfer) wavesurfer.setPlaybackRate(rate);
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // TRANSCRIPTION
+  // ═══════════════════════════════════════════════════════════════
+  function cancelTranscription() {
+    if (transcriptionWorker) { transcriptionWorker.terminate(); transcriptionWorker = null; }
+    isTranscribing = false;
+    transcriptChunks = null;
+    document.getElementById('transportStatus').classList.remove('visible');
+    document.getElementById('transcribeProgress').classList.remove('visible');
+    document.getElementById('transcriptDisplay').classList.remove('visible');
+    document.getElementById('transcriptDisplay').innerHTML = '';
+    document.getElementById('transportSearch').classList.remove('visible');
+  }
+
+  async function startTranscription() {
+    if (isTranscribing || !audioBuffer) return;
+    isTranscribing = true;
+
+    var statusBar = document.getElementById('transportStatus');
+    var status = document.getElementById('transcribeStatus');
+    var prog = document.getElementById('transcribeProgress');
+    var progBar = document.getElementById('transcribeProgressBar');
+
+    document.getElementById('transportSearch').classList.remove('visible');
+    statusBar.classList.add('visible');
+    status.textContent = 'Starting transcription…';
+    prog.classList.add('visible');
+    progBar.classList.add('indeterminate');
+
+    try {
+      var targetLen = Math.ceil(audioBuffer.duration * 16000);
+      var offline = new OfflineAudioContext(1, targetLen, 16000);
+      var src = offline.createBufferSource();
+      src.buffer = audioBuffer; src.connect(offline.destination); src.start();
+      var rendered = await offline.startRendering();
+      var audioData = rendered.getChannelData(0);
+
+      transcriptionWorker = new Worker(workerUrl, { type: 'module' });
+      transcriptionWorker.onmessage = function (e) {
+        var msg = e.data;
+        if (msg.type === 'status') status.textContent = msg.text;
+        if (msg.type === 'progress') {
+          progBar.classList.remove('indeterminate');
+          progBar.style.width = msg.value + '%';
+        }
+        if (msg.type === 'result') {
+          var result = msg.data;
+          if (result && result.chunks && result.chunks.length) {
+            transcriptChunks = result.chunks.map(function (c) {
+              return { start: c.timestamp[0] || 0, end: c.timestamp[1] || c.timestamp[0] + 1, text: c.text };
+            });
+          } else if (result && result.text) {
+            transcriptChunks = [{ start: 0, end: audioBuffer.duration, text: result.text }];
+          }
+          displayTranscript();
+          isTranscribing = false;
+          setTimeout(function () { prog.classList.remove('visible'); }, 1000);
+          transcriptionWorker.terminate(); transcriptionWorker = null;
+          if (autoAnalyseEnabled) setTimeout(startAnalysis, 500);
+        }
+        if (msg.type === 'error') {
+          status.textContent = 'Transcription failed: ' + msg.text;
+          isTranscribing = false;
+          transcriptionWorker.terminate(); transcriptionWorker = null;
+        }
+      };
+      transcriptionWorker.onerror = function (err) {
+        status.textContent = 'Transcription worker failed.';
+        isTranscribing = false; transcriptionWorker = null;
+      };
+      transcriptionWorker.postMessage({ audio: audioData, audioDuration: audioBuffer.duration }, [audioData.buffer]);
+    } catch (err) {
+      status.textContent = 'Failed: ' + (err.message || err);
+      isTranscribing = false;
+    }
+  }
+
+  function displayTranscript() {
+    var container = document.getElementById('transcriptDisplay');
+    if (!transcriptChunks || !transcriptChunks.length) return;
+    var html = '';
+    for (var i = 0; i < transcriptChunks.length; i++) {
+      var c = transcriptChunks[i];
+      html += '<span class="ts-word" data-start="' + c.start + '" data-end="' + c.end + '">' + escapeHtml(c.text.trim()) + '</span> ';
+    }
+    container.innerHTML = html;
+    container.classList.add('visible');
+    document.getElementById('transportStatus').classList.remove('visible');
+    document.getElementById('transportSearch').classList.add('visible');
+    container.querySelectorAll('.ts-word').forEach(function (el) {
+      el.addEventListener('click', function () {
+        if (wavesurfer && audioLoaded) {
+          var d = wavesurfer.getDuration();
+          if (d > 0) wavesurfer.seekTo(parseFloat(el.dataset.start) / d);
+        }
+      });
+    });
+  }
+
+  function highlightTranscriptAtTime(time) {
+    var container = document.getElementById('transcriptDisplay');
+    document.querySelectorAll('.ts-word').forEach(function (el) {
+      var s = parseFloat(el.dataset.start), e = parseFloat(el.dataset.end);
+      var active = time >= s && time <= e;
+      el.classList.toggle('highlight', active);
+      if (active && container.classList.contains('visible')) {
+        var elTop = el.offsetTop - container.offsetTop;
+        var viewH = container.clientHeight;
+        if (elTop < container.scrollTop || elTop > container.scrollTop + viewH) {
+          container.scrollTop = elTop - viewH / 2;
+        }
+      }
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // TRANSCRIPT SEARCH (same as Timecode Helper)
+  // ═══════════════════════════════════════════════════════════════
+  var searchInput = document.getElementById('transcriptSearchInput');
+  var searchCountEl = document.getElementById('searchCount');
+  var searchNavEl = document.getElementById('searchNav');
+  var searchMatches = [], searchIdx = -1;
+
+  function doTranscriptSearch() {
+    var query = searchInput.value.trim().toLowerCase();
+    document.querySelectorAll('.ts-word.search-match, .ts-word.search-active').forEach(function (el) {
+      el.classList.remove('search-match', 'search-active');
+    });
+    searchMatches = []; searchIdx = -1;
+    if (!query) { searchCountEl.textContent = ''; searchNavEl.classList.remove('visible'); return; }
+    document.querySelectorAll('.ts-word').forEach(function (el) {
+      if (el.textContent.toLowerCase().indexOf(query) !== -1) {
+        el.classList.add('search-match'); searchMatches.push(el);
+      }
+    });
+    if (searchMatches.length) {
+      searchIdx = 0; searchMatches[0].classList.add('search-active');
+      searchCountEl.textContent = '1 / ' + searchMatches.length;
+      searchNavEl.classList.add('visible');
+    } else { searchCountEl.textContent = '0 results'; searchNavEl.classList.remove('visible'); }
+  }
+
+  function searchNavigate(dir) {
+    if (!searchMatches.length) return;
+    searchMatches[searchIdx].classList.remove('search-active');
+    searchIdx = (searchIdx + dir + searchMatches.length) % searchMatches.length;
+    searchMatches[searchIdx].classList.add('search-active');
+    searchCountEl.textContent = (searchIdx + 1) + ' / ' + searchMatches.length;
+  }
+
+  searchInput.addEventListener('input', doTranscriptSearch);
+  searchInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); searchNavigate(e.shiftKey ? -1 : 1); }
+    if (!e.key.startsWith('F')) e.stopPropagation();
+  });
+  document.getElementById('searchPrev').addEventListener('click', function () { searchNavigate(-1); });
+  document.getElementById('searchNext').addEventListener('click', function () { searchNavigate(1); });
+
+  // ═══════════════════════════════════════════════════════════════
+  // LLM ANALYSIS
+  // ═══════════════════════════════════════════════════════════════
+  async function startAnalysis() {
+    if (isAnalysing || !transcriptChunks || !transcriptChunks.length) return;
+    if (!promptLoaded || !PROMPT) { showError('Prompt file not loaded yet.'); return; }
+
+    isAnalysing = true;
+    clearBites();
+    document.getElementById('analysisBar').classList.add('visible');
+    document.getElementById('analysisText').textContent = 'Analysing transcript for promo-worthy bites…';
+    document.getElementById('analysisProgressFill').style.animation = 'none';
+    requestAnimationFrame(function () {
+      document.getElementById('analysisProgressFill').style.animation = '';
+    });
+
+    // Build timestamped transcript for the LLM
+    var transcriptText = '';
+    for (var i = 0; i < transcriptChunks.length; i++) {
+      var c = transcriptChunks[i];
+      transcriptText += '[' + c.start.toFixed(1) + 's - ' + c.end.toFixed(1) + 's] ' + c.text.trim() + '\n';
+    }
+
+    try {
+      var res = await fetch(WORKER_URL + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelEl.value,
+          max_tokens: 2048,
+          messages: [
+            { role: 'system', content: PROMPT },
+            { role: 'user', content: transcriptText }
+          ]
+        })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error((data.error && data.error.message) || 'API error ' + res.status);
+
+      var text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (!text) throw new Error('Model returned an empty response. Try a different model.');
+
+      var clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      var parsed;
+      try { parsed = JSON.parse(clean); }
+      catch (e) {
+        var match = clean.match(/\{[\s\S]*\}/);
+        if (match) { try { parsed = JSON.parse(match[0]); } catch (e2) { throw new Error('Could not parse JSON from model.'); } }
+        else { throw new Error('Model did not return valid JSON.'); }
+      }
+
+      if (parsed.bites && Array.isArray(parsed.bites)) {
+        bites = parsed.bites.map(function (b, idx) {
+          return {
+            id: 'bite-' + (idx + 1),
+            label: 'Bite ' + (idx + 1),
+            start: parseFloat(b.start) || 0,
+            end: parseFloat(b.end) || 0,
+            quote: b.quote || '',
+            rationale: b.rationale || ''
+          };
+        });
+        renderBites();
+      } else {
+        throw new Error('Unexpected response format from model.');
+      }
+    } catch (err) {
+      showError('Analysis failed: ' + (err.message || err));
+    } finally {
+      isAnalysing = false;
+      document.getElementById('analysisBar').classList.remove('visible');
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // RENDER BITE CARDS
+  // ═══════════════════════════════════════════════════════════════
+  var CLOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+  var PLAY_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6,4 20,12 6,20"/></svg>';
+  var DOWNLOAD_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  var STOP_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>';
+  var REMOVE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+  function renderBites() {
+    var container = document.getElementById('bitesContainer');
+    container.innerHTML = '';
+
+    bites.forEach(function (bite, idx) {
+      var card = document.createElement('div');
+      card.className = 'bite-card';
+      card.id = bite.id;
+      card.dataset.idx = idx;
+
+      card.innerHTML =
+        '<div class="bite-header" data-idx="' + idx + '">' +
+          '<div class="header-left"><span>' + bite.label + '</span></div>' +
+          '<div class="header-right">' +
+            '<span style="font-size:9px;letter-spacing:1px;color:var(--text-muted);">' +
+              (bite.end - bite.start).toFixed(1) + 's' +
+            '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="bite-rationale">' + escapeHtml(bite.rationale) + '</div>' +
+        '<div class="bite-row">' +
+          '<span class="row-label">In</span>' +
+          '<div class="tc-wrap">' +
+            '<input type="text" class="tc-input" data-field="start" data-idx="' + idx + '" value="' + secondsToTimecode(bite.start) + '" maxlength="8" />' +
+            '<button class="stamp-btn" data-field="start" data-idx="' + idx + '" title="Stamp current time">' + CLOCK_SVG + '</button>' +
+          '</div>' +
+          '<span class="row-label" style="width:auto;margin-left:8px;">Out</span>' +
+          '<div class="tc-wrap">' +
+            '<input type="text" class="tc-input" data-field="end" data-idx="' + idx + '" value="' + secondsToTimecode(bite.end) + '" maxlength="8" />' +
+            '<button class="stamp-btn" data-field="end" data-idx="' + idx + '" title="Stamp current time">' + CLOCK_SVG + '</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="bite-row">' +
+          '<textarea class="bite-quote" data-idx="' + idx + '" rows="2">' + escapeHtml(bite.quote) + '</textarea>' +
+        '</div>' +
+        '<div class="bite-actions">' +
+          '<button class="bite-btn preview-btn" data-idx="' + idx + '">' + PLAY_SVG + ' Preview</button>' +
+          '<button class="bite-btn" data-action="download" data-idx="' + idx + '">' + DOWNLOAD_SVG + ' Download</button>' +
+          '<button class="bite-btn remove" data-action="remove" data-idx="' + idx + '">' + REMOVE_SVG + '</button>' +
+        '</div>';
+
+      container.appendChild(card);
+
+      // Setup timecode inputs
+      card.querySelectorAll('.tc-input').forEach(function (inp) {
+        inp.addEventListener('input', function () {
+          var digits = this.value.replace(/[^\d]/g, '');
+          if (digits.length > 6) digits = digits.substring(0, 6);
+          var formatted = '';
+          for (var i = 0; i < digits.length; i++) {
+            if (i === 2 || i === 4) formatted += '.';
+            formatted += digits[i];
+          }
+          this.value = formatted;
+        });
+        inp.addEventListener('blur', function () {
+          if (this.value && !isValidTimecode(this.value)) this.classList.add('invalid');
+          else {
+            this.classList.remove('invalid');
+            var i = parseInt(this.dataset.idx, 10);
+            var field = this.dataset.field;
+            if (!isNaN(i) && bites[i]) {
+              bites[i][field] = timecodeToSeconds(this.value);
+            }
+          }
+        });
+        inp.addEventListener('focus', function () { this.classList.remove('invalid'); });
+      });
+
+      // Stamp buttons
+      card.querySelectorAll('.stamp-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (!wavesurfer || !audioLoaded) return;
+          var i = parseInt(btn.dataset.idx, 10);
+          var field = btn.dataset.field;
+          var tc = secondsToTimecode(wavesurfer.getCurrentTime());
+          var inp = card.querySelector('.tc-input[data-field="' + field + '"]');
+          if (inp) { inp.value = tc; inp.classList.remove('invalid'); bites[i][field] = wavesurfer.getCurrentTime(); }
+          showToast(bites[i].label + ' ' + field.toUpperCase() + ': ' + tc);
+        });
+      });
+
+      // Header click to select
+      card.querySelector('.bite-header').addEventListener('click', function () {
+        selectBite(idx);
+      });
+
+      // Quote input
+      card.querySelector('.bite-quote').addEventListener('input', function () {
+        var i = parseInt(this.dataset.idx, 10);
+        if (!isNaN(i) && bites[i]) bites[i].quote = this.value;
+      });
+    });
+
+    // Wire preview/download/remove buttons
+    container.querySelectorAll('.preview-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        previewBite(parseInt(btn.dataset.idx, 10));
+      });
+    });
+    container.querySelectorAll('[data-action="download"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        downloadBite(parseInt(btn.dataset.idx, 10));
+      });
+    });
+    container.querySelectorAll('[data-action="remove"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var i = parseInt(btn.dataset.idx, 10);
+        bites.splice(i, 1);
+        // Re-label
+        bites.forEach(function (b, j) { b.id = 'bite-' + (j + 1); b.label = 'Bite ' + (j + 1); });
+        renderBites();
+        showToast('Bite removed');
+      });
+    });
+
+    document.getElementById('bottomActions').style.display = bites.length ? 'flex' : 'none';
+    if (selectedBiteIndex >= 0 && selectedBiteIndex < bites.length) selectBite(selectedBiteIndex);
+  }
+
+  function selectBite(idx) {
+    selectedBiteIndex = idx;
+    document.querySelectorAll('.bite-card').forEach(function (c, i) {
+      c.classList.toggle('selected', i === idx);
+    });
+  }
+
+  function updateBiteHighlights(time) {
+    // Could highlight which bite is currently playing through
+    // Light enhancement — not critical
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PREVIEW BITE
+  // ═══════════════════════════════════════════════════════════════
+  function previewBite(idx) {
+    if (!wavesurfer || !audioLoaded || !bites[idx]) return;
+    var bite = bites[idx];
+    var card = document.getElementById(bite.id);
+    var btn = card ? card.querySelector('.preview-btn') : null;
+
+    // If already previewing, stop
+    if (card && card.classList.contains('previewing')) {
+      wavesurfer.pause();
+      card.classList.remove('previewing');
+      if (btn) { btn.innerHTML = PLAY_SVG + ' Preview'; btn.classList.remove('previewing'); }
+      if (previewTimeout) { clearTimeout(previewTimeout); previewTimeout = null; }
+      return;
+    }
+
+    // Clear any other previewing state
+    document.querySelectorAll('.bite-card.previewing').forEach(function (c) { c.classList.remove('previewing'); });
+    document.querySelectorAll('.preview-btn.previewing').forEach(function (b) {
+      b.innerHTML = PLAY_SVG + ' Preview'; b.classList.remove('previewing');
+    });
+    if (previewTimeout) { clearTimeout(previewTimeout); previewTimeout = null; }
+
+    selectBite(idx);
+    var dur = wavesurfer.getDuration();
+    if (dur > 0) wavesurfer.seekTo(bite.start / dur);
+    wavesurfer.play();
+
+    if (card) card.classList.add('previewing');
+    if (btn) { btn.innerHTML = STOP_SVG + ' Stop'; btn.classList.add('previewing'); }
+
+    // Stop when reaching end time
+    var checkInterval = setInterval(function () {
+      if (!wavesurfer || !wavesurfer.isPlaying()) {
+        clearInterval(checkInterval);
+        if (card) card.classList.remove('previewing');
+        if (btn) { btn.innerHTML = PLAY_SVG + ' Preview'; btn.classList.remove('previewing'); }
+        return;
+      }
+      if (wavesurfer.getCurrentTime() >= bite.end) {
+        wavesurfer.pause();
+        clearInterval(checkInterval);
+        if (card) card.classList.remove('previewing');
+        if (btn) { btn.innerHTML = PLAY_SVG + ' Preview'; btn.classList.remove('previewing'); }
+      }
+    }, 100);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // DOWNLOAD BITE (client-side WAV or server-side MP3)
+  // ═══════════════════════════════════════════════════════════════
+  async function downloadBite(idx) {
+    if (!audioBuffer || !bites[idx]) return;
+    var bite = bites[idx];
+
+    if (serverModeEnabled && serverOnline) {
+      await downloadBiteServer(bite);
+    } else {
+      downloadBiteLocal(bite);
+    }
+  }
+
+  function downloadBiteLocal(bite) {
+    var sr = audioBuffer.sampleRate;
+    var startSample = Math.floor(bite.start * sr);
+    var endSample = Math.min(Math.floor(bite.end * sr), audioBuffer.length);
+    var length = endSample - startSample;
+    if (length <= 0) { showError('Invalid bite range.'); return; }
+
+    var offCtx = new OfflineAudioContext(1, length, sr);
+    var buf = offCtx.createBuffer(1, length, sr);
+    var srcData = audioBuffer.getChannelData(0);
+    var destData = buf.getChannelData(0);
+    for (var i = 0; i < length; i++) {
+      destData[i] = (startSample + i < srcData.length) ? srcData[startSample + i] : 0;
+    }
+
+    // Encode WAV
+    var wavBuf = new ArrayBuffer(44 + length * 2);
+    var v = new DataView(wavBuf);
+    function ws(o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+    ws(0, 'RIFF'); v.setUint32(4, 36 + length * 2, true); ws(8, 'WAVE');
+    ws(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+    v.setUint16(22, 1, true); v.setUint32(24, sr, true);
+    v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    ws(36, 'data'); v.setUint32(40, length * 2, true);
+    for (var j = 0, o = 44; j < length; j++, o += 2) {
+      var s = Math.max(-1, Math.min(1, destData[j]));
+      v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+
+    var blob = new Blob([wavBuf], { type: 'audio/wav' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = bite.label.toLowerCase().replace(/\s+/g, '-') + '.wav';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast(bite.label + ' downloaded (WAV)');
+  }
+
+  async function downloadBiteServer(bite) {
+    showToast('Requesting server-side export…');
+    try {
+      var res = await fetch(URL_GRAB_SERVER + '/api/slice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          start: bite.start,
+          end: bite.end,
+          format: 'mp3',
+          bitrate: '192k',
+          sampleRate: 48000
+        })
+      });
+      if (!res.ok) throw new Error('Server returned ' + res.status);
+      var blob = await res.blob();
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = bite.label.toLowerCase().replace(/\s+/g, '-') + '.mp3';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast(bite.label + ' downloaded (MP3)');
+    } catch (err) {
+      showToast('Server export failed — downloading WAV locally');
+      downloadBiteLocal(bite);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // DOWNLOAD ALL
+  // ═══════════════════════════════════════════════════════════════
+  document.getElementById('downloadAllBtn').addEventListener('click', async function () {
+    if (!bites.length || !audioBuffer) return;
+    for (var i = 0; i < bites.length; i++) {
+      await downloadBite(i);
+      // Small delay between downloads
+      await new Promise(function (r) { setTimeout(r, 300); });
+    }
+    showToast('All bites downloaded');
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // RE-ANALYSE
+  // ═══════════════════════════════════════════════════════════════
+  document.getElementById('reanalyseBtn').addEventListener('click', function () {
+    if (!transcriptChunks || !transcriptChunks.length) {
+      showToast('No transcript available'); return;
+    }
+    startAnalysis();
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // KEYBOARD SHORTCUTS
+  // ═══════════════════════════════════════════════════════════════
+  document.addEventListener('keydown', function (e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      if (!e.key.startsWith('F')) return;
+    }
+    if (e.metaKey || e.ctrlKey) return;
+
+    if (e.key === 'F2') {
+      e.preventDefault();
+      if (wavesurfer && audioLoaded) wavesurfer.skip(-1);
+      return;
+    }
+    if (e.key === 'F3') {
+      e.preventDefault();
+      if (wavesurfer && audioLoaded) wavesurfer.playPause();
+      return;
+    }
+    if (e.key === 'F4') {
+      e.preventDefault();
+      if (wavesurfer && audioLoaded) wavesurfer.skip(1);
+      return;
+    }
+    if (e.key === 'F5') {
+      e.preventDefault();
+      if (wavesurfer && audioLoaded && selectedBiteIndex >= 0 && bites[selectedBiteIndex]) {
+        var tc = secondsToTimecode(wavesurfer.getCurrentTime());
+        bites[selectedBiteIndex].start = wavesurfer.getCurrentTime();
+        var inp = document.querySelector('.tc-input[data-field="start"][data-idx="' + selectedBiteIndex + '"]');
+        if (inp) { inp.value = tc; inp.classList.remove('invalid'); }
+        showToast(bites[selectedBiteIndex].label + ' IN: ' + tc);
+      }
+      return;
+    }
+    if (e.key === 'F6') {
+      e.preventDefault();
+      if (wavesurfer && audioLoaded && selectedBiteIndex >= 0 && bites[selectedBiteIndex]) {
+        var tc2 = secondsToTimecode(wavesurfer.getCurrentTime());
+        bites[selectedBiteIndex].end = wavesurfer.getCurrentTime();
+        var inp2 = document.querySelector('.tc-input[data-field="end"][data-idx="' + selectedBiteIndex + '"]');
+        if (inp2) { inp2.value = tc2; inp2.classList.remove('invalid'); }
+        showToast(bites[selectedBiteIndex].label + ' OUT: ' + tc2);
+      }
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (bites.length && selectedBiteIndex > 0) selectBite(selectedBiteIndex - 1);
+      else if (bites.length && selectedBiteIndex < 0) selectBite(0);
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (bites.length && selectedBiteIndex < bites.length - 1) selectBite(selectedBiteIndex + 1);
+      else if (bites.length && selectedBiteIndex < 0) selectBite(0);
+      return;
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
