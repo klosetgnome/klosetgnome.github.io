@@ -94,7 +94,7 @@
       align-items: center;
       justify-content: center;
       gap: 10px;
-      padding: 28px 20px;
+      padding: 18px 20px;
       text-align: center;
     }
     .drop-prompt.hidden { display: none; }
@@ -717,13 +717,12 @@
     <!-- Transcript mode card (finance / news) -->
     <div class="card" id="transcriptCard" style="display:none;">
       <span class="card-label">Transcript</span>
-      <span class="card-hint" id="transcriptHint">Drop a .txt file or paste a transcript to generate episode copy</span>
       <input type="text" id="titleInput" class="title-inline" placeholder="Episode title (optional)" />
       <div class="drop-zone" id="dropZone">
         <div class="drop-overlay" id="dropOverlay"><span class="drop-overlay-label">Drop .txt file here</span></div>
         <div class="drop-prompt" id="dropPrompt">
           <div class="drop-prompt-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
-          <div class="drop-prompt-text">Drag &amp; drop a .txt transcript file here or <span class="browse" id="browseLink">browse to select one</span></div>
+          <div class="drop-prompt-text">Drop a .txt file here or <span class="browse" id="browseLink">browse</span></div>
         </div>
         <input type="file" id="fileInput" accept=".txt,text/plain" style="display:none;" />
         <textarea id="transcript" placeholder="…or paste the transcript here"></textarea>
@@ -848,7 +847,6 @@
   var modelStatus      = document.getElementById('modelStatus');
   var categorySelect   = document.getElementById('categorySelect');
   var inputHint        = document.getElementById('inputHint');
-  var transcriptHint   = document.getElementById('transcriptHint');
   var progressLabel    = document.getElementById('progressLabel');
   var resultsLabel     = document.getElementById('resultsLabel');
 
@@ -922,10 +920,6 @@
     message:   'Type or paste here…',
     summarise: 'Type, paste, or drop a link here…',
     review:    'Type or paste here…'
-  };
-  var TRANSCRIPT_HINTS = {
-    finance: 'Drop a .txt file or paste a finance podcast transcript',
-    news:    'Drop a .txt file or paste a news broadcast transcript'
   };
   var PROGRESS_LABELS = {
     message:   'Drafting email…',
@@ -1330,9 +1324,7 @@
     loadPrompt(opt.getAttribute('data-prompt'));
 
     // Update UI strings
-    if (isTranscriptMode()) {
-      transcriptHint.textContent = TRANSCRIPT_HINTS[cat] || '';
-    } else {
+    if (!isTranscriptMode()) {
       inputHint.textContent     = HINTS[cat] || '';
       inputTextEl.placeholder   = PLACEHOLDERS[cat] || '';
     }
