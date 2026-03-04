@@ -9,29 +9,29 @@
 
 /* ── Design Tokens (light) ── */
 :root {
-  --bg: #f4f1ec;
-  --surface: #fff;
-  --surface-raised: #faf8f5;
-  --border: #d9d4cb;
+  --bg: #efeae3;
+  --surface: #f5f2ec;
+  --surface-raised: #f8f6f1;
+  --border: #d4cec3;
   --border-active: #b8b0a3;
-  --text-primary: #2c2a26;
-  --text-secondary: #7a756b;
-  --text-muted: #a09889;
+  --text-primary: #2e2b27;
+  --text-secondary: #6e6860;
+  --text-muted: #9a9388;
   --accent: #c0512d;
-  --accent-light: rgba(192, 81, 45, 0.08);
-  --accent-glow: rgba(192, 81, 45, 0.12);
+  --accent-light: rgba(192, 81, 45, 0.06);
+  --accent-glow: rgba(192, 81, 45, 0.10);
   --success: #4a8c3f;
   --success-glow: rgba(74, 140, 63, 0.10);
   --warning: #a07828;
   --warning-glow: rgba(160, 120, 40, 0.10);
   --error: #b5392e;
   --error-glow: rgba(181, 57, 46, 0.10);
-  --shadow: rgba(44, 42, 38, 0.06);
-  --shadow-sm: rgba(44, 42, 38, 0.05);
-  --waveform-wave: #d9d4cb;
+  --shadow: rgba(44, 42, 38, 0.04);
+  --shadow-sm: rgba(44, 42, 38, 0.03);
+  --waveform-wave: #d4cec3;
   --waveform-progress: #c0512d;
-  --waveform-cursor: #2c2a26;
-  --loading-overlay: rgba(255, 255, 255, 0.92);
+  --waveform-cursor: #2e2b27;
+  --loading-overlay: rgba(245, 242, 236, 0.92);
   --serif: 'Source Serif 4', Georgia, serif;
   --mono: 'DM Mono', 'Courier New', monospace;
   --radius: 8px;
@@ -40,29 +40,29 @@
 
 /* ── Design Tokens (dark) ── */
 [data-theme="dark"] {
-  --bg: #1c1917;
-  --surface: #292524;
+  --bg: #1b1816;
+  --surface: #272421;
   --surface-raised: #302c28;
-  --border: #3d3833;
+  --border: #3b3631;
   --border-active: #564f47;
-  --text-primary: #e7e0d8;
-  --text-secondary: #b5ada5;
-  --text-muted: #8a817a;
+  --text-primary: #e4ddd5;
+  --text-secondary: #b0a89e;
+  --text-muted: #837b72;
   --accent: #d4774a;
-  --accent-light: rgba(212, 119, 74, 0.10);
-  --accent-glow: rgba(212, 119, 74, 0.15);
+  --accent-light: rgba(212, 119, 74, 0.08);
+  --accent-glow: rgba(212, 119, 74, 0.12);
   --success: #5ea852;
   --success-glow: rgba(94, 168, 82, 0.12);
   --warning: #c49a3a;
   --warning-glow: rgba(196, 154, 58, 0.12);
   --error: #d4564a;
   --error-glow: rgba(212, 86, 74, 0.12);
-  --shadow: rgba(0, 0, 0, 0.2);
+  --shadow: rgba(0, 0, 0, 0.22);
   --shadow-sm: rgba(0, 0, 0, 0.15);
   --waveform-wave: #564f47;
   --waveform-progress: #d4774a;
-  --waveform-cursor: #e7e0d8;
-  --loading-overlay: rgba(28, 25, 23, 0.92);
+  --waveform-cursor: #e4ddd5;
+  --loading-overlay: rgba(27, 24, 22, 0.92);
 }
 
 /* ── Body ── */
@@ -150,11 +150,11 @@ body {
 /* ── Site Blurb ── */
 .site-blurb {
   font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.75;
+  font-size: 14px;
+  line-height: 1.8;
   letter-spacing: 0.2px;
   color: var(--text-secondary);
-  max-width: 560px;
+  max-width: 580px;
   margin: 0 auto 0;
   padding: 0;
   background: transparent;
@@ -170,7 +170,7 @@ footer {
   border-top: 1px solid var(--border);
   text-align: center;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 1.5px;
   color: var(--text-secondary);
   transition: border-color 0.3s ease, color 0.3s ease;
@@ -222,7 +222,7 @@ main {
   border-radius: var(--radius);
   padding: 14px 18px;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 13px;
   color: var(--warning);
   line-height: 1.9;
   display: none;
@@ -233,7 +233,7 @@ main {
   background: rgba(160, 120, 40, 0.12);
   padding: 2px 7px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* ── Cards ── */
@@ -249,7 +249,7 @@ main {
 
 .card-label {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--text-secondary);
@@ -259,7 +259,7 @@ main {
 
 .card-hint {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.5px;
   color: var(--text-muted);
   padding: 3px 20px 0;
@@ -279,7 +279,7 @@ textarea {
   width: 100%;
   resize: none;
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.7;
   color: var(--text-primary);
   background: transparent;
@@ -295,7 +295,7 @@ input.title-input {
   display: block;
   width: 100%;
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.7;
   color: var(--text-primary);
   background: transparent;
@@ -323,7 +323,7 @@ input.title-input::placeholder { color: var(--text-muted); }
 
 .field-group label {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--text-secondary);
@@ -331,7 +331,7 @@ input.title-input::placeholder { color: var(--text-muted); }
 
 button.submit {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -368,7 +368,7 @@ button.submit:disabled {
 
 .progress-label {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--text-secondary);
@@ -415,7 +415,7 @@ button.submit:disabled {
   align-items: center;
   justify-content: space-between;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 2.5px;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -431,7 +431,7 @@ button.submit:disabled {
   border-radius: var(--radius);
   padding: 14px 18px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--error);
   display: none;
   white-space: pre-wrap;
@@ -456,7 +456,7 @@ button.submit:disabled {
 }
 .waveform-loading.visible { display: flex; }
 .waveform-loading-label {
-  font-family: var(--mono); font-size: 11px; letter-spacing: 1.5px;
+  font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px;
   text-transform: uppercase; color: var(--text-secondary);
 }
 .waveform-loading-track {
@@ -468,7 +468,7 @@ button.submit:disabled {
   animation: indeterminate 1.8s ease-in-out infinite;
 }
 .waveform-loading-detail {
-  font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+  font-family: var(--mono); font-size: 11px; color: var(--text-muted);
   letter-spacing: 0.5px;
 }
 
@@ -491,16 +491,16 @@ button.submit:disabled {
 }
 .transport-btn svg { width: 12px; height: 12px; }
 .transport-time {
-  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  font-family: var(--mono); font-size: 12px; font-weight: 500;
   color: var(--text-primary); letter-spacing: 1px; min-width: 60px;
 }
 .transport-duration {
-  font-family: var(--mono); font-size: 11px; color: var(--text-muted);
+  font-family: var(--mono); font-size: 12px; color: var(--text-muted);
 }
 .transport-spacer { flex: 1; }
 
 .speed-badge {
-  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  font-family: var(--mono); font-size: 12px; font-weight: 500;
   letter-spacing: 0.5px; color: var(--text-secondary);
   background: var(--bg); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 4px 10px; cursor: pointer;
@@ -544,14 +544,14 @@ button.submit:disabled {
   transition: opacity 0.2s;
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%232c2a26' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%232e2b27' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 2px center;
   min-width: 0;
 }
 
 [data-theme="dark"] .minimal-select {
-  background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23e7e0d8' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23e4ddd5' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .minimal-select:hover { opacity: 0.75; }
@@ -564,7 +564,7 @@ button.submit:disabled {
 .minimal-select option {
   background: var(--surface);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 1px;
   text-transform: none;
 }
@@ -596,7 +596,7 @@ button.submit:disabled {
 }
 .url-grab-divider span {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -607,7 +607,7 @@ button.submit:disabled {
   align-items: center;
   gap: 6px;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.5px;
   text-transform: none;
   color: var(--text-muted);
@@ -636,7 +636,7 @@ button.submit:disabled {
   padding: 10px 14px;
   color: var(--text-primary);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -648,7 +648,7 @@ button.submit:disabled {
 
 .url-grab-btn {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -708,7 +708,7 @@ button.submit:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--accent);
   font-family: var(--mono);
@@ -721,7 +721,7 @@ button.submit:disabled {
   gap: 8px;
   margin-top: 10px;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 .url-grab-status.visible { display: flex; }
@@ -738,7 +738,7 @@ button.submit:disabled {
   color: var(--text-muted);
   cursor: pointer;
   margin-left: auto;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 1px;
   text-transform: uppercase;
   transition: color 0.2s;
@@ -765,5 +765,5 @@ button.submit:disabled {
   main { padding: 32px 16px 60px; }
   .submit-row { flex-direction: column; align-items: stretch; }
   footer { padding: 24px 16px; }
-  .site-blurb { font-size: 11px; }
+  .site-blurb { font-size: 13px; }
 }
