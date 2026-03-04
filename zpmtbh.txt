@@ -17,12 +17,14 @@ For each bite you select, provide:
 - The verbatim quote text exactly as it appears in the transcript
 - A brief rationale (one sentence maximum) explaining why this works as a promo bite
 
+IMPORTANT: Be generous with your selections. Always include a few seconds of lead-in before the key moment and let the thought finish completely. Promo bites need breathing room — do not cut them too tight. Err on the side of longer rather than shorter.
+
 Respond ONLY with valid JSON in the exact format below. Do not include any other text, markdown formatting, or code fences:
 {"bites":[{"start":0.0,"end":0.0,"quote":"exact words from transcript","rationale":"why this works as a promo bite"}]}
 
 Rules:
 - Select between 5 and 8 bites total
-- Each bite should represent roughly 5 to 20 seconds of audio
+- Each bite should represent roughly 10 to 30 seconds of audio — longer is better than shorter
 - Bites must be self-contained and make sense to a listener without prior context
 - Avoid selecting bites that require setup or background knowledge to understand
 - Prefer punchy, impactful moments over long explanations or rambling passages
