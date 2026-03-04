@@ -198,32 +198,6 @@
     .waveform-area { display: none; flex-direction: column; gap: 0; }
     .waveform-area.visible { display: flex; }
 
-    /* ── Transcription / analysis status ── */
-    .transport-status {
-      display: none; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 1;
-      min-width: 0; overflow: hidden;
-    }
-    .transport-status.visible { display: flex; }
-    .transport-status-text {
-      font-family: var(--mono); font-size: 10px; color: var(--text-muted);
-      letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .transport-status-progress {
-      width: 60px; height: 3px; background: var(--border); border-radius: 3px;
-      overflow: hidden; flex-shrink: 0; display: none;
-    }
-    .transport-status-progress.visible { display: block; }
-    .transport-status-progress-bar {
-      height: 100%; width: 0%; background: var(--accent); transition: width 0.3s ease;
-    }
-    .transport-status-progress-bar.indeterminate {
-      width: 100%; animation: indeterminate 1.8s ease-in-out infinite;
-    }
-    @keyframes indeterminate {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
-    }
-
     /* ── Transcript search ── */
     .transport-search {
       display: none; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0;
@@ -846,12 +820,6 @@
         <span class="transport-duration" id="transportDuration">/ 00.00.00</span>
         <span class="speed-badge" id="speedBadge" title="Click to cycle speed">1&times;</span>
         <span class="transport-spacer"></span>
-        <div class="transport-status" id="transportStatus">
-          <span class="transport-status-text" id="transcribeStatus"></span>
-          <div class="transport-status-progress" id="transcribeProgress">
-            <div class="transport-status-progress-bar" id="transcribeProgressBar"></div>
-          </div>
-        </div>
         <div class="transport-search" id="transportSearch">
           <span class="transport-search-count" id="searchCount"></span>
           <div class="transport-search-nav" id="searchNav">
@@ -1257,17 +1225,19 @@
         var totalChunks = Math.max(1, Math.ceil(audioLengthSec / chunkSec));
         var chunksProcessed = 0;
         self.postMessage({ type: 'phase', phase: 'transcribing' });
-        self.postMessage({ type: 'progress', value: 5, done: 0, total: totalChunks });
+        self.postMessage({ type: 'progress', value: 2, done: 0, total: totalChunks, text: '' });
         var result = await transcriber(e.data.audio, {
           return_timestamps: true, chunk_length_s: chunkSec, stride_length_s: 5,
           language: 'en', task: 'transcribe',
-          callback_function: function () {
+          chunk_callback: function (chunk) {
             chunksProcessed++;
             var pct = Math.min(95, Math.round((chunksProcessed / totalChunks) * 95));
-            self.postMessage({ type: 'progress', value: pct, done: chunksProcessed, total: totalChunks });
+            var chunkText = '';
+            if (chunk && chunk.text) chunkText = chunk.text;
+            self.postMessage({ type: 'progress', value: pct, done: chunksProcessed, total: totalChunks, text: chunkText });
           }
         });
-        self.postMessage({ type: 'progress', value: 100, done: totalChunks, total: totalChunks });
+        self.postMessage({ type: 'progress', value: 100, done: totalChunks, total: totalChunks, text: '' });
         self.postMessage({ type: 'result', data: result });
       } catch (err) {
         self.postMessage({ type: 'error', text: err.message || String(err) });
@@ -1610,8 +1580,6 @@
     isTranscribing = false;
     transcriptChunks = null;
     hideTranscriptionCard();
-    document.getElementById('transportStatus').classList.remove('visible');
-    document.getElementById('transcribeProgress').classList.remove('visible');
     document.getElementById('transcriptDisplay').classList.remove('visible');
     document.getElementById('transcriptDisplay').innerHTML = '';
     document.getElementById('transportSearch').classList.remove('visible');
@@ -1620,18 +1588,6 @@
   async function startTranscription() {
     if (isTranscribing || !audioBuffer) return;
     isTranscribing = true;
-
-    // Small transport bar status (secondary indicator)
-    var statusBar = document.getElementById('transportStatus');
-    var status = document.getElementById('transcribeStatus');
-    var prog = document.getElementById('transcribeProgress');
-    var progBar = document.getElementById('transcribeProgressBar');
-
-    document.getElementById('transportSearch').classList.remove('visible');
-    statusBar.classList.add('visible');
-    status.textContent = 'Transcribing\u2026';
-    prog.classList.add('visible');
-    progBar.classList.add('indeterminate');
 
     // Show the big progress card
     showTranscriptionCard();
@@ -1646,6 +1602,7 @@
       var audioData = rendered.getChannelData(0);
 
       transcriptionWorker = new Worker(workerUrl, { type: 'module' });
+      var liveText = '';
       transcriptionWorker.onmessage = function (e) {
         var msg = e.data;
 
@@ -1661,13 +1618,15 @@
         }
 
         if (msg.type === 'progress') {
-          progBar.classList.remove('indeterminate');
-          progBar.style.width = msg.value + '%';
           updateTranscriptionProgress(msg.value, msg.done || 0, msg.total || 0);
-          if (msg.value > 5) {
+          if (msg.value > 2) {
             setTranscriptionStatus('Listening to your audio\u2026');
           }
-          status.textContent = 'Transcribing\u2026 ' + msg.value + '%';
+          // Accumulate live transcript text from chunk_callback
+          if (msg.text) {
+            liveText += (liveText ? ' ' : '') + msg.text.trim();
+            showLiveTranscriptText(liveText);
+          }
         }
 
         if (msg.type === 'result') {
@@ -1680,12 +1639,6 @@
             transcriptChunks = [{ start: 0, end: audioBuffer.duration, text: result.text }];
           }
 
-          // Show complete transcript in the progress card briefly
-          if (transcriptChunks && transcriptChunks.length) {
-            var fullText = transcriptChunks.map(function (c) { return c.text.trim(); }).join(' ');
-            showLiveTranscriptText(fullText);
-          }
-
           updateTranscriptionProgress(100, 0, 0);
           setTranscriptionStatus('Transcript ready \u2714');
           document.getElementById('tcParts').textContent = '';
@@ -1695,8 +1648,6 @@
             hideTranscriptionCard();
             displayTranscript();
             isTranscribing = false;
-            statusBar.classList.remove('visible');
-            prog.classList.remove('visible');
             transcriptionWorker = null;
             if (autoAnalyseEnabled) setTimeout(startAnalysis, 400);
           }, 1200);
@@ -1707,20 +1658,17 @@
         if (msg.type === 'error') {
           setTranscriptionStatus('Transcription failed');
           document.getElementById('tcParts').textContent = msg.text || '';
-          status.textContent = 'Failed';
           isTranscribing = false;
           if (transcriptionWorker) { transcriptionWorker.terminate(); transcriptionWorker = null; }
         }
       };
       transcriptionWorker.onerror = function (err) {
         setTranscriptionStatus('Transcription failed');
-        status.textContent = 'Failed';
         isTranscribing = false; transcriptionWorker = null;
       };
       transcriptionWorker.postMessage({ audio: audioData, audioDuration: audioBuffer.duration }, [audioData.buffer]);
     } catch (err) {
       setTranscriptionStatus('Failed: ' + (err.message || err));
-      status.textContent = 'Failed';
       isTranscribing = false;
     }
   }
@@ -1735,7 +1683,6 @@
     }
     container.innerHTML = html;
     container.classList.add('visible');
-    document.getElementById('transportStatus').classList.remove('visible');
     document.getElementById('transportSearch').classList.add('visible');
     container.querySelectorAll('.ts-word').forEach(function (el) {
       el.addEventListener('click', function () {
