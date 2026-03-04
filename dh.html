@@ -441,11 +441,35 @@
       transition: opacity 0.35s ease, max-height 0.45s ease;
       max-height: 800px;
       overflow: hidden;
+      position: relative;
     }
     .input-section.collapsed {
       opacity: 0;
       max-height: 0 !important;
       pointer-events: none;
+    }
+
+    /* Creating overlay on input section (first generation) */
+    .input-section.creating .card {
+      filter: blur(6px);
+      opacity: 0.35;
+      pointer-events: none;
+      transition: filter 0.4s ease, opacity 0.4s ease;
+    }
+    .input-section .creating-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: var(--surface-transparent, rgba(0,0,0,0.05));
+      border-radius: var(--radius-lg);
+    }
+    .input-section.creating .creating-overlay {
+      display: flex;
     }
 
     /* ── History heading ── */
@@ -585,6 +609,11 @@
   </div>
 
   <div class="input-section" id="inputSection">
+    <div class="creating-overlay" id="creatingOverlay">
+      <span class="regen-label">Creating…</span>
+      <div class="regen-track"><div class="regen-bar"></div></div>
+      <button class="regen-cancel" id="createCancel">Cancel</button>
+    </div>
     <div class="card">
       <span class="card-label">Title</span>
       <input type="text" id="titleInput" class="title-input" placeholder="Add a title to guide the headlines (optional)" />
@@ -710,11 +739,17 @@
 
   var regenLabel  = document.getElementById('regenLabel');
   var regenCancel = document.getElementById('regenCancel');
+  var createCancel = document.getElementById('createCancel');
 
   regenCancel.addEventListener('click', function () {
     if (apiAbort) { apiAbort.abort(); apiAbort = null; }
     results.classList.remove('regenerating');
-    if (!hasGenerated) { results.classList.remove('visible'); }
+    btn.disabled = false;
+  });
+
+  createCancel.addEventListener('click', function () {
+    if (apiAbort) { apiAbort.abort(); apiAbort = null; }
+    inputSection.classList.remove('creating');
     btn.disabled = false;
   });
 
@@ -1008,7 +1043,9 @@
     clearFile();
     document.getElementById('results').classList.remove('visible');
     document.getElementById('results').classList.remove('regenerating');
+    inputSection.classList.remove('creating');
     document.getElementById('errorBox').classList.remove('visible');
+    if (apiAbort) { apiAbort.abort(); apiAbort = null; }
 
     // Reset to fresh state on category switch
     expandInputs();
@@ -1065,21 +1102,15 @@
       regenLabel.textContent = 'Recreating…';
       results.classList.add('regenerating');
     } else {
-      // First create: show empty results with creating overlay
-      regenLabel.textContent = 'Creating…';
-      document.getElementById('h1').textContent = '';
-      document.getElementById('h2').textContent = '';
-      document.getElementById('h3').textContent = '';
-      document.getElementById('desc').innerHTML = '';
-      results.classList.add('visible');
-      results.classList.add('regenerating');
+      // First create: overlay the input cards
+      inputSection.classList.add('creating');
     }
 
     // Cancel any running countdown when submit fires
     cancelCountdown();
 
-    if (!transcript) { showError('Please drop a transcript file or paste text before submitting.'); results.classList.remove('regenerating'); if (!isRecreate) results.classList.remove('visible'); return; }
-    if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); results.classList.remove('regenerating'); if (!isRecreate) results.classList.remove('visible'); return; }
+    if (!transcript) { showError('Please drop a transcript file or paste text before submitting.'); if (isRecreate) { results.classList.remove('regenerating'); } else { inputSection.classList.remove('creating'); } return; }
+    if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); if (isRecreate) { results.classList.remove('regenerating'); } else { inputSection.classList.remove('creating'); } return; }
 
     var userMessage = '';
     if (titleVal) { userMessage = 'Suggested title: ' + titleVal + '\n\n'; }
@@ -1132,6 +1163,7 @@
         .replace(/\n/g, '<br>');
       descEl.innerHTML = description;
 
+      inputSection.classList.remove('creating');
       results.classList.remove('regenerating');
       results.classList.add('visible');
       generationCount++;
@@ -1145,8 +1177,8 @@
       var msg = err.message || String(err);
       if (/failed to fetch|networkerror|load failed/i.test(msg))
         msg = 'Network error: could not reach the proxy worker.\nCheck WORKER_URL and ensure you are serving over HTTP.';
+      inputSection.classList.remove('creating');
       results.classList.remove('regenerating');
-      if (!isRecreate) results.classList.remove('visible');
       showError(msg);
     } finally {
       apiAbort = null;
@@ -1158,7 +1190,6 @@
     var box = document.getElementById('errorBox');
     box.textContent = msg;
     box.classList.add('visible');
-    document.getElementById('results').classList.remove('regenerating');
     document.getElementById('submitBtn').disabled = false;
   }
 
