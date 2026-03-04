@@ -2774,9 +2774,21 @@
         }
 
         // Step 2: Upload WAV directly to Funnel URL (bypasses Cloudflare entirely)
+        // Downsample to 16kHz mono first — Whisper wants this anyway, and it's ~6x smaller
+        status.textContent = 'Preparing audio…';
+        var audio16k = await getMixedAudio16k();
+
+        if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) {
+          isTranscribing = false; return;
+        }
+
+        var uploadBuffer = new AudioBuffer({ length: audio16k.length, sampleRate: 16000, numberOfChannels: 1 });
+        uploadBuffer.copyToChannel(audio16k, 0);
+        var uploadBlob = audioBufferToWav(uploadBuffer);
+
         transcribeUrl = tokenData.upload_url;
         var formData = new FormData();
-        formData.append('file', mixedBlob, 'audio.wav');
+        formData.append('file', uploadBlob, 'audio.wav');
         fetchOpts = {
           method: 'POST',
           body: formData,
