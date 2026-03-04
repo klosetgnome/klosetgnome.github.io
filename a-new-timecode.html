@@ -2821,7 +2821,7 @@
         // Try direct Funnel upload first (bypasses CF for external users)
         // Falls back to CF Worker if PNA blocks it (dev on local network)
         if (tokenOk) {
-          status.textContent = 'Uploading audio…';
+          status.textContent = 'Uploading & transcribing…';
           try {
             var directRes = await fetch(directUrl, { method: 'POST', body: formData });
             if (directRes.ok) {
@@ -2836,12 +2836,13 @@
             formData.append('file', uploadBlob, 'audio.wav');
             transcribeUrl = URL_GRAB_SERVER + '/api/transcribe';
             fetchOpts = { method: 'POST', body: formData };
+            status.textContent = 'Uploading & transcribing…';
           }
         } else {
           transcribeUrl = URL_GRAB_SERVER + '/api/transcribe';
           fetchOpts = { method: 'POST', body: formData };
+          status.textContent = 'Uploading & transcribing…';
         }
-        status.textContent = 'Uploading audio…';
       } else {
         throw new Error('No audio available for transcription');
       }
