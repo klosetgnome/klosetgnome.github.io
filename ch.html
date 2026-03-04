@@ -353,6 +353,20 @@
       pointer-events: none;
     }
 
+    /* ── History heading ── */
+    .history-heading {
+      display: none;
+      width: 100%;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 4px 0 0;
+      animation: fadeInUp 0.3s ease;
+    }
+    .history-heading.visible { display: block; }
+
     /* ── History section ── */
     #history {
       display: flex;
@@ -444,6 +458,8 @@
     </div>
     <div class="results-body" id="resultContent"></div>
   </div>
+
+  <div class="history-heading" id="historyHeading">History</div>
 
   <div id="history"></div>
 
@@ -554,10 +570,14 @@
   var RING_CIRCUMFERENCE = 2 * Math.PI * 8; // r=8 → ≈50.27
 
   // ── State for recreate + history ──
-  var btn          = document.getElementById('submitBtn');
-  var inputSection = document.getElementById('inputSection');
-  var historyEl    = document.getElementById('history');
-  var hasGenerated = false;
+  var btn            = document.getElementById('submitBtn');
+  var inputSection   = document.getElementById('inputSection');
+  var submitRow      = document.getElementById('submitRow');
+  var historyEl      = document.getElementById('history');
+  var historyHeading = document.getElementById('historyHeading');
+  var progressWrap   = document.getElementById('progressWrap');
+  var results        = document.getElementById('results');
+  var hasGenerated   = false;
   var generationCount = 0;
 
   var HINTS = {
@@ -607,10 +627,18 @@
     btn.textContent = 'Recreate';
     btn.style.display = 'inline-block';
     btn.disabled = false;
+    // Move submit row to just after results so Recreate sits beneath current generation
+    results.after(submitRow);
   }
 
   function expandInputs() {
     inputSection.classList.remove('collapsed');
+    // Move submit row back to after input section (before progress bar)
+    progressWrap.parentNode.insertBefore(submitRow, progressWrap);
+  }
+
+  function updateHistoryHeading() {
+    historyHeading.classList.toggle('visible', historyEl.children.length > 0);
   }
 
   function saveToHistory() {
@@ -663,6 +691,9 @@
     while (historyEl.children.length > 3) {
       historyEl.removeChild(historyEl.lastChild);
     }
+
+    // Show history heading
+    updateHistoryHeading();
   }
 
   // ── URL detection & fetching ──────────────────────────────────────
@@ -842,6 +873,7 @@
     hasGenerated = false;
     generationCount = 0;
     historyEl.innerHTML = '';
+    historyHeading.classList.remove('visible');
     btn.textContent = 'Create';
     updateSubmitVisibility();
 
