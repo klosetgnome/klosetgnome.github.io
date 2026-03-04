@@ -34,18 +34,6 @@
       position: relative;
       width: 100%;
     }
-    .textarea-icon {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: var(--text-muted);
-      opacity: 0.18;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-    .textarea-icon svg { width: 40px; height: 40px; }
-    .textarea-wrap.has-text .textarea-icon { opacity: 0; }
 
     /* ── Title inline input (transcript card) ── */
     .title-inline {
@@ -696,11 +684,7 @@
     <!-- Copy mode card (message / summarise / review) -->
     <div class="card" id="copyCard">
       <span class="card-label">Your Text</span>
-      <span class="card-hint" id="inputHint">Paste text, or a link to a webpage, to summarise</span>
       <div class="textarea-wrap" id="textareaWrap">
-        <div class="textarea-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-        </div>
         <textarea id="inputText" placeholder="Type, paste, or drop a link here…"></textarea>
       </div>
       <div class="fetch-bar" id="fetchBar">
@@ -846,13 +830,11 @@
   var modelEl          = document.getElementById('model');
   var modelStatus      = document.getElementById('modelStatus');
   var categorySelect   = document.getElementById('categorySelect');
-  var inputHint        = document.getElementById('inputHint');
   var progressLabel    = document.getElementById('progressLabel');
   var resultsLabel     = document.getElementById('resultsLabel');
 
   // Copy mode elements
   var inputTextEl      = document.getElementById('inputText');
-  var textareaWrap     = document.getElementById('textareaWrap');
   var copyCard         = document.getElementById('copyCard');
   var fetchBar         = document.getElementById('fetchBar');
   var fetchLabel       = document.getElementById('fetchLabel');
@@ -911,11 +893,6 @@
   // ═══════════════════════════════════════════════════════════════
   // CATEGORY CONFIG
   // ═══════════════════════════════════════════════════════════════
-  var HINTS = {
-    message:   'Paste bullet points or rough notes to turn into a polished email',
-    summarise: 'Paste text, or a link to a webpage, to summarise',
-    review:    'Paste notes or key details about your experience'
-  };
   var PLACEHOLDERS = {
     message:   'Type or paste here…',
     summarise: 'Type, paste, or drop a link here…',
@@ -1092,7 +1069,6 @@
   // COPY MODE: TEXT INPUT
   // ═══════════════════════════════════════════════════════════════
   inputTextEl.addEventListener('input', function () {
-    textareaWrap.classList.toggle('has-text', inputTextEl.value.length > 0);
     updateSubmitVisibility();
   });
 
@@ -1148,7 +1124,6 @@
   fetchClearBtn.addEventListener('click', function () {
     cancelUrlCountdown();
     inputTextEl.value = '';
-    textareaWrap.classList.remove('has-text');
     hideFetchBar();
     inputTextEl.focus();
     updateSubmitVisibility();
@@ -1180,7 +1155,6 @@
       if (!text || text.length < 50) throw new Error('Could not extract meaningful content from this page.');
       if (text.length > 12000) text = text.substring(0, 12000) + '\n\n[Content truncated]';
       inputTextEl.value = text;
-      textareaWrap.classList.add('has-text');
       showFetchBar('Fetched from ' + new URL(url).hostname, false);
       updateSubmitVisibility();
       startUrlCountdown();
@@ -1307,7 +1281,6 @@
   // INIT UI
   // ═══════════════════════════════════════════════════════════════
   var initCat = categorySelect.value;
-  inputHint.textContent     = HINTS[initCat]          || '';
   inputTextEl.placeholder   = PLACEHOLDERS[initCat]    || '';
   progressLabel.textContent = PROGRESS_LABELS[initCat] || '';
   resultsLabel.textContent  = RESULT_LABELS[initCat]   || '';
@@ -1325,7 +1298,6 @@
 
     // Update UI strings
     if (!isTranscriptMode()) {
-      inputHint.textContent     = HINTS[cat] || '';
       inputTextEl.placeholder   = PLACEHOLDERS[cat] || '';
     }
     progressLabel.textContent = PROGRESS_LABELS[cat] || '';
@@ -1333,7 +1305,6 @@
 
     // Clear state
     inputTextEl.value = '';
-    textareaWrap.classList.remove('has-text');
     hideFetchBar();
     clearFile();
     titleInput.value = '';
