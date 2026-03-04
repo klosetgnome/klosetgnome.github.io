@@ -18,10 +18,15 @@
   </script>
   <link rel="stylesheet" href="astyle.css">
   <style>
-    /* ── Page-specific: textarea height & icon ── */
-    textarea {
+    /* ── Page-specific: textarea heights ── */
+    #inputText {
       min-height: 160px;
       max-height: 160px;
+      padding: 14px 20px 18px;
+    }
+    #transcript {
+      min-height: 120px;
+      max-height: 120px;
       padding: 14px 20px 18px;
     }
 
@@ -42,7 +47,151 @@
     .textarea-icon svg { width: 40px; height: 40px; }
     .textarea-wrap.has-text .textarea-icon { opacity: 0; }
 
-    /* ── Fetch status bar ── */
+    /* ── Title inline input (transcript card) ── */
+    .title-inline {
+      width: 100%;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 14px 20px;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+    .title-inline::placeholder { color: var(--text-muted); }
+    .title-inline:focus { border-bottom-color: var(--accent); }
+
+    /* ── Drop-zone (transcript card) ── */
+    .drop-zone { position: relative; width: 100%; }
+
+    .drop-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background: var(--accent-light);
+      border: 2px dashed var(--accent);
+      border-radius: var(--radius);
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .drop-overlay.active { display: flex; }
+    .drop-overlay-label {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .drop-prompt {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 28px 20px;
+      text-align: center;
+    }
+    .drop-prompt.hidden { display: none; }
+    .drop-prompt-icon { color: var(--text-muted); opacity: 0.4; flex-shrink: 0; }
+    .drop-prompt-icon svg { width: 22px; height: 22px; }
+    .drop-prompt-text {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .drop-prompt-text .browse {
+      color: var(--accent);
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .drop-prompt-text .browse:hover { text-decoration: underline; }
+
+    .file-loaded-bar {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .file-loaded-bar.visible { display: flex; }
+    .file-loaded-bar .file-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    .file-loaded-bar .file-size {
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .file-loaded-bar .file-remove {
+      flex-shrink: 0;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .file-loaded-bar .file-remove:hover {
+      border-color: var(--error);
+      color: var(--error);
+      background: var(--error-glow);
+    }
+
+    /* ── File countdown bar ── */
+    .file-countdown-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      animation: fadeInUp 0.3s ease;
+    }
+    .file-countdown-bar.visible { display: flex; }
+    .file-countdown-bar .countdown-label { flex: 1; }
+    .file-countdown-bar .countdown-cancel {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .file-countdown-bar .countdown-cancel:hover {
+      border-color: var(--error);
+      color: var(--error);
+      background: var(--error-glow);
+    }
+
+    /* ── Fetch status bar (URL summarise) ── */
     .fetch-bar {
       display: none;
       align-items: center;
@@ -91,7 +240,7 @@
       background: var(--error-glow);
     }
 
-    /* ── Countdown ring ── */
+    /* ── Shared countdown ring ── */
     .countdown-ring {
       width: 22px;
       height: 22px;
@@ -129,7 +278,7 @@
       font-family: var(--mono);
     }
 
-    /* ── Results (page-specific: copy button, body, lists) ── */
+    /* ── Results: copy button, body, lists ── */
     #results {
       position: relative;
     }
@@ -183,9 +332,63 @@
     }
     .results-body li:last-child { margin-bottom: 0; }
 
-    /* ── Regenerating overlay inside results ── */
+    /* ── Result rows (transcript mode) ── */
+    .result-row {
+      display: flex;
+      align-items: stretch;
+      border-bottom: 1px solid var(--border);
+    }
+    .result-row:last-child { border-bottom: none; }
+    .row-meta {
+      width: 120px;
+      flex-shrink: 0;
+      padding: 16px 14px;
+      display: flex;
+      align-items: center;
+    }
+    .row-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .row-content {
+      flex: 1;
+      padding: 16px 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      word-break: break-word;
+      border-left: 1px solid var(--border);
+    }
+    .result-row.headline .row-content {
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .copy-row-btn {
+      flex-shrink: 0;
+      width: 44px;
+      background: none;
+      border: none;
+      border-left: 1px solid var(--border);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .copy-row-btn:hover {
+      color: var(--text-primary);
+      background: var(--surface-raised);
+    }
+    .copy-row-btn.copied { color: var(--accent); }
+    .copy-row-btn svg { width: 15px; height: 15px; }
+
+    /* ── Regenerating overlay ── */
     #results.regenerating .results-header,
-    #results.regenerating .results-body {
+    #results.regenerating .results-body,
+    #results.regenerating .result-row {
       filter: blur(6px);
       opacity: 0.35;
       pointer-events: none;
@@ -267,9 +470,7 @@
       flex-shrink: 0;
     }
 
-    .settings-wrap {
-      position: relative;
-    }
+    .settings-wrap { position: relative; }
 
     .settings-toggle {
       background: none;
@@ -286,25 +487,11 @@
       height: 38px;
       flex-shrink: 0;
     }
-    .settings-toggle:hover {
-      color: var(--accent);
-      border-color: var(--accent);
-    }
-    .settings-toggle.active {
-      color: var(--accent);
-      border-color: var(--accent);
-      background: var(--accent-light);
-    }
-    .settings-toggle svg {
-      width: 18px;
-      height: 18px;
-      stroke-width: 1.5;
-      transition: transform 0.4s ease;
-    }
+    .settings-toggle:hover { color: var(--accent); border-color: var(--accent); }
+    .settings-toggle.active { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+    .settings-toggle svg { width: 18px; height: 18px; stroke-width: 1.5; transition: transform 0.4s ease; }
     .settings-toggle:hover svg,
-    .settings-toggle.active svg {
-      transform: rotate(60deg);
-    }
+    .settings-toggle.active svg { transform: rotate(60deg); }
 
     .settings-panel {
       display: none;
@@ -321,45 +508,15 @@
       animation: fadeInDown 0.2s ease;
     }
     .settings-panel.visible { display: block; }
-
-    .settings-panel-label {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-    }
-
-    .settings-panel select.minimal-select {
-      width: 100%;
-      font-size: 12px;
-      letter-spacing: 1px;
-      padding: 8px 24px 8px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .settings-panel .model-status {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      margin-top: 8px;
-    }
-
-    .settings-panel .model-status .status-live {
-      color: var(--success);
-    }
-    .settings-panel .model-status .status-fallback {
-      color: var(--warning);
-    }
+    .settings-panel-label { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+    .settings-panel select.minimal-select { width: 100%; font-size: 12px; letter-spacing: 1px; padding: 8px 24px 8px 0; border-bottom: 1px solid var(--border); }
+    .settings-panel .model-status { font-family: var(--mono); font-size: 10px; letter-spacing: 1px; color: var(--text-muted); margin-top: 8px; }
+    .settings-panel .model-status .status-live { color: var(--success); }
+    .settings-panel .model-status .status-fallback { color: var(--warning); }
 
     /* ── Hide original model controls in submit row ── */
     .submit-row .field-group { display: none; }
-
-    .submit-row {
-      justify-content: flex-end;
-    }
+    .submit-row { justify-content: flex-end; }
 
     /* ── Collapsible input section ── */
     .input-section {
@@ -378,7 +535,6 @@
       pointer-events: none;
     }
 
-    /* Creating overlay on input section (first generation) */
     .input-section.creating .card {
       filter: blur(6px);
       opacity: 0.35;
@@ -397,11 +553,9 @@
       background: var(--surface-transparent, rgba(0,0,0,0.05));
       border-radius: var(--radius-lg);
     }
-    .input-section.creating .creating-overlay {
-      display: flex;
-    }
+    .input-section.creating .creating-overlay { display: flex; }
 
-    /* ── History heading ── */
+    /* ── History ── */
     .history-heading {
       display: none;
       width: 100%;
@@ -415,34 +569,16 @@
     }
     .history-heading.visible { display: block; }
 
-    /* ── History section ── */
-    #history {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      width: 100%;
-    }
+    #history { display: flex; flex-direction: column; gap: 16px; width: 100%; }
     #history:empty { display: none; }
 
-    .history-entry {
-      opacity: 0.55;
-      transition: opacity 0.2s;
-      animation: historyFadeIn 0.35s ease;
-    }
+    .history-entry { opacity: 0.55; transition: opacity 0.2s; animation: historyFadeIn 0.35s ease; }
     .history-entry:hover { opacity: 0.85; }
-
-    .history-entry .results-header {
-      font-size: 9px;
-      letter-spacing: 2.5px;
-    }
-
-    .history-entry .results-body {
-      font-size: 13px;
-    }
-
-    .history-entry .results-copy {
-      font-size: 9px;
-    }
+    .history-entry .results-header { font-size: 9px; letter-spacing: 2.5px; }
+    .history-entry .results-body { font-size: 13px; }
+    .history-entry .results-copy { font-size: 9px; }
+    .history-entry .row-content { font-size: 13px; }
+    .history-entry .result-row.headline .row-content { font-size: 14px; }
 
     @keyframes historyFadeIn {
       from { opacity: 0; transform: translateY(8px); }
@@ -462,36 +598,19 @@
       animation: fadeInUp 0.5s ease 0.2s both;
     }
     .info-hero.hidden { display: none; }
-    .info-hero-graphic {
-      flex-shrink: 0;
-      width: 80px;
-      height: 80px;
-      color: var(--accent);
-      opacity: 0.7;
-    }
+    .info-hero-graphic { flex-shrink: 0; width: 80px; height: 80px; color: var(--accent); opacity: 0.7; }
     .info-hero-graphic svg { width: 100%; height: 100%; }
     .info-hero-content { flex: 1; min-width: 0; }
-    .info-hero-title {
-      font-family: var(--mono);
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--text-primary);
-      margin-bottom: 8px;
-    }
-    .info-hero-desc {
-      font-family: var(--mono);
-      font-size: 11px;
-      line-height: 1.8;
-      color: var(--text-secondary);
-      letter-spacing: 0.3px;
-    }
+    .info-hero-title { font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--text-primary); margin-bottom: 8px; }
+    .info-hero-desc { font-family: var(--mono); font-size: 11px; line-height: 1.8; color: var(--text-secondary); letter-spacing: 0.3px; }
     .info-hero-desc .hl { color: var(--accent); font-weight: 500; }
 
     @media (max-width: 700px) {
       .info-hero { flex-direction: column; text-align: center; padding: 24px 20px; gap: 16px; }
       .info-hero-graphic { width: 60px; height: 60px; }
+      .row-meta { width: 90px; padding: 12px 10px; }
+      .row-content { padding: 12px 10px; }
+      .settings-panel { min-width: 240px; right: -40px; }
     }
   </style>
 </head>
@@ -504,6 +623,8 @@
       <option value="message" data-prompt="zpmtche.txt">Message</option>
       <option value="summarise" data-prompt="zpmtchs.txt" selected>Summarise</option>
       <option value="review" data-prompt="zpmtchr.txt">Review</option>
+      <option value="finance" data-prompt="zpmtdha.txt">Finance</option>
+      <option value="news" data-prompt="zpmtdhb.txt">News</option>
     </select>
   </div>
   <div class="header-actions">
@@ -521,22 +642,15 @@
       </div>
     </div>
     <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
-      <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
-      </svg>
-      <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="4"/>
-        <path d="M12 2v2"/><path d="M12 20v2"/>
-        <path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
-        <path d="M2 12h2"/><path d="M20 12h2"/>
-        <path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
-      </svg>
+      <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
     </button>
   </div>
 </header>
 
 <main>
 
+  <!-- ══ RESULTS ══ -->
   <div class="results" id="results">
     <div class="regen-overlay" id="regenOverlay">
       <span class="regen-label" id="regenLabel">Creating…</span>
@@ -550,68 +664,59 @@
         <span class="copy-label">Copy</span>
       </button>
     </div>
+    <!-- Copy mode body -->
     <div class="results-body" id="resultContent"></div>
+    <!-- Transcript mode rows -->
+    <div id="resultRows" style="display:none;">
+      <div class="result-row headline"><div class="row-meta"><span class="row-tag">Headline 1</span></div><div class="row-content" id="h1"></div><button class="copy-row-btn" data-target="h1" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>
+      <div class="result-row headline"><div class="row-meta"><span class="row-tag">Headline 2</span></div><div class="row-content" id="h2"></div><button class="copy-row-btn" data-target="h2" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>
+      <div class="result-row headline"><div class="row-meta"><span class="row-tag">Headline 3</span></div><div class="row-content" id="h3"></div><button class="copy-row-btn" data-target="h3" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>
+      <div class="result-row description"><div class="row-meta"><span class="row-tag">Description</span></div><div class="row-content" id="desc"></div><button class="copy-row-btn" data-target="desc" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>
+    </div>
   </div>
 
-  <!-- ── Info heroes ── -->
+  <!-- ══ INFO HEROES ══ -->
   <div class="info-hero hidden" id="infoHeroMessage">
-    <div class="info-hero-graphic">
-      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="10" y="14" width="60" height="42" rx="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
-        <polyline points="10,18 40,40 70,18" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        <line x1="10" y1="56" x2="30" y2="40" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
-        <line x1="70" y1="56" x2="50" y2="40" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
-      </svg>
-    </div>
+    <div class="info-hero-graphic"><svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="14" width="60" height="42" rx="4" stroke="currentColor" stroke-width="1.5" fill="none"/><polyline points="10,18 40,40 70,18" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="56" x2="30" y2="40" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="70" y1="56" x2="50" y2="40" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/></svg></div>
     <div class="info-hero-content">
       <div class="info-hero-title">Copy Assist — Message</div>
-      <div class="info-hero-desc">
-        Paste your <span class="hl">rough notes or bullet points</span> into the text box and Copy Assist will transform them into a polished, well-structured email. Choose a model from the <span class="hl">gear icon</span>, then hit <span class="hl">Create</span>. Use <span class="hl">Recreate</span> to generate a fresh version — previous drafts are saved in the history below.
-      </div>
+      <div class="info-hero-desc">Paste your <span class="hl">rough notes or bullet points</span> into the text box and Copy Assist will transform them into a polished, well-structured email. Choose a model from the <span class="hl">gear icon</span>, then hit <span class="hl">Create</span>. Use <span class="hl">Recreate</span> to generate a fresh version — previous drafts are saved in the history below.</div>
     </div>
   </div>
 
   <div class="info-hero" id="infoHeroSummarise">
-    <div class="info-hero-graphic">
-      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="10" y="8" width="40" height="50" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
-        <line x1="18" y1="18" x2="42" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="18" y1="26" x2="42" y2="26" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="18" y1="34" x2="34" y2="34" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="18" y1="42" x2="42" y2="42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
-        <line x1="18" y1="50" x2="36" y2="50" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.25"/>
-        <path d="M56 22 L56 48" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <polyline points="50,28 56,22 62,28" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="48" y="48" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/>
-        <line x1="52" y1="53" x2="60" y2="53" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-        <line x1="52" y1="57" x2="58" y2="57" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-      </svg>
-    </div>
+    <div class="info-hero-graphic"><svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="8" width="40" height="50" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="18" y1="18" x2="42" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="26" x2="42" y2="26" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="34" x2="34" y2="34" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="42" x2="42" y2="42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="18" y1="50" x2="36" y2="50" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.25"/><path d="M56 22 L56 48" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><polyline points="50,28 56,22 62,28" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="48" y="48" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="52" y1="53" x2="60" y2="53" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="52" y1="57" x2="58" y2="57" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>
     <div class="info-hero-content">
       <div class="info-hero-title">Copy Assist — Summarise</div>
-      <div class="info-hero-desc">
-        Paste a block of text — or <span class="hl">drop a link</span> to any webpage — and Copy Assist will generate a concise summary. Links are fetched automatically and summarisation begins after a short countdown. Hit <span class="hl">Recreate</span> to try again with different wording.
-      </div>
+      <div class="info-hero-desc">Paste a block of text — or <span class="hl">drop a link</span> to any webpage — and Copy Assist will generate a concise summary. Links are fetched automatically and summarisation begins after a short countdown. Hit <span class="hl">Recreate</span> to try again with different wording.</div>
     </div>
   </div>
 
   <div class="info-hero hidden" id="infoHeroReview">
-    <div class="info-hero-graphic">
-      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="40,10 47,30 68,30 51,42 57,62 40,50 23,62 29,42 12,30 33,30" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
-        <line x1="22" y1="70" x2="58" y2="70" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
-      </svg>
-    </div>
+    <div class="info-hero-graphic"><svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><polygon points="40,10 47,30 68,30 51,42 57,62 40,50 23,62 29,42 12,30 33,30" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/><line x1="22" y1="70" x2="58" y2="70" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/></svg></div>
     <div class="info-hero-content">
       <div class="info-hero-title">Copy Assist — Review</div>
-      <div class="info-hero-desc">
-        Paste your <span class="hl">notes or key details</span> about a product, restaurant, or experience and Copy Assist will craft a natural-sounding review. Great for turning quick impressions into something ready to publish. Use <span class="hl">Recreate</span> to generate alternatives.
-      </div>
+      <div class="info-hero-desc">Paste your <span class="hl">notes or key details</span> about a product, restaurant, or experience and Copy Assist will craft a natural-sounding review. Great for turning quick impressions into something ready to publish. Use <span class="hl">Recreate</span> to generate alternatives.</div>
+    </div>
+  </div>
+
+  <div class="info-hero hidden" id="infoHeroFinance">
+    <div class="info-hero-graphic"><svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="12,58 28,38 42,46 56,24 68,30" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="24" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="12" y1="64" x2="68" y2="64" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/><rect x="16" y="52" width="8" height="12" rx="1" stroke="currentColor" stroke-width="1" fill="none" opacity="0.4"/><rect x="28" y="44" width="8" height="20" rx="1" stroke="currentColor" stroke-width="1" fill="none" opacity="0.4"/><rect x="40" y="48" width="8" height="16" rx="1" stroke="currentColor" stroke-width="1" fill="none" opacity="0.4"/><rect x="52" y="36" width="8" height="28" rx="1" stroke="currentColor" stroke-width="1" fill="none" opacity="0.4"/></svg></div>
+    <div class="info-hero-content">
+      <div class="info-hero-title">Copy Assist — Finance</div>
+      <div class="info-hero-desc">Drop a <span class="hl">.txt transcript</span> from a finance podcast — or paste it directly — and Copy Assist will generate three headline options and a polished episode description. Add an optional title to guide the output. Use <span class="hl">Recreate</span> to try different variations.</div>
+    </div>
+  </div>
+
+  <div class="info-hero hidden" id="infoHeroNews">
+    <div class="info-hero-graphic"><svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="12" y="12" width="56" height="48" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="20" y1="22" x2="48" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="20" y1="30" x2="60" y2="30" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/><line x1="20" y1="36" x2="56" y2="36" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/><line x1="20" y1="42" x2="36" y2="42" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.25"/><rect x="44" y="40" width="16" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.5"/><line x1="20" y1="52" x2="60" y2="52" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.2"/></svg></div>
+    <div class="info-hero-content">
+      <div class="info-hero-title">Copy Assist — News</div>
+      <div class="info-hero-desc">Drop a <span class="hl">.txt transcript</span> from a news broadcast or podcast — or paste it directly — and Copy Assist will generate three headline options and an episode description. Use <span class="hl">Recreate</span> to generate alternatives.</div>
     </div>
   </div>
 
   <div class="history-heading" id="historyHeading">History</div>
-
   <div id="history"></div>
 
   <div class="warn-banner" id="warnBanner">
@@ -621,42 +726,68 @@
     Then open <code>http://localhost:8080/copyassist.html</code> in your browser.
   </div>
 
+  <!-- ══ INPUT SECTION ══ -->
   <div class="input-section" id="inputSection">
     <div class="creating-overlay" id="creatingOverlay">
       <span class="regen-label">Creating…</span>
       <div class="regen-track"><div class="regen-bar"></div></div>
       <button class="regen-cancel" id="createCancel">Cancel</button>
     </div>
-    <div class="card">
+
+    <!-- Copy mode card (message / summarise / review) -->
+    <div class="card" id="copyCard">
       <span class="card-label">Your Text</span>
       <span class="card-hint" id="inputHint">Paste text, or a link to a webpage, to summarise</span>
       <div class="textarea-wrap" id="textareaWrap">
         <div class="textarea-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-            <path d="m15 5 4 4"/>
-          </svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
         </div>
         <textarea id="inputText" placeholder="Type, paste, or drop a link here…"></textarea>
       </div>
       <div class="fetch-bar" id="fetchBar">
         <div class="fetch-spinner" id="fetchSpinner"></div>
-        <div class="countdown-ring" id="countdownRing" style="display:none;">
-          <svg viewBox="0 0 20 20">
-            <circle class="ring-bg" cx="10" cy="10" r="8"/>
-            <circle class="ring-fg" id="ringFg" cx="10" cy="10" r="8"/>
-          </svg>
-          <span class="countdown-number" id="countdownNumber">3</span>
+        <div class="countdown-ring" id="urlCountdownRing" style="display:none;">
+          <svg viewBox="0 0 20 20"><circle class="ring-bg" cx="10" cy="10" r="8"/><circle class="ring-fg" id="urlRingFg" cx="10" cy="10" r="8"/></svg>
+          <span class="countdown-number" id="urlCountdownNum">3</span>
         </div>
         <span class="fetch-label" id="fetchLabel">Fetching page content…</span>
         <button class="fetch-clear" id="fetchClear">Clear</button>
+      </div>
+    </div>
+
+    <!-- Transcript mode card (finance / news) -->
+    <div class="card" id="transcriptCard" style="display:none;">
+      <span class="card-label">Transcript</span>
+      <span class="card-hint" id="transcriptHint">Drop a .txt file or paste a transcript to generate episode copy</span>
+      <input type="text" id="titleInput" class="title-inline" placeholder="Episode title (optional)" />
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-overlay" id="dropOverlay"><span class="drop-overlay-label">Drop .txt file here</span></div>
+        <div class="drop-prompt" id="dropPrompt">
+          <div class="drop-prompt-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+          <div class="drop-prompt-text">Drag &amp; drop a .txt transcript file here or <span class="browse" id="browseLink">browse to select one</span></div>
+        </div>
+        <input type="file" id="fileInput" accept=".txt,text/plain" style="display:none;" />
+        <textarea id="transcript" placeholder="…or paste the transcript here"></textarea>
+      </div>
+      <div class="file-loaded-bar" id="fileBar">
+        <span class="file-name" id="fileName"></span>
+        <span class="file-size" id="fileSize"></span>
+        <button class="file-remove" id="fileRemove">Clear</button>
+      </div>
+      <div class="file-countdown-bar" id="fileCountdownBar">
+        <div class="countdown-ring" id="fileCountdownRing">
+          <svg viewBox="0 0 20 20"><circle class="ring-bg" cx="10" cy="10" r="8"/><circle class="ring-fg" id="fileRingFg" cx="10" cy="10" r="8"/></svg>
+          <span class="countdown-number" id="fileCountdownNum">3</span>
+        </div>
+        <span class="countdown-label" id="fileCountdownLabel">Creating in 3s…</span>
+        <button class="countdown-cancel" id="fileCountdownCancel">Cancel</button>
       </div>
     </div>
   </div>
 
   <div class="submit-row" id="submitRow">
     <div class="field-group">
-      <label>Model <span id="modelStatusLegacy" style="display:none;"></span></label>
+      <label>Model</label>
       <select id="modelLegacy" class="minimal-select" style="display:none;"></select>
     </div>
     <button class="submit" id="submitBtn" style="display:none;">Create</button>
@@ -678,6 +809,11 @@
 
 <script>
 (function () {
+  'use strict';
+
+  // ═══════════════════════════════════════════════════════════════
+  // THEME
+  // ═══════════════════════════════════════════════════════════════
   document.querySelector('.theme-toggle').addEventListener('click', function () {
     var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     var next = isDark ? 'light' : 'dark';
@@ -685,16 +821,16 @@
     localStorage.setItem('theme', next);
   });
 
-  /* ── Settings gear toggle ── */
+  // ═══════════════════════════════════════════════════════════════
+  // SETTINGS GEAR
+  // ═══════════════════════════════════════════════════════════════
   var settingsToggle = document.getElementById('settingsToggle');
   var settingsPanel  = document.getElementById('settingsPanel');
-
   settingsToggle.addEventListener('click', function (e) {
     e.stopPropagation();
     settingsPanel.classList.toggle('visible');
     settingsToggle.classList.toggle('active');
   });
-
   document.addEventListener('click', function (e) {
     if (!settingsPanel.contains(e.target) && e.target !== settingsToggle) {
       settingsPanel.classList.remove('visible');
@@ -702,57 +838,81 @@
     }
   });
 
-  var WORKER_URL = '/openrouter';
-  
-  var modelEl        = document.getElementById('model');
-  var modelStatus    = document.getElementById('modelStatus');
-  var categorySelect = document.getElementById('categorySelect');
-  var inputHint      = document.getElementById('inputHint');
-  var progressLabel  = document.getElementById('progressLabel');
-  var resultsLabel   = document.getElementById('resultsLabel');
-  var inputTextEl    = document.getElementById('inputText');
-  var textareaWrap   = document.getElementById('textareaWrap');
-  var fetchBar       = document.getElementById('fetchBar');
-  var fetchLabel     = document.getElementById('fetchLabel');
-  var fetchSpinner   = document.getElementById('fetchSpinner');
-  var fetchClearBtn  = document.getElementById('fetchClear');
-  var countdownRing  = document.getElementById('countdownRing');
-  var countdownNumber= document.getElementById('countdownNumber');
-  var ringFg         = document.getElementById('ringFg');
-  var promptLoaded   = false;
-  var PROMPT         = '';
-  var fetchedFromUrl = null;
-  var countdownTimer = null;
-  var RING_CIRCUMFERENCE = 2 * Math.PI * 8; // r=8 → ≈50.27
+  // ═══════════════════════════════════════════════════════════════
+  // CONSTANTS & ELEMENTS
+  // ═══════════════════════════════════════════════════════════════
+  var WORKER_URL       = '/openrouter';
+  var RING_CIRCUMFERENCE = 2 * Math.PI * 8;
 
-  // ── State for recreate + history ──
-  var btn            = document.getElementById('submitBtn');
-  var inputSection   = document.getElementById('inputSection');
-  var submitRow      = document.getElementById('submitRow');
-  var historyEl      = document.getElementById('history');
-  var historyHeading = document.getElementById('historyHeading');
-  var progressWrap   = document.getElementById('progressWrap');
-  var results        = document.getElementById('results');
-  var hasGenerated   = false;
-  var generationCount = 0;
-  var apiAbort       = null;
+  var modelEl          = document.getElementById('model');
+  var modelStatus      = document.getElementById('modelStatus');
+  var categorySelect   = document.getElementById('categorySelect');
+  var inputHint        = document.getElementById('inputHint');
+  var transcriptHint   = document.getElementById('transcriptHint');
+  var progressLabel    = document.getElementById('progressLabel');
+  var resultsLabel     = document.getElementById('resultsLabel');
 
-  var regenLabel  = document.getElementById('regenLabel');
-  var regenCancel = document.getElementById('regenCancel');
-  var createCancel = document.getElementById('createCancel');
+  // Copy mode elements
+  var inputTextEl      = document.getElementById('inputText');
+  var textareaWrap     = document.getElementById('textareaWrap');
+  var copyCard         = document.getElementById('copyCard');
+  var fetchBar         = document.getElementById('fetchBar');
+  var fetchLabel       = document.getElementById('fetchLabel');
+  var fetchSpinner     = document.getElementById('fetchSpinner');
+  var fetchClearBtn    = document.getElementById('fetchClear');
+  var urlCountdownRing = document.getElementById('urlCountdownRing');
+  var urlCountdownNum  = document.getElementById('urlCountdownNum');
+  var urlRingFg        = document.getElementById('urlRingFg');
 
-  regenCancel.addEventListener('click', function () {
-    if (apiAbort) { apiAbort.abort(); apiAbort = null; }
-    results.classList.remove('regenerating');
-    btn.disabled = false;
-  });
+  // Transcript mode elements
+  var transcriptCard   = document.getElementById('transcriptCard');
+  var titleInput       = document.getElementById('titleInput');
+  var dropZone         = document.getElementById('dropZone');
+  var dropOverlay      = document.getElementById('dropOverlay');
+  var dropPrompt       = document.getElementById('dropPrompt');
+  var fileInput        = document.getElementById('fileInput');
+  var transcriptEl     = document.getElementById('transcript');
+  var fileBar          = document.getElementById('fileBar');
+  var fileNameEl       = document.getElementById('fileName');
+  var fileSizeEl       = document.getElementById('fileSize');
+  var fileRemoveBtn    = document.getElementById('fileRemove');
+  var fileCountdownBar = document.getElementById('fileCountdownBar');
+  var fileCountdownLabel = document.getElementById('fileCountdownLabel');
+  var fileCountdownCancel = document.getElementById('fileCountdownCancel');
+  var fileRingFg       = document.getElementById('fileRingFg');
+  var fileCountdownNum = document.getElementById('fileCountdownNum');
 
-  createCancel.addEventListener('click', function () {
-    if (apiAbort) { apiAbort.abort(); apiAbort = null; }
-    inputSection.classList.remove('creating');
-    btn.disabled = false;
-  });
+  // Shared state
+  var btn              = document.getElementById('submitBtn');
+  var inputSection     = document.getElementById('inputSection');
+  var submitRow        = document.getElementById('submitRow');
+  var historyEl        = document.getElementById('history');
+  var historyHeading   = document.getElementById('historyHeading');
+  var progressWrap     = document.getElementById('progressWrap');
+  var results          = document.getElementById('results');
+  var regenLabel       = document.getElementById('regenLabel');
+  var regenCancel      = document.getElementById('regenCancel');
+  var createCancel     = document.getElementById('createCancel');
 
+  var promptLoaded     = false;
+  var PROMPT           = '';
+  var hasGenerated     = false;
+  var generationCount  = 0;
+  var apiAbort         = null;
+  var fetchedFromUrl   = null;
+  var urlCountdownTimer = null;
+  var fileCountdownTimer = null;
+  var loadedFileText   = null;
+  var fetchAbort       = null;
+  var dragCounter      = 0;
+
+  var TRANSCRIPT_MODES = { finance: true, news: true };
+
+  function isTranscriptMode() { return !!TRANSCRIPT_MODES[categorySelect.value]; }
+
+  // ═══════════════════════════════════════════════════════════════
+  // CATEGORY CONFIG
+  // ═══════════════════════════════════════════════════════════════
   var HINTS = {
     message:   'Paste bullet points or rough notes to turn into a polished email',
     summarise: 'Paste text, or a link to a webpage, to summarise',
@@ -763,54 +923,80 @@
     summarise: 'Type, paste, or drop a link here…',
     review:    'Type or paste here…'
   };
+  var TRANSCRIPT_HINTS = {
+    finance: 'Drop a .txt file or paste a finance podcast transcript',
+    news:    'Drop a .txt file or paste a news broadcast transcript'
+  };
   var PROGRESS_LABELS = {
     message:   'Drafting email…',
     summarise: 'Generating summary…',
-    review:    'Writing review…'
+    review:    'Writing review…',
+    finance:   'Processing transcript…',
+    news:      'Processing transcript…'
   };
   var RESULT_LABELS = {
     message:   'Email',
     summarise: 'Summary',
-    review:    'Review'
+    review:    'Review',
+    finance:   'Episode Copy',
+    news:      'Episode Copy'
   };
 
-  inputTextEl.addEventListener('input', function () {
-    textareaWrap.classList.toggle('has-text', inputTextEl.value.length > 0);
-    updateSubmitVisibility();
-  });
-
-  if (window.location.protocol === 'file:') {
-    document.getElementById('warnBanner').classList.add('visible');
-  }
-
-  // ── Info hero show/hide ─────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+  // INFO HEROES
+  // ═══════════════════════════════════════════════════════════════
   var infoHeroes = {
     message:   document.getElementById('infoHeroMessage'),
     summarise: document.getElementById('infoHeroSummarise'),
-    review:    document.getElementById('infoHeroReview')
+    review:    document.getElementById('infoHeroReview'),
+    finance:   document.getElementById('infoHeroFinance'),
+    news:      document.getElementById('infoHeroNews')
   };
-
   function updateInfoHero() {
     var cat = categorySelect.value;
-    Object.keys(infoHeroes).forEach(function (key) {
-      infoHeroes[key].classList.toggle('hidden', key !== cat);
-    });
+    Object.keys(infoHeroes).forEach(function (k) { infoHeroes[k].classList.toggle('hidden', k !== cat); });
   }
-
   function hideAllHeroes() {
-    Object.keys(infoHeroes).forEach(function (key) {
-      infoHeroes[key].classList.add('hidden');
-    });
+    Object.keys(infoHeroes).forEach(function (k) { infoHeroes[k].classList.add('hidden'); });
   }
 
-  // ── Submit button visibility ──────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+  // RESULT MODE SWITCHING
+  // ═══════════════════════════════════════════════════════════════
+  function setResultMode() {
+    var tm = isTranscriptMode();
+    document.getElementById('resultContent').style.display = tm ? 'none' : '';
+    document.getElementById('resultRows').style.display = tm ? '' : 'none';
+    document.getElementById('copyBtn').style.display = tm ? 'none' : '';
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // INPUT CARD SWITCHING
+  // ═══════════════════════════════════════════════════════════════
+  function switchInputCards() {
+    var tm = isTranscriptMode();
+    copyCard.style.display = tm ? 'none' : '';
+    transcriptCard.style.display = tm ? '' : 'none';
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SUBMIT VISIBILITY
+  // ═══════════════════════════════════════════════════════════════
   function updateSubmitVisibility() {
     if (hasGenerated) { btn.style.display = 'inline-block'; return; }
-    var hasText = !!inputTextEl.value.trim();
-    var isUrlPaste = fetchedFromUrl && categorySelect.value === 'summarise';
-    btn.style.display = (hasText && !isUrlPaste) ? 'inline-block' : 'none';
+    if (isTranscriptMode()) {
+      var hasPasted = !loadedFileText && !!transcriptEl.value.trim();
+      btn.style.display = hasPasted ? 'inline-block' : 'none';
+    } else {
+      var hasText = !!inputTextEl.value.trim();
+      var isUrlPaste = fetchedFromUrl && categorySelect.value === 'summarise';
+      btn.style.display = (hasText && !isUrlPaste) ? 'inline-block' : 'none';
+    }
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // COLLAPSE / EXPAND
+  // ═══════════════════════════════════════════════════════════════
   function collapseInputs() {
     inputSection.classList.add('collapsed');
     hasGenerated = true;
@@ -820,135 +1006,153 @@
     btn.disabled = false;
     results.after(submitRow);
   }
-
   function expandInputs() {
     inputSection.classList.remove('collapsed');
     progressWrap.parentNode.insertBefore(submitRow, progressWrap);
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // HISTORY
+  // ═══════════════════════════════════════════════════════════════
   function updateHistoryHeading() {
     historyHeading.classList.toggle('visible', historyEl.children.length > 0);
   }
 
-  function saveToHistory() {
-    var content = document.getElementById('resultContent').innerHTML;
-    if (!content) return;
+  var COPY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 
-    var uid = 'hist-' + Date.now();
+  function wireCopyBtn(container, btnSel, targetSel) {
+    container.querySelectorAll(btnSel).forEach(function (cbtn) {
+      cbtn.addEventListener('click', async function () {
+        var el = targetSel ? container.querySelector(targetSel) : document.getElementById(cbtn.dataset.target);
+        var text = el ? (el.innerText || el.textContent || '').trim() : '';
+        if (!text) return;
+        try { await navigator.clipboard.writeText(text); }
+        catch (e) { var ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
+        cbtn.classList.add('copied');
+        var lbl = cbtn.querySelector('.copy-label');
+        if (lbl) lbl.textContent = 'Copied';
+        setTimeout(function () { cbtn.classList.remove('copied'); if (lbl) lbl.textContent = 'Copy'; }, 1800);
+      });
+    });
+  }
+
+  function saveToHistory() {
+    var uid = 'hist-' + Date.now() + '-';
     var entry = document.createElement('div');
     entry.className = 'history-entry';
 
-    entry.innerHTML =
-      '<div class="results visible">' +
-        '<div class="results-header">' +
-          '<span>Generation ' + generationCount + '</span>' +
-          '<button class="results-copy" id="' + uid + '-copy" title="Copy to clipboard">' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
-            '<span class="copy-label">Copy</span>' +
-          '</button>' +
-        '</div>' +
-        '<div class="results-body" id="' + uid + '-body"></div>' +
-      '</div>';
+    if (isTranscriptMode()) {
+      var h1 = document.getElementById('h1').textContent;
+      var h2 = document.getElementById('h2').textContent;
+      var h3 = document.getElementById('h3').textContent;
+      var dsc = document.getElementById('desc').innerHTML;
+      if (!h1 && !h2 && !h3 && !dsc) return;
 
-    entry.querySelector('#' + uid + '-body').innerHTML = content;
-
-    var copyBtn = entry.querySelector('#' + uid + '-copy');
-    copyBtn.addEventListener('click', async function () {
-      var el = entry.querySelector('#' + uid + '-body');
-      var text = el ? (el.innerText || '').trim() : '';
-      if (!text) return;
-      try { await navigator.clipboard.writeText(text); }
-      catch (e) {
-        var ta = document.createElement('textarea');
-        ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
-        document.body.appendChild(ta); ta.select();
-        document.execCommand('copy'); document.body.removeChild(ta);
-      }
-      copyBtn.classList.add('copied');
-      copyBtn.querySelector('.copy-label').textContent = 'Copied';
-      setTimeout(function () {
-        copyBtn.classList.remove('copied');
-        copyBtn.querySelector('.copy-label').textContent = 'Copy';
-      }, 1800);
-    });
-
-    historyEl.insertBefore(entry, historyEl.firstChild);
-
-    while (historyEl.children.length > 3) {
-      historyEl.removeChild(historyEl.lastChild);
+      entry.innerHTML =
+        '<div class="results visible">' +
+          '<div class="results-header">Generation ' + generationCount + '</div>' +
+          '<div class="result-row headline"><div class="row-meta"><span class="row-tag">Headline 1</span></div><div class="row-content" id="' + uid + 'h1"></div><button class="copy-row-btn" data-target="' + uid + 'h1" title="Copy">' + COPY_SVG + '</button></div>' +
+          '<div class="result-row headline"><div class="row-meta"><span class="row-tag">Headline 2</span></div><div class="row-content" id="' + uid + 'h2"></div><button class="copy-row-btn" data-target="' + uid + 'h2" title="Copy">' + COPY_SVG + '</button></div>' +
+          '<div class="result-row headline"><div class="row-meta"><span class="row-tag">Headline 3</span></div><div class="row-content" id="' + uid + 'h3"></div><button class="copy-row-btn" data-target="' + uid + 'h3" title="Copy">' + COPY_SVG + '</button></div>' +
+          '<div class="result-row description"><div class="row-meta"><span class="row-tag">Description</span></div><div class="row-content" id="' + uid + 'desc"></div><button class="copy-row-btn" data-target="' + uid + 'desc" title="Copy">' + COPY_SVG + '</button></div>' +
+        '</div>';
+      entry.querySelector('#' + uid + 'h1').textContent = h1;
+      entry.querySelector('#' + uid + 'h2').textContent = h2;
+      entry.querySelector('#' + uid + 'h3').textContent = h3;
+      entry.querySelector('#' + uid + 'desc').innerHTML = dsc;
+      wireCopyBtn(entry, '.copy-row-btn');
+    } else {
+      var content = document.getElementById('resultContent').innerHTML;
+      if (!content) return;
+      entry.innerHTML =
+        '<div class="results visible">' +
+          '<div class="results-header"><span>Generation ' + generationCount + '</span>' +
+            '<button class="results-copy" id="' + uid + 'copy" title="Copy to clipboard">' + COPY_SVG + '<span class="copy-label">Copy</span></button>' +
+          '</div>' +
+          '<div class="results-body" id="' + uid + 'body"></div>' +
+        '</div>';
+      entry.querySelector('#' + uid + 'body').innerHTML = content;
+      wireCopyBtn(entry, '.results-copy', '#' + uid + 'body');
     }
 
+    historyEl.insertBefore(entry, historyEl.firstChild);
+    while (historyEl.children.length > 3) historyEl.removeChild(historyEl.lastChild);
     updateHistoryHeading();
   }
 
-  // ── URL detection & fetching ──────────────────────────────────────
-  var URL_REGEX = /^https?:\/\/[^\s]+$/i;
-  var fetchAbort = null;
+  // ═══════════════════════════════════════════════════════════════
+  // CANCEL BUTTONS
+  // ═══════════════════════════════════════════════════════════════
+  regenCancel.addEventListener('click', function () {
+    if (apiAbort) { apiAbort.abort(); apiAbort = null; }
+    results.classList.remove('regenerating');
+    btn.disabled = false;
+  });
+  createCancel.addEventListener('click', function () {
+    if (apiAbort) { apiAbort.abort(); apiAbort = null; }
+    inputSection.classList.remove('creating');
+    btn.disabled = false;
+  });
 
+  // ═══════════════════════════════════════════════════════════════
+  // COPY MODE: TEXT INPUT
+  // ═══════════════════════════════════════════════════════════════
+  inputTextEl.addEventListener('input', function () {
+    textareaWrap.classList.toggle('has-text', inputTextEl.value.length > 0);
+    updateSubmitVisibility();
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // COPY MODE: URL FETCH + COUNTDOWN
+  // ═══════════════════════════════════════════════════════════════
+  var URL_REGEX = /^https?:\/\/[^\s]+$/i;
   function isUrl(text) { return URL_REGEX.test(text.trim()); }
 
   function showFetchBar(msg, loading) {
     fetchLabel.textContent = msg;
     fetchSpinner.style.display = loading ? 'block' : 'none';
-    countdownRing.style.display = 'none';
+    urlCountdownRing.style.display = 'none';
     fetchClearBtn.textContent = 'Clear';
     fetchClearBtn.classList.toggle('visible', !loading);
     fetchBar.classList.add('visible');
   }
-
   function hideFetchBar() {
     fetchBar.classList.remove('visible');
-    cancelCountdown();
+    cancelUrlCountdown();
     fetchedFromUrl = null;
     updateSubmitVisibility();
   }
-
-  function cancelCountdown() {
-    if (countdownTimer) {
-      clearInterval(countdownTimer);
-      countdownTimer = null;
-    }
-    countdownRing.style.display = 'none';
+  function cancelUrlCountdown() {
+    if (urlCountdownTimer) { clearInterval(urlCountdownTimer); urlCountdownTimer = null; }
+    urlCountdownRing.style.display = 'none';
     fetchClearBtn.textContent = 'Clear';
   }
-
-  function startAutoSubmitCountdown() {
-    cancelCountdown();
+  function startUrlCountdown() {
+    cancelUrlCountdown();
     var remaining = 3;
-
     fetchSpinner.style.display = 'none';
-    countdownRing.style.display = '';
-    countdownNumber.textContent = remaining;
-
-    ringFg.style.transition = 'none';
-    ringFg.style.strokeDashoffset = '0';
-
+    urlCountdownRing.style.display = '';
+    urlCountdownNum.textContent = remaining;
+    urlRingFg.style.transition = 'none';
+    urlRingFg.style.strokeDashoffset = '0';
     requestAnimationFrame(function () {
-      ringFg.style.transition = 'stroke-dashoffset 1s linear';
-      ringFg.style.strokeDashoffset = (RING_CIRCUMFERENCE / 3).toFixed(2);
+      urlRingFg.style.transition = 'stroke-dashoffset 1s linear';
+      urlRingFg.style.strokeDashoffset = (RING_CIRCUMFERENCE / 3).toFixed(2);
     });
-
     fetchLabel.textContent = 'Summarising in ' + remaining + 's…';
     fetchClearBtn.textContent = 'Cancel';
     fetchClearBtn.classList.add('visible');
-
-    countdownTimer = setInterval(function () {
+    urlCountdownTimer = setInterval(function () {
       remaining--;
-      if (remaining <= 0) {
-        cancelCountdown();
-        btn.click();
-        return;
-      }
-      countdownNumber.textContent = remaining;
+      if (remaining <= 0) { cancelUrlCountdown(); btn.click(); return; }
+      urlCountdownNum.textContent = remaining;
       fetchLabel.textContent = 'Summarising in ' + remaining + 's…';
-
-      var offset = RING_CIRCUMFERENCE * ((3 - remaining) / 3);
-      ringFg.style.strokeDashoffset = offset.toFixed(2);
+      urlRingFg.style.strokeDashoffset = (RING_CIRCUMFERENCE * ((3 - remaining) / 3)).toFixed(2);
     }, 1000);
   }
 
   fetchClearBtn.addEventListener('click', function () {
-    cancelCountdown();
+    cancelUrlCountdown();
     inputTextEl.value = '';
     textareaWrap.classList.remove('has-text');
     hideFetchBar();
@@ -958,14 +1162,12 @@
 
   function extractText(html) {
     var doc = new DOMParser().parseFromString(html, 'text/html');
-    var remove = doc.querySelectorAll('script, style, nav, header, footer, aside, iframe, noscript, svg, form, [role="navigation"], [role="banner"], [role="complementary"]');
-    remove.forEach(function (el) { el.remove(); });
+    doc.querySelectorAll('script, style, nav, header, footer, aside, iframe, noscript, svg, form, [role="navigation"], [role="banner"], [role="complementary"]').forEach(function (el) { el.remove(); });
     var main = doc.querySelector('article, [role="main"], main, .post-content, .entry-content, .article-body');
     var source = main || doc.body;
     if (!source) return '';
     var text = source.innerText || source.textContent || '';
-    text = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-    return text;
+    return text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
   }
 
   async function fetchPageContent(url) {
@@ -976,8 +1178,7 @@
     if (fetchAbort) fetchAbort.abort();
     fetchAbort = new AbortController();
     try {
-      var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
-      var res = await fetch(proxyUrl, { signal: fetchAbort.signal });
+      var res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(url), { signal: fetchAbort.signal });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       var data = await res.json();
       if (!data.contents) throw new Error('Empty response');
@@ -988,8 +1189,7 @@
       textareaWrap.classList.add('has-text');
       showFetchBar('Fetched from ' + new URL(url).hostname, false);
       updateSubmitVisibility();
-
-      startAutoSubmitCountdown();
+      startUrlCountdown();
     } catch (err) {
       if (err.name === 'AbortError') return;
       inputTextEl.value = url;
@@ -1002,16 +1202,104 @@
     }
   }
 
-  inputTextEl.addEventListener('paste', function (e) {
+  inputTextEl.addEventListener('paste', function () {
     setTimeout(function () {
       var val = inputTextEl.value.trim();
-      if (categorySelect.value === 'summarise' && isUrl(val)) {
-        fetchPageContent(val);
-      }
+      if (categorySelect.value === 'summarise' && isUrl(val)) fetchPageContent(val);
     }, 300);
   });
 
-  // ── Prompt loading ────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+  // TRANSCRIPT MODE: FILE DROP + COUNTDOWN
+  // ═══════════════════════════════════════════════════════════════
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+
+  function cancelFileCountdown() {
+    if (fileCountdownTimer) { clearInterval(fileCountdownTimer); fileCountdownTimer = null; }
+    fileCountdownBar.classList.remove('visible');
+  }
+
+  function startFileCountdown() {
+    cancelFileCountdown();
+    var remaining = 3;
+    fileCountdownBar.classList.add('visible');
+    fileCountdownNum.textContent = remaining;
+    fileCountdownLabel.textContent = 'Creating in ' + remaining + 's…';
+    fileRingFg.style.transition = 'none';
+    fileRingFg.style.strokeDashoffset = '0';
+    requestAnimationFrame(function () {
+      fileRingFg.style.transition = 'stroke-dashoffset 1s linear';
+      fileRingFg.style.strokeDashoffset = (RING_CIRCUMFERENCE / 3).toFixed(2);
+    });
+    fileCountdownTimer = setInterval(function () {
+      remaining--;
+      if (remaining <= 0) { cancelFileCountdown(); btn.click(); return; }
+      fileCountdownNum.textContent = remaining;
+      fileCountdownLabel.textContent = 'Creating in ' + remaining + 's…';
+      fileRingFg.style.strokeDashoffset = (RING_CIRCUMFERENCE * ((3 - remaining) / 3)).toFixed(2);
+    }, 1000);
+  }
+  fileCountdownCancel.addEventListener('click', cancelFileCountdown);
+
+  function handleFile(file) {
+    if (!file) return;
+    if (file.type && !file.type.startsWith('text/') && !file.name.endsWith('.txt')) {
+      showError('Only .txt (plain text) files are supported.');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      loadedFileText = e.target.result;
+      fileNameEl.textContent = file.name;
+      fileSizeEl.textContent = formatBytes(file.size);
+      fileBar.classList.add('visible');
+      dropPrompt.classList.add('hidden');
+      transcriptEl.style.display = 'none';
+      updateSubmitVisibility();
+      setTimeout(startFileCountdown, 300);
+    };
+    reader.onerror = function () { showError('Could not read the file. Please try again.'); };
+    reader.readAsText(file);
+  }
+
+  function clearFile() {
+    loadedFileText = null;
+    fileInput.value = '';
+    fileBar.classList.remove('visible');
+    dropPrompt.classList.remove('hidden');
+    transcriptEl.style.display = '';
+    transcriptEl.value = '';
+    cancelFileCountdown();
+    updateSubmitVisibility();
+  }
+
+  dropZone.addEventListener('dragenter', function (e) { e.preventDefault(); e.stopPropagation(); dragCounter++; dropOverlay.classList.add('active'); });
+  dropZone.addEventListener('dragover', function (e) { e.preventDefault(); e.stopPropagation(); });
+  dropZone.addEventListener('dragleave', function (e) { e.preventDefault(); e.stopPropagation(); if (--dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('active'); } });
+  dropZone.addEventListener('drop', function (e) { e.preventDefault(); e.stopPropagation(); dragCounter = 0; dropOverlay.classList.remove('active'); if (e.dataTransfer && e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+
+  document.getElementById('browseLink').addEventListener('click', function () { fileInput.click(); });
+  fileInput.addEventListener('change', function () { if (fileInput.files.length) handleFile(fileInput.files[0]); fileInput.value = ''; });
+  fileRemoveBtn.addEventListener('click', clearFile);
+  transcriptEl.addEventListener('input', function () {
+    if (loadedFileText) { loadedFileText = null; fileBar.classList.remove('visible'); }
+    updateSubmitVisibility();
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // WARN BANNER
+  // ═══════════════════════════════════════════════════════════════
+  if (window.location.protocol === 'file:') {
+    document.getElementById('warnBanner').classList.add('visible');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PROMPT LOADING
+  // ═══════════════════════════════════════════════════════════════
   function loadPrompt(file) {
     fetch(file)
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
@@ -1021,33 +1309,49 @@
   var initOpt = categorySelect.options[categorySelect.selectedIndex];
   loadPrompt(initOpt.getAttribute('data-prompt'));
 
-  // ── Init UI strings from Worker-selected category ──
+  // ═══════════════════════════════════════════════════════════════
+  // INIT UI
+  // ═══════════════════════════════════════════════════════════════
   var initCat = categorySelect.value;
-  inputHint.textContent     = HINTS[initCat]          || HINTS.summarise;
-  inputTextEl.placeholder   = PLACEHOLDERS[initCat]    || PLACEHOLDERS.summarise;
-  progressLabel.textContent = PROGRESS_LABELS[initCat] || PROGRESS_LABELS.summarise;
-  resultsLabel.textContent  = RESULT_LABELS[initCat]   || RESULT_LABELS.summarise;
-
-  // Show initial info hero
+  inputHint.textContent     = HINTS[initCat]          || '';
+  inputTextEl.placeholder   = PLACEHOLDERS[initCat]    || '';
+  progressLabel.textContent = PROGRESS_LABELS[initCat] || '';
+  resultsLabel.textContent  = RESULT_LABELS[initCat]   || '';
+  switchInputCards();
+  setResultMode();
   updateInfoHero();
 
+  // ═══════════════════════════════════════════════════════════════
+  // CATEGORY CHANGE
+  // ═══════════════════════════════════════════════════════════════
   categorySelect.addEventListener('change', function () {
     var opt = categorySelect.options[categorySelect.selectedIndex];
     var cat = categorySelect.value;
     loadPrompt(opt.getAttribute('data-prompt'));
-    inputHint.textContent      = HINTS[cat];
-    inputTextEl.placeholder    = PLACEHOLDERS[cat];
-    progressLabel.textContent  = PROGRESS_LABELS[cat];
-    resultsLabel.textContent   = RESULT_LABELS[cat];
-    document.getElementById('results').classList.remove('visible');
-    document.getElementById('results').classList.remove('regenerating');
-    inputSection.classList.remove('creating');
-    document.getElementById('errorBox').classList.remove('visible');
-    if (apiAbort) { apiAbort.abort(); apiAbort = null; }
 
+    // Update UI strings
+    if (isTranscriptMode()) {
+      transcriptHint.textContent = TRANSCRIPT_HINTS[cat] || '';
+    } else {
+      inputHint.textContent     = HINTS[cat] || '';
+      inputTextEl.placeholder   = PLACEHOLDERS[cat] || '';
+    }
+    progressLabel.textContent = PROGRESS_LABELS[cat] || '';
+    resultsLabel.textContent  = RESULT_LABELS[cat] || '';
+
+    // Clear state
     inputTextEl.value = '';
     textareaWrap.classList.remove('has-text');
     hideFetchBar();
+    clearFile();
+    titleInput.value = '';
+    transcriptEl.value = '';
+
+    results.classList.remove('visible');
+    results.classList.remove('regenerating');
+    inputSection.classList.remove('creating');
+    document.getElementById('errorBox').classList.remove('visible');
+    if (apiAbort) { apiAbort.abort(); apiAbort = null; }
 
     expandInputs();
     hasGenerated = false;
@@ -1055,24 +1359,27 @@
     historyEl.innerHTML = '';
     historyHeading.classList.remove('visible');
     btn.textContent = 'Create';
+
+    switchInputCards();
+    setResultMode();
     updateSubmitVisibility();
-
     selectPreferredModel();
-
     updateInfoHero();
   });
 
-  // ── Deep-link via hash (e.g. #summarise or #review) ──────────────
+  // ── Deep-link via hash ────────────────────────────────────────
   (function () {
     var hash = window.location.hash.replace('#', '').toLowerCase();
-            var hashOpt = categorySelect.querySelector('option[value="' + hash + '"]:not([hidden])');
-            if (hash && hashOpt) {
+    var hashOpt = categorySelect.querySelector('option[value="' + hash + '"]:not([hidden])');
+    if (hash && hashOpt) {
       categorySelect.value = hash;
       categorySelect.dispatchEvent(new Event('change'));
     }
   })();
 
-  // ── Models ────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+  // MODELS
+  // ═══════════════════════════════════════════════════════════════
   var FALLBACK_MODELS = [
     ['arcee-ai/trinity-mini:free','Arcee AI: Trinity Mini (free)'],
     ['deepseek/deepseek-chat:free','DeepSeek: V3 Chat (free)'],
@@ -1101,26 +1408,21 @@
   var PREFERRED_BY_CATEGORY = {
     message:   ['arcee-ai/trinity-large-preview:free'],
     summarise: ['arcee-ai/trinity-large-preview:free'],
-    review:    ['arcee-ai/trinity-large-preview:free']
+    review:    ['arcee-ai/trinity-large-preview:free'],
+    finance:   ['arcee-ai/trinity-large-preview:free'],
+    news:      ['arcee-ai/trinity-large-preview:free']
   };
 
-  function getPreferred() {
-    var cat = categorySelect.value;
-    return PREFERRED_BY_CATEGORY[cat] || PREFERRED_BY_CATEGORY.summarise;
-  }
+  function getPreferred() { return PREFERRED_BY_CATEGORY[categorySelect.value] || PREFERRED_BY_CATEGORY.summarise; }
 
   function updateModelStatus(count, src) {
-    var label = count + ' free model' + (count !== 1 ? 's' : '');
-    var dot = '<span class="status-' + src + '">\u25CF</span> ';
-    modelStatus.innerHTML = dot + label + ' \u2014 ' + src;
+    modelStatus.innerHTML = '<span class="status-' + src + '">\u25CF</span> ' + count + ' free model' + (count !== 1 ? 's' : '') + ' \u2014 ' + src;
   }
-
   function populateDropdown(models, src) {
     modelEl.innerHTML = models.map(function (m) { return '<option value="'+m[0]+'">'+m[1]+'</option>'; }).join('');
     updateModelStatus(models.length, src);
     selectPreferredModel();
   }
-
   function selectPreferredModel() {
     var preferred = getPreferred();
     for (var p = 0; p < preferred.length; p++) {
@@ -1148,7 +1450,9 @@
     }
   })();
 
-  // ── Markdown-ish rendering ────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+  // MARKDOWN RENDERER (copy mode)
+  // ═══════════════════════════════════════════════════════════════
   function render(raw) {
     var s = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -1159,30 +1463,24 @@
       var block = blocks[i].trim();
       if (!block) continue;
       var lines = block.split('\n');
-      var listLines = [];
-      var preLines = [];
+      var listLines = [], preLines = [];
       for (var j = 0; j < lines.length; j++) {
         var line = lines[j].trim();
-        if (/^- /.test(line)) { listLines.push(line.replace(/^- /, '')); }
-        else { preLines.push(line); }
+        if (/^- /.test(line)) listLines.push(line.replace(/^- /, ''));
+        else preLines.push(line);
       }
-      if (preLines.length > 0) html += '<p>' + preLines.join('<br>') + '</p>';
-      if (listLines.length > 0) {
-        html += '<ul>';
-        for (var k = 0; k < listLines.length; k++) html += '<li>' + listLines[k] + '</li>';
-        html += '</ul>';
-      }
+      if (preLines.length) html += '<p>' + preLines.join('<br>') + '</p>';
+      if (listLines.length) { html += '<ul>'; for (var k = 0; k < listLines.length; k++) html += '<li>' + listLines[k] + '</li>'; html += '</ul>'; }
     }
     return html;
   }
 
-  // ── Submit ────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+  // SUBMIT
+  // ═══════════════════════════════════════════════════════════════
   btn.addEventListener('click', async function () {
-    var text     = inputTextEl.value.trim();
-    var model    = modelEl.value;
-    var cat      = categorySelect.value;
-    var errorBox = document.getElementById('errorBox');
-    var results  = document.getElementById('results');
+    var cat        = categorySelect.value;
+    var errorBox   = document.getElementById('errorBox');
     var isRecreate = hasGenerated;
 
     errorBox.classList.remove('visible');
@@ -1195,31 +1493,45 @@
       inputSection.classList.add('creating');
     }
 
-    cancelCountdown();
+    cancelUrlCountdown();
+    cancelFileCountdown();
 
-    if (!text) { showError('Please type or paste some text before submitting.'); if (isRecreate) { results.classList.remove('regenerating'); } else { inputSection.classList.remove('creating'); } return; }
-    if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); if (isRecreate) { results.classList.remove('regenerating'); } else { inputSection.classList.remove('creating'); } return; }
+    // Gather input
+    var userContent;
+    if (isTranscriptMode()) {
+      var transcript = loadedFileText ? loadedFileText.trim() : transcriptEl.value.trim();
+      if (!transcript) { showError('Please drop a transcript file or paste text before submitting.'); if (isRecreate) results.classList.remove('regenerating'); else inputSection.classList.remove('creating'); return; }
+      var titleVal = titleInput.value.trim();
+      userContent = titleVal ? 'Suggested title: ' + titleVal + '\n\n' + transcript : transcript;
+    } else {
+      userContent = inputTextEl.value.trim();
+      if (!userContent) { showError('Please type or paste some text before submitting.'); if (isRecreate) results.classList.remove('regenerating'); else inputSection.classList.remove('creating'); return; }
+    }
 
-    progressLabel.textContent = PROGRESS_LABELS[cat];
-    resultsLabel.textContent  = RESULT_LABELS[cat];
+    if (!promptLoaded || !PROMPT) { showError('Prompt file is still loading — please wait a moment.'); if (isRecreate) results.classList.remove('regenerating'); else inputSection.classList.remove('creating'); return; }
+
+    progressLabel.textContent = PROGRESS_LABELS[cat] || '';
+    resultsLabel.textContent  = RESULT_LABELS[cat] || '';
+    setResultMode();
 
     btn.disabled = true;
-
     fetchBar.classList.remove('visible');
 
     if (apiAbort) apiAbort.abort();
     apiAbort = new AbortController();
 
     try {
+      var maxTokens = isTranscriptMode() ? 1024 : 2048;
       var res = await fetch(WORKER_URL + '/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: apiAbort.signal,
         body: JSON.stringify({
-          model: model, max_tokens: 2048,
+          model: modelEl.value,
+          max_tokens: maxTokens,
           messages: [
             { role: 'system', content: PROMPT },
-            { role: 'user',   content: text }
+            { role: 'user',   content: userContent }
           ]
         })
       });
@@ -1228,16 +1540,39 @@
 
       var out = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
       if (!out) throw new Error('Model returned an empty response. Try a different model.');
-      out = out.replace(/^```(?:markdown|md)?\s*\n?/i,'').replace(/\n?```\s*$/i,'').trim();
 
-      document.getElementById('resultContent').innerHTML = render(out);
+      if (isTranscriptMode()) {
+        // Parse JSON response
+        var clean = out.replace(/```json/g, '').replace(/```/g, '').trim().replace(/\}\s*\{/g, ',');
+        var parsed;
+        try { parsed = JSON.parse(clean); }
+        catch (e) {
+          var match = clean.match(/\{[\s\S]*\}/);
+          if (match) {
+            try { parsed = JSON.parse(match[0].replace(/\}\s*\{/g, ',')); }
+            catch (e2) { throw new Error('Could not parse JSON.\n\nRaw output:\n' + out); }
+          } else {
+            throw new Error('Model did not return JSON. Try a different model.\n\nRaw output:\n' + out);
+          }
+        }
+        document.getElementById('h1').textContent = parsed.headline1 || '';
+        document.getElementById('h2').textContent = parsed.headline2 || '';
+        document.getElementById('h3').textContent = parsed.headline3 || '';
+        document.getElementById('desc').innerHTML = (parsed.description || '')
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\n/g, '<br>');
+      } else {
+        // Render markdown
+        out = out.replace(/^```(?:markdown|md)?\s*\n?/i,'').replace(/\n?```\s*$/i,'').trim();
+        document.getElementById('resultContent').innerHTML = render(out);
+      }
+
       inputSection.classList.remove('creating');
       results.classList.remove('regenerating');
       results.classList.add('visible');
       generationCount++;
-      resultsLabel.textContent = (RESULT_LABELS[cat] || 'Summary') + ' \u2014 Generation ' + generationCount;
+      resultsLabel.textContent = (RESULT_LABELS[cat] || 'Result') + ' \u2014 Generation ' + generationCount;
       results.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
       collapseInputs();
     } catch (err) {
       if (err.name === 'AbortError') return;
@@ -1260,18 +1595,33 @@
     btn.disabled = false;
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // COPY BUTTONS (main results)
+  // ═══════════════════════════════════════════════════════════════
   document.getElementById('copyBtn').addEventListener('click', async function () {
     var text = (document.getElementById('resultContent').innerText || '').trim();
     if (!text) return;
     var cbtn = this, label = cbtn.querySelector('.copy-label');
     try { await navigator.clipboard.writeText(text); } catch (e) {
-      var ta = document.createElement('textarea');
-      ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
-      document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); document.body.removeChild(ta);
+      var ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
     }
     cbtn.classList.add('copied'); label.textContent = 'Copied';
     setTimeout(function () { cbtn.classList.remove('copied'); label.textContent = 'Copy'; }, 1800);
+  });
+
+  document.querySelectorAll('.copy-row-btn').forEach(function (cbtn) {
+    cbtn.addEventListener('click', async function () {
+      var el = document.getElementById(cbtn.dataset.target);
+      var text = el ? el.textContent.trim() : '';
+      if (!text) return;
+      try { await navigator.clipboard.writeText(text); } catch (e) {
+        var ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      cbtn.classList.add('copied');
+      setTimeout(function () { cbtn.classList.remove('copied'); }, 1800);
+    });
   });
 }());
 </script>
