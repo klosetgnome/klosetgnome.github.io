@@ -683,10 +683,13 @@
 
 <script>
   // ╔═══════════════════════════════════════════════════════════╗
-  // ║  CONFIG — Set your Tailscale Funnel URL here             ║
+  // ║  CONFIG                                                  ║
+  // ║                                                          ║
+  // ║  API calls go through same-origin Cloudflare Worker.     ║
+  // ║  No secrets, no backend URLs exposed to the client.      ║
+  // ║  File downloads use signed URLs returned by the API.     ║
   // ╚═══════════════════════════════════════════════════════════╝
-  const SERVER_URL = 'https://mac-mini.tail257f46.ts.net';
-  const API_KEY = null;
+  const API_BASE = '/api';  // Same-origin — proxied by Cloudflare Worker
 
   // ── Theme toggle ──
   (function() {
@@ -829,11 +832,7 @@
 
   async function checkHealth() {
     try {
-      const headers = {};
-      if (API_KEY) headers['X-API-Key'] = API_KEY;
-
-      const res = await fetch(`${SERVER_URL}/api/health`, {
-        headers,
+      const res = await fetch(`${API_BASE}/health`, {
         signal: AbortSignal.timeout(5000),
       });
       const data = await res.json();
@@ -967,18 +966,15 @@
     }
 
     try {
-      const headers = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      };
-      if (API_KEY) headers['X-API-Key'] = API_KEY;
-
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 300000);
 
-      const res = await fetch(`${SERVER_URL}/api/download`, {
+      const res = await fetch(`${API_BASE}/download`, {
         method: 'POST',
-        headers,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(body),
         signal: controller.signal,
       });
@@ -991,7 +987,8 @@
       working = false;
 
       if (data.status === 'redirect') {
-        const fileUrl = `${SERVER_URL}${data.url}`;
+        // data.url is a full signed URL pointing directly to the backend
+        const fileUrl = data.url;
 
         // Truncate filename for display
         let displayName = data.filename || 'File';
