@@ -2786,21 +2786,7 @@
         };
         status.textContent = 'Transcribing on server…';
       } else if (mixedBlob) {
-        // Audio was dropped/browsed — upload directly to Funnel (bypasses CF)
-        // Step 1: Get a signed upload URL from the worker (tiny request through CF)
-        status.textContent = 'Preparing upload…';
-        var tokenRes = await fetch(URL_GRAB_SERVER + '/api/transcribe-token');
-        if (!tokenRes.ok) throw new Error('Failed to get upload token');
-        var tokenData = await tokenRes.json();
-        if (tokenData.status !== 'ok' || !tokenData.upload_url) {
-          throw new Error('Invalid token response');
-        }
-
-        if (expectedGeneration !== undefined && expectedGeneration !== mixGeneration) {
-          isTranscribing = false; return;
-        }
-
-        // Step 2: Upload WAV directly to Funnel URL (bypasses Cloudflare entirely)
+        // Audio was dropped/browsed — upload via CF Worker
         // Downsample to 16kHz mono first — Whisper wants this anyway, and it's ~6x smaller
         status.textContent = 'Preparing audio…';
         var audio16k = await getMixedAudio16k();
@@ -2813,7 +2799,7 @@
         uploadBuffer.copyToChannel(audio16k, 0);
         var uploadBlob = audioBufferToWav(uploadBuffer);
 
-        transcribeUrl = tokenData.upload_url;
+        transcribeUrl = URL_GRAB_SERVER + '/api/transcribe';
         var formData = new FormData();
         formData.append('file', uploadBlob, 'audio.wav');
         fetchOpts = {
