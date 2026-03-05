@@ -1332,7 +1332,7 @@
   const URL_REGEX = /^https?:\/\/[^\s]+$/i;
 
   function updateGrabVisibility() {
-    grabBtn.style.display = urlInput.value.trim() ? '' : 'none';
+    grabBtn.style.display = urlInput.value.trim() ? 'inline-block' : 'none';
   }
   urlInput.addEventListener('input', updateGrabVisibility);
   urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleGrab(); });
