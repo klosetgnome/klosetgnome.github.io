@@ -908,6 +908,8 @@
   let isLocalFile    = false; // true when media loaded from local file drop
   let localSrtContent = null; // pre-generated SRT string, ready for download
   let localSrtName   = null;  // filename for the SRT download
+  let cachedWords    = null;  // background-transcribed word timestamps (URL mode)
+  let bgTranscribing = false; // true while background transcription is running
 
   // ╔══════════════════════════════════════╗
   // ║  DOM                                 ║
@@ -1441,6 +1443,11 @@
 
       // Ensure keyboard shortcuts work immediately (blur any focused input)
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+
+      // Start background transcription for URL-loaded media
+      if (!isLocalFile && proxyBlob) {
+        startBackgroundTranscription();
+      }
     });
 
     wavesurfer.on('audioprocess', onTimeUpdate);
@@ -2302,7 +2309,72 @@
     });
   }
 
-  // ── Grab SRT click: instant download for local, server transcribe for URL ──
+  // ╔══════════════════════════════════════╗
+  // ║  BACKGROUND TRANSCRIPTION (URL mode) ║
+  // ╚══════════════════════════════════════╝
+  async function startBackgroundTranscription() {
+    if (bgTranscribing || !proxyBlob) return;
+    bgTranscribing = true;
+    cachedWords = null;
+
+    // Subtle indicator on SRT button
+    const srtBtn = $('btnExportSrt');
+    srtBtn.textContent = 'Grab SRT ···';
+    srtBtn.title = 'Transcription in progress. Click to wait for result.';
+
+    try {
+      // Get signed upload URL
+      const tokenRes = await fetch(`${API_BASE}/transcribe-token`, { signal: AbortSignal.timeout(10000) });
+      if (!tokenRes.ok) throw new Error('Token request failed');
+      const tokenData = await tokenRes.json();
+      if (tokenData.status !== 'ok' || !tokenData.upload_url) throw new Error('No upload URL');
+
+      // Upload proxy direct to Funnel
+      const formData = new FormData();
+      formData.append('file', proxyBlob, 'proxy-audio.mp4');
+      const res = await fetch(tokenData.upload_url, {
+        method: 'POST', body: formData, signal: AbortSignal.timeout(300000)
+      });
+      if (!res.ok) throw new Error('Upload failed');
+
+      const data = await res.json();
+      if (data.status !== 'ok' || !data.words || !data.words.length) {
+        throw new Error(data.error || 'No words returned');
+      }
+
+      cachedWords = data.words.map(w => ({ word: w.word, start: w.start, end: w.end }));
+      srtBtn.textContent = 'Grab SRT';
+      srtBtn.title = 'Download SRT subtitles for the selected range';
+
+    } catch (err) {
+      console.log('Background transcription failed:', err.message);
+      srtBtn.textContent = 'Grab SRT';
+      srtBtn.title = 'Click to transcribe and download SRT';
+    } finally {
+      bgTranscribing = false;
+    }
+  }
+
+  function downloadSrtFromWords(words) {
+    const trimmedWords = words.filter(w => w.end > inPoint && w.start < outPoint);
+    if (!trimmedWords.length) {
+      showExportError('No speech detected in the selected range');
+      return;
+    }
+    const srtContent = wordsToSrt(trimmedWords, inPoint);
+    const sourceName = $('fileName').textContent || 'clip';
+    const srtName = sourceName.replace(/\.[^.]+$/, '') + '.srt';
+
+    const blob = new Blob([srtContent], { type: 'text/srt' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = srtName;
+    a.style.display = 'none';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  }
+
+  // ── Grab SRT click: instant download for local, cached or server transcribe for URL ──
   $('btnExportSrt').addEventListener('click', () => {
     if (isLocalFile && localSrtContent) {
       // Instant download of pre-generated SRT
@@ -2315,7 +2387,43 @@
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
       return;
     }
-    // URL mode: existing server transcription flow
+
+    // URL mode: use cached words if available
+    if (cachedWords && cachedWords.length) {
+      downloadSrtFromWords(cachedWords);
+      return;
+    }
+
+    // Still transcribing in background — show overlay and wait
+    if (bgTranscribing) {
+      playerCard.classList.add('processing');
+      exportSpinner.style.display    = '';
+      exportStatusText.style.display = '';
+      exportStatusText.textContent   = 'Waiting for transcription to finish…';
+      exportTrackFill.className      = 'export-track-fill';
+      exportTrackFill.parentElement.style.display = '';
+      exportSuccess.classList.remove('visible');
+      exportErrorBox.classList.remove('visible');
+      exportOverlay.classList.add('visible');
+
+      // Poll until done
+      const poll = setInterval(() => {
+        if (!bgTranscribing) {
+          clearInterval(poll);
+          exportOverlay.classList.remove('visible');
+          playerCard.classList.remove('processing');
+          if (cachedWords && cachedWords.length) {
+            downloadSrtFromWords(cachedWords);
+          } else {
+            // Background failed, fall through to full transcription
+            handleExportSrt();
+          }
+        }
+      }, 500);
+      return;
+    }
+
+    // No cache, not transcribing — fall back to full transcription
     handleExportSrt();
   });
 
@@ -2341,6 +2449,8 @@
     isLocalFile = false;
     localSrtContent = null;
     localSrtName = null;
+    cachedWords = null;
+    bgTranscribing = false;
     mediaLoaded = false; isVideo = false; mediaDuration = 0;
     inPoint = 0; outPoint = 0; trimUndoStack = [];
     hideWaitingCard();
