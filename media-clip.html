@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Media Grab</title>
+<title>Media Clip</title>
 <script>
   (function() {
     var saved = localStorage.getItem('theme');
@@ -642,7 +642,7 @@
 <body>
 
 <header class="site-header">
-  <h1><span>MEDIA</span> GRAB</h1>
+  <h1><span>MEDIA</span> CLIP</h1>
   <div class="header-actions">
     <div class="kbd-wrap">
       <button class="kbd-toggle" id="kbdToggle" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">
@@ -754,7 +754,7 @@
     <input type="file" id="localFileInput" accept="video/*,audio/*,.mp4,.mov,.mkv,.webm,.mp3,.wav,.m4a,.ogg,.flac" style="display:none;" />
     <div class="input-row">
       <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=…" autocomplete="off" spellcheck="false">
-      <button class="btn-grab" id="grabBtn">Grab</button>
+      <button class="btn-grab" id="grabBtn">Clip</button>
     </div>
     <div class="import-status" id="importStatus">
       <span class="status-dot working" id="importDot"></span>
@@ -862,11 +862,11 @@
 
   <!-- ═══ EXPORT ACTION BAR ═══ -->
   <div class="export-action-bar" id="exportActionBar">
-    <button class="btn-secondary-bar" id="btnExportAudio">Grab Audio</button>
+    <button class="btn-secondary-bar" id="btnExportAudio">Clip Audio</button>
     <span class="export-spacer"></span>
-    <button class="btn-secondary-bar" id="btnExportSrt">Grab SRT</button>
+    <button class="btn-secondary-bar" id="btnExportSrt">Clip SRT</button>
     <span class="export-spacer"></span>
-    <button class="btn-primary" id="btnExportVideo">Grab Video</button>
+    <button class="btn-primary" id="btnExportVideo">Clip Video</button>
     <!-- SRT pipeline status (local file mode) -->
     <div class="srt-status" id="srtStatus">
       <div class="srt-spinner"></div>
@@ -899,9 +899,9 @@
       </svg>
     </div>
     <div class="info-hero-content">
-      <div class="info-hero-title">Media Grab</div>
+      <div class="info-hero-title">Media Clip</div>
       <div class="info-hero-desc">
-        Paste a YouTube, TikTok, Instagram, or Twitter URL to grab just the <span class="hl">video</span>, <span class="hl">audio</span>, or <span class="hl">SRT subtitles</span> from any portion you choose. Or drop a local file to instantly generate an <span class="hl">SRT</span> for the full timeline.
+        Paste a YouTube, TikTok, Instagram, or Twitter URL to clip just the <span class="hl">video</span>, <span class="hl">audio</span>, or <span class="hl">SRT subtitles</span> from any portion you choose. Or drop a local file to instantly generate an <span class="hl">SRT</span> for the full timeline.
       </div>
     </div>
   </div>
@@ -2740,7 +2740,7 @@
       });
 
       cachedCues = cues;
-      srtBtn.textContent = 'Grab SRT';
+      srtBtn.textContent = 'Clip SRT';
       srtBtn.title = 'Download SRT subtitles for the selected range';
 
     } catch (err) {
@@ -2752,7 +2752,7 @@
         setTimeout(() => startBackgroundTranscription(), 3000);
         return;
       }
-      srtBtn.textContent = 'Grab SRT';
+      srtBtn.textContent = 'Clip SRT';
       srtBtn.title = 'Click to transcribe and download SRT';
     } finally {
       bgTranscribing = false;
@@ -2885,7 +2885,7 @@
     $('btnExportAudio').style.display = '';
     $('btnExportVideo').style.display = '';
     $('btnExportSrt').style.display = '';
-    $('btnExportSrt').textContent = 'Grab SRT';
+    $('btnExportSrt').textContent = 'Clip SRT';
     $('srtStatus').classList.remove('visible');
 
     // Clear SRT overlay
