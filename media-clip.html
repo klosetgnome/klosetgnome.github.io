@@ -1072,6 +1072,7 @@
   let localSrtName   = null;  // filename for the SRT download
   let cachedCues     = null;  // background-transcribed & LLM-cleaned cues (URL mode)
   let bgTranscribing = false; // true while background transcription is running
+  let bgRetries      = 0;    // retry counter for background transcription
   let lastCueIndex   = -1;   // SRT overlay: index of currently displayed cue
 
   // ╔══════════════════════════════════════╗
@@ -2315,20 +2316,28 @@
         throw new Error(data.error || 'No words returned from server');
       }
 
-      // Filter words to the selected in/out range
-      const trimmedWords = data.words.filter(w => w.end > inPoint && w.start < outPoint);
+      // Build full-timeline cues, run LLM cleanup, and cache for subtitle overlay
+      exportStatusText.textContent = 'Refining transcript… 0%';
+      let allCues = wordsToCues(data.words, 0);
+      allCues = await llmCleanupCues(allCues, pct => {
+        exportStatusText.textContent = `Refining transcript… ${pct}%`;
+      });
+      cachedCues = allCues;
 
-      if (!trimmedWords.length) {
+      // Filter to selected in/out range for the SRT download
+      const trimmedCues = allCues
+        .filter(c => c.end > inPoint && c.start < outPoint)
+        .map(c => ({
+          start: Math.max(0, c.start - inPoint),
+          end: Math.max(0, c.end - inPoint),
+          text: c.text
+        }));
+
+      if (!trimmedCues.length) {
         throw new Error('No speech detected in the selected range');
       }
 
-      // Group into cues, run LLM cleanup, generate SRT
-      exportStatusText.textContent = 'Refining transcript… 0%';
-      let cues = wordsToCues(trimmedWords, inPoint);
-      cues = await llmCleanupCues(cues, pct => {
-        exportStatusText.textContent = `Refining transcript… ${pct}%`;
-      });
-      const srtContent = cuesToSrt(cues);
+      const srtContent = cuesToSrt(trimmedCues);
 
       // Build branded filename
       const sourceName = $('fileName').dataset.fullName || $('fileName').textContent || 'clip';
@@ -2736,6 +2745,13 @@
 
     } catch (err) {
       console.log('Background transcription failed:', err.message);
+      // Retry once after a short delay
+      if (!cachedCues && proxyBlob && bgRetries < 1) {
+        bgRetries++;
+        bgTranscribing = false;
+        setTimeout(() => startBackgroundTranscription(), 3000);
+        return;
+      }
       srtBtn.textContent = 'Grab SRT';
       srtBtn.title = 'Click to transcribe and download SRT';
     } finally {
@@ -2848,6 +2864,7 @@
     localSrtName = null;
     cachedCues = null;
     bgTranscribing = false;
+    bgRetries = 0;
     lastCueIndex = -1;
     mediaLoaded = false; isVideo = false; mediaDuration = 0;
     inPoint = 0; outPoint = 0; trimUndoStack = [];
