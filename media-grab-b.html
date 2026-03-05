@@ -801,7 +801,9 @@
 
   <!-- ═══ EXPORT ACTION BAR ═══ -->
   <div class="export-action-bar" id="exportActionBar">
-    <button class="btn-secondary-bar" id="btnExportAudio">Grab Audio</button>
+    <button class="btn-primary" id="btnExportAudio">Grab Audio</button>
+    <span class="export-spacer"></span>
+    <button class="btn-primary" id="btnExportSrt">Grab SRT</button>
     <span class="export-spacer"></span>
     <button class="btn-primary" id="btnExportVideo">Grab Video</button>
   </div>
@@ -872,6 +874,7 @@
   let outPoint       = 0;
   let serverFilePath = null;
   let mediaBlobUrl   = null;
+  let proxyBlob      = null;
   let speedIndex     = 2;
   let serverOnline   = false;
   let working        = false;
@@ -1342,6 +1345,7 @@
       }
 
       const blobUrl = URL.createObjectURL(blob);
+      proxyBlob = blob;
       const vidFlag = completed.isVideo !== undefined
         ? completed.isVideo
         : (blob.type.startsWith('video/') || /\.(mp4|mov|mkv|webm)/.test(completed.filename || ''));
@@ -1723,6 +1727,7 @@
   // ╚══════════════════════════════════════╝
   $('btnExportVideo').addEventListener('click', () => handleExport('video'));
   $('btnExportAudio').addEventListener('click', () => handleExport('audio'));
+  $('btnExportSrt').addEventListener('click', handleExportSrt);
 
   async function handleExport(mode) {
     if (!mediaLoaded || !serverFilePath) return;
@@ -1761,6 +1766,7 @@
     exportOverlay.classList.add('visible');
     $('btnExportVideo').disabled = true;
     $('btnExportAudio').disabled = true;
+    $('btnExportSrt').disabled = true;
 
     try {
       const res  = await fetch(`${API_BASE}/edit`, {
@@ -1806,6 +1812,176 @@
     } finally {
       $('btnExportVideo').disabled = false;
       $('btnExportAudio').disabled = false;
+      $('btnExportSrt').disabled = false;
+    }
+  }
+
+  // ╔══════════════════════════════════════╗
+  // ║  EXPORT SRT                          ║
+  // ╚══════════════════════════════════════╝
+  function srtTimestamp(seconds) {
+    if (isNaN(seconds) || seconds < 0) seconds = 0;
+    const hh = Math.floor(seconds / 3600);
+    const mm = Math.floor((seconds % 3600) / 60);
+    const ss = Math.floor(seconds % 60);
+    const ms = Math.round((seconds % 1) * 1000);
+    return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0') + ':' +
+           String(ss).padStart(2,'0') + ',' + String(ms).padStart(3,'0');
+  }
+
+  function wordsToSrt(words, offsetSec) {
+    // Group words into subtitle cues of ~8 words or split on pauses > 0.6s
+    const cues = [];
+    let current = [];
+    let cueStart = null;
+    let cueEnd = null;
+
+    for (let i = 0; i < words.length; i++) {
+      const w = words[i];
+      const wStart = w.start - offsetSec;
+      const wEnd = w.end - offsetSec;
+
+      if (cueStart === null) cueStart = Math.max(0, wStart);
+      current.push(w.word);
+      cueEnd = Math.max(0, wEnd);
+
+      const nextW = words[i + 1];
+      const pause = nextW ? (nextW.start - w.end) : 999;
+      const atLimit = current.length >= 10;
+      const naturalBreak = pause > 0.6 && current.length >= 3;
+
+      if (atLimit || naturalBreak || i === words.length - 1) {
+        cues.push({
+          start: cueStart,
+          end: cueEnd,
+          text: current.join(' ').trim()
+        });
+        current = [];
+        cueStart = null;
+        cueEnd = null;
+      }
+    }
+
+    let srt = '';
+    cues.forEach((cue, i) => {
+      srt += (i + 1) + '\n';
+      srt += srtTimestamp(cue.start) + ' --> ' + srtTimestamp(cue.end) + '\n';
+      srt += cue.text + '\n\n';
+    });
+
+    return srt;
+  }
+
+  async function handleExportSrt() {
+    if (!mediaLoaded || !proxyBlob) return;
+
+    if (!serverOnline) {
+      await checkHealth();
+      if (!serverOnline) { alert('Server is offline.'); return; }
+    }
+
+    // Show export overlay
+    playerCard.classList.add('processing');
+    exportSpinner.style.display    = '';
+    exportStatusText.style.display = '';
+    exportStatusText.textContent   = 'Transcribing audio…';
+    exportTrackFill.className      = 'export-track-fill';
+    exportSuccess.classList.remove('visible');
+    exportErrorBox.classList.remove('visible');
+    exportOverlay.classList.add('visible');
+    $('btnExportVideo').disabled = true;
+    $('btnExportAudio').disabled = true;
+    $('btnExportSrt').disabled = true;
+
+    try {
+      // Get a signed upload URL (small request through CF Worker)
+      exportStatusText.textContent = 'Preparing upload…';
+      const tokenRes = await fetch(`${API_BASE}/transcribe-token`, { signal: AbortSignal.timeout(10000) });
+      let directUrl = null;
+
+      if (tokenRes.ok) {
+        const tokenData = await tokenRes.json();
+        if (tokenData.status === 'ok' && tokenData.upload_url) {
+          directUrl = tokenData.upload_url;
+        }
+      }
+
+      exportStatusText.textContent = 'Transcribing audio…';
+
+      // Upload proxy blob for Whisper transcription
+      const formData = new FormData();
+      formData.append('file', proxyBlob, 'proxy-audio.mp4');
+
+      let res;
+      if (directUrl) {
+        // Upload directly to Funnel (bypasses CF for large file)
+        try {
+          res = await fetch(directUrl, { method: 'POST', body: formData, signal: AbortSignal.timeout(300000) });
+          if (!res.ok) throw new Error('Direct upload failed');
+        } catch (directErr) {
+          // Fall back to CF Worker
+          const formData2 = new FormData();
+          formData2.append('file', proxyBlob, 'proxy-audio.mp4');
+          res = await fetch(`${API_BASE}/transcribe`, { method: 'POST', body: formData2, signal: AbortSignal.timeout(300000) });
+        }
+      } else {
+        res = await fetch(`${API_BASE}/transcribe`, { method: 'POST', body: formData, signal: AbortSignal.timeout(300000) });
+      }
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Transcription failed');
+      }
+
+      const data = await res.json();
+
+      if (data.status !== 'ok' || !data.words || !data.words.length) {
+        throw new Error(data.error || 'No words returned from server');
+      }
+
+      // Filter words to the selected in/out range
+      const trimmedWords = data.words.filter(w => w.end > inPoint && w.start < outPoint);
+
+      if (!trimmedWords.length) {
+        throw new Error('No speech detected in the selected range');
+      }
+
+      // Generate SRT with timestamps offset from the in point
+      const srtContent = wordsToSrt(trimmedWords, inPoint);
+
+      // Build filename from source
+      const sourceName = $('fileName').textContent || 'clip';
+      const srtName = sourceName.replace(/\.[^.]+$/, '') + '.srt';
+
+      // Trigger download
+      const srtBlob = new Blob([srtContent], { type: 'text/srt' });
+      const srtUrl = URL.createObjectURL(srtBlob);
+      const a = document.createElement('a');
+      a.href = srtUrl; a.download = srtName;
+      a.style.display = 'none';
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(srtUrl); }, 100);
+
+      // Show success
+      exportSpinner.style.display    = 'none';
+      exportStatusText.style.display = 'none';
+      exportTrackFill.className      = 'export-track-fill done';
+
+      $('exportFilename').textContent = srtName;
+      $('exportFilemeta').textContent = (srtContent.length / 1024).toFixed(1) + ' KB · ' + trimmedWords.length + ' words';
+
+      const checkEl = $('successCheck');
+      checkEl.classList.remove('animate');
+      void checkEl.offsetWidth;
+      checkEl.classList.add('animate');
+      exportSuccess.classList.add('visible');
+
+    } catch (err) {
+      showExportError(err.message || 'SRT generation failed');
+    } finally {
+      $('btnExportVideo').disabled = false;
+      $('btnExportAudio').disabled = false;
+      $('btnExportSrt').disabled = false;
     }
   }
 
@@ -1855,6 +2031,7 @@
     if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
     stopPlaybackLoop();
     if (mediaBlobUrl) { URL.revokeObjectURL(mediaBlobUrl); mediaBlobUrl = null; }
+    proxyBlob = null;
     mediaLoaded = false; isVideo = false; mediaDuration = 0;
     inPoint = 0; outPoint = 0; trimUndoStack = [];
     hideWaitingCard();
