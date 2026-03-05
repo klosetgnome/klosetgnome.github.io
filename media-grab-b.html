@@ -30,7 +30,7 @@
   .container {
     position: relative; z-index: 1;
     max-width: 820px; margin: 0 auto;
-    padding: 48px 24px 80px;
+    padding: 24px 24px 80px;
     flex: 1; width: 100%;
     display: flex; flex-direction: column;
     align-items: stretch; gap: 20px;
@@ -164,6 +164,38 @@
     transition: filter 0.3s ease;
   }
   .player-card.processing { cursor: wait; }
+  /* Import card blur while fetching */
+  .import-card { position: relative; }
+  .import-card.processing > *:not(.import-card-overlay) {
+    filter: blur(3px); pointer-events: none;
+    transition: filter 0.3s ease;
+  }
+  .import-card-overlay {
+    display: none; position: absolute; inset: 0; z-index: 10;
+    flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+    animation: fadeIn 0.25s ease;
+  }
+  .import-card.processing .import-card-overlay { display: flex; }
+  .import-card-overlay .overlay-spinner {
+    width: 22px; height: 22px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; flex-shrink: 0;
+  }
+  .import-card-overlay .overlay-text {
+    font-family: var(--mono); font-size: 12px; color: var(--text-secondary);
+    letter-spacing: 0.5px; text-align: center;
+  }
+  .import-card-overlay .overlay-text.pulse { animation: overlayPulse 2s ease-in-out infinite; }
+  @keyframes overlayPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  .import-card-overlay .overlay-track {
+    width: 160px; height: 3px; background: var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .import-card-overlay .overlay-track-fill {
+    height: 100%; border-radius: 3px; background: var(--accent);
+    animation: indeterminate 1.8s ease-in-out infinite; transition: width 0.3s ease;
+  }
+  .import-card-overlay .overlay-track-fill.determinate { animation: none; }
+
   .import-card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius-lg); overflow: hidden;
@@ -570,31 +602,10 @@
           </div>
         </div>
         <div class="settings-divider"></div>
-        <div class="settings-section">
-          <div class="settings-section-label">Quality &amp; Format</div>
-          <div class="settings-row">
-            <div>
-              <div class="settings-field-label">Video quality</div>
-              <select class="format-select" id="qualitySelect">
-                <option value="max" selected>Best available</option>
-                <option value="2160">4K (2160p)</option>
-                <option value="1080">1080p</option>
-                <option value="720">720p</option>
-                <option value="480">480p</option>
-                <option value="360">360p</option>
-              </select>
-            </div>
-            <div>
-              <div class="settings-field-label">Output format</div>
-              <select class="format-select" id="outputFormat">
-                <option value="mp4" selected>MP4</option>
-                <option value="mov">MOV</option>
-                <option value="mkv">MKV</option>
-                <option value="mp3">MP3 (audio)</option>
-                <option value="wav">WAV (audio)</option>
-              </select>
-            </div>
-          </div>
+        <!-- Quality & Format hidden for now — values hardcoded -->
+        <div style="display:none">
+          <select id="qualitySelect"><option value="max" selected>Best available</option></select>
+          <select id="outputFormat"><option value="mp4" selected>MP4</option></select>
         </div>
       </div>
     </div>
@@ -614,6 +625,12 @@
 
   <!-- ═══ IMPORT CARD ═══ -->
   <div class="import-card" id="importCard">
+    <!-- Blur overlay shown during fetch -->
+    <div class="import-card-overlay" id="importCardOverlay">
+      <div class="overlay-spinner"></div>
+      <div class="overlay-text pulse" id="overlayText">Connecting to server…</div>
+      <div class="overlay-track"><div class="overlay-track-fill" id="overlayTrackFill"></div></div>
+    </div>
     <span class="card-label">Media link</span>
     <span class="card-hint">Paste a URL — the full source downloads to the server and a preview streams to your browser</span>
     <div class="input-row">
@@ -965,6 +982,18 @@
   // ║  IMPORT STATUS HELPERS               ║
   // ╚══════════════════════════════════════╝
   function setImportProgress(pct, text) {
+    // Show the blur overlay with status
+    importCard.classList.add('processing');
+    $('overlayText').textContent = text;
+    const fill = $('overlayTrackFill');
+    if (pct !== null && pct >= 0) {
+      fill.className = 'overlay-track-fill determinate';
+      fill.style.width = Math.min(100, Math.round(pct)) + '%';
+    } else {
+      fill.className = 'overlay-track-fill';
+      fill.style.width = '100%';
+    }
+    // Also keep legacy status bar updated
     importStatus.classList.add('visible');
     importDot.className = 'status-dot working';
     importText.textContent = text;
@@ -979,6 +1008,7 @@
   }
 
   function setImportDone(text) {
+    importCard.classList.remove('processing');
     importStatus.classList.add('visible');
     importDot.className = 'status-dot done';
     importText.textContent = text;
@@ -987,6 +1017,7 @@
   }
 
   function setImportError(text) {
+    importCard.classList.remove('processing');
     importStatus.classList.add('visible');
     importDot.className = 'status-dot error';
     importText.textContent = text;
@@ -995,6 +1026,7 @@
   }
 
   function hideImportStatus() {
+    importCard.classList.remove('processing');
     importStatus.classList.remove('visible');
     importTrack.classList.remove('visible');
   }
