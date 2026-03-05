@@ -691,6 +691,12 @@
           </div>
         </div>
         <div class="settings-divider"></div>
+        <div class="settings-section">
+          <div class="settings-section-label">Transcription</div>
+          <select id="srtModelSelect" class="format-select"></select>
+          <div id="srtModelStatus" style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:6px;letter-spacing:0.5px;"></div>
+        </div>
+        <div class="settings-divider"></div>
         <!-- Quality & Format hidden for now — values hardcoded -->
         <div style="display:none">
           <select id="qualitySelect"><option value="max" selected>Best available</option></select>
@@ -894,6 +900,96 @@
   // ╚══════════════════════════════════════╝
   const API_BASE = '/api';
   const SPEED_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  const LLM_WORKER_URL = '/openrouter';
+
+  // ╔══════════════════════════════════════╗
+  // ║  LLM MODEL (transcription cleanup)   ║
+  // ╚══════════════════════════════════════╝
+  const SRT_CLEANUP_PROMPT = `You are a transcription editor. You will receive raw speech-to-text output with one subtitle line per numbered line. Fix spelling errors, capitalisation, proper nouns, grammar, and punctuation. Do not add, remove, or reorder lines. Do not add line numbers. Return exactly the same number of lines, one corrected subtitle per line.`;
+
+  const FALLBACK_MODELS = [
+    ['google/gemini-2.0-flash-exp:free','Google: Gemini 2.0 Flash Exp (free)'],
+    ['google/gemini-flash-1.5:free','Google: Gemini 1.5 Flash (free)'],
+    ['meta-llama/llama-3.3-70b-instruct:free','Meta: Llama 3.3 70B (free)'],
+    ['deepseek/deepseek-chat:free','DeepSeek: V3 Chat (free)'],
+    ['qwen/qwen-2.5-72b-instruct:free','Qwen: 2.5 72B (free)'],
+  ];
+  const PREFERRED_MODEL = 'google/gemini-2.0-flash-exp:free';
+
+  (function loadModels() {
+    const selectEl = $('srtModelSelect');
+    const statusEl = $('srtModelStatus');
+
+    function populate(models, src) {
+      selectEl.innerHTML = models.map(m => `<option value="${m[0]}">${m[1]}</option>`).join('');
+      statusEl.textContent = models.length + ' free model' + (models.length !== 1 ? 's' : '');
+      // Select preferred
+      for (const opt of selectEl.options) {
+        if (opt.value === PREFERRED_MODEL) { selectEl.value = PREFERRED_MODEL; break; }
+      }
+    }
+
+    populate(FALLBACK_MODELS, 'fallback');
+
+    fetch(LLM_WORKER_URL + '/models')
+      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(data => {
+        const free = (data.data || []).filter(m => m.id && m.id.endsWith(':free'));
+        if (!free.length) throw new Error();
+        free.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+        populate(free.map(m => {
+          let l = m.name || m.id;
+          if (!/\bfree\b/i.test(l)) l += ' (free)';
+          return [m.id, l];
+        }), 'live');
+      })
+      .catch(() => {});
+  })();
+
+  async function llmCleanupCues(cues) {
+    const model = $('srtModelSelect').value;
+    if (!model || !cues.length) return cues;
+
+    // Build numbered lines for the LLM
+    const rawLines = cues.map((c, i) => `${i + 1}. ${c.text}`).join('\n');
+
+    try {
+      const res = await fetch(LLM_WORKER_URL + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          max_tokens: 4096,
+          messages: [
+            { role: 'system', content: SRT_CLEANUP_PROMPT },
+            { role: 'user', content: rawLines }
+          ]
+        }),
+        signal: AbortSignal.timeout(60000)
+      });
+
+      if (!res.ok) throw new Error('LLM API error');
+      const data = await res.json();
+      const out = data.choices?.[0]?.message?.content;
+      if (!out) throw new Error('Empty response');
+
+      // Parse cleaned lines — strip any numbering the model may have kept
+      const cleanedLines = out.trim().split('\n')
+        .map(l => l.replace(/^\d+[\.\)]\s*/, '').trim())
+        .filter(l => l.length > 0);
+
+      // Map back to cues — if line count matches, replace text; otherwise keep originals
+      if (cleanedLines.length === cues.length) {
+        return cues.map((c, i) => ({ ...c, text: cleanedLines[i] }));
+      }
+      // Mismatch — return originals (LLM didn't follow instructions)
+      console.log(`LLM returned ${cleanedLines.length} lines vs ${cues.length} cues, keeping originals`);
+      return cues;
+    } catch (err) {
+      console.log('LLM cleanup failed, keeping raw transcription:', err.message);
+      return cues;
+    }
+  }
 
   // ╔══════════════════════════════════════╗
   // ║  STATE                               ║
@@ -918,7 +1014,7 @@
   let isLocalFile    = false; // true when media loaded from local file drop
   let localSrtContent = null; // pre-generated SRT string, ready for download
   let localSrtName   = null;  // filename for the SRT download
-  let cachedWords    = null;  // background-transcribed word timestamps (URL mode)
+  let cachedCues     = null;  // background-transcribed & LLM-cleaned cues (URL mode)
   let bgTranscribing = false; // true while background transcription is running
 
   // ╔══════════════════════════════════════╗
@@ -1986,8 +2082,8 @@
            String(ss).padStart(2,'0') + ',' + String(ms).padStart(3,'0');
   }
 
-  function wordsToSrt(words, offsetSec) {
-    // Group words into subtitle cues of ~8 words or split on pauses > 0.6s
+  function wordsToCues(words, offsetSec) {
+    // Group words into subtitle cues of ~10 words or split on pauses > 0.6s
     const cues = [];
     let current = [];
     let cueStart = null;
@@ -2018,15 +2114,22 @@
         cueEnd = null;
       }
     }
+    return cues;
+  }
 
+  function cuesToSrt(cues) {
     let srt = '';
     cues.forEach((cue, i) => {
       srt += (i + 1) + '\n';
       srt += srtTimestamp(cue.start) + ' --> ' + srtTimestamp(cue.end) + '\n';
       srt += cue.text + '\n\n';
     });
-
     return srt;
+  }
+
+  // Legacy wrapper used by handleExportSrt
+  function wordsToSrt(words, offsetSec) {
+    return cuesToSrt(wordsToCues(words, offsetSec));
   }
 
   async function handleExportSrt() {
@@ -2104,8 +2207,11 @@
         throw new Error('No speech detected in the selected range');
       }
 
-      // Generate SRT with timestamps offset from the in point
-      const srtContent = wordsToSrt(trimmedWords, inPoint);
+      // Group into cues, run LLM cleanup, generate SRT
+      exportStatusText.textContent = 'Refining transcript…';
+      let cues = wordsToCues(trimmedWords, inPoint);
+      cues = await llmCleanupCues(cues);
+      const srtContent = cuesToSrt(cues);
 
       // Build filename from source
       const sourceName = $('fileName').dataset.fullName || $('fileName').textContent || 'clip';
@@ -2294,8 +2400,12 @@
         return;
       }
 
-      // Step 4: Generate SRT
-      const srt = wordsToSrt(words, 0);
+      // Step 4: Group into cues and run LLM cleanup
+      exportStatusText.textContent = 'Refining transcript…';
+      let cues = wordsToCues(words, 0);
+      cues = await llmCleanupCues(cues);
+
+      const srt = cuesToSrt(cues);
       const sourceName = file.name.replace(/\.[^.]+$/, '') || 'transcription';
       localSrtContent = srt;
       localSrtName = sourceName + '.srt';
@@ -2438,9 +2548,8 @@
   async function startBackgroundTranscription() {
     if (bgTranscribing || !proxyBlob) return;
     bgTranscribing = true;
-    cachedWords = null;
+    cachedCues = null;
 
-    // Subtle indicator on SRT button
     const srtBtn = $('btnExportSrt');
     srtBtn.innerHTML = '<span class="btn-spinner"></span>SRT (transcribing)';
     srtBtn.title = 'Transcription in progress. Click to wait for result.';
@@ -2465,7 +2574,14 @@
         throw new Error(data.error || 'No words returned');
       }
 
-      cachedWords = data.words.map(w => ({ word: w.word, start: w.start, end: w.end }));
+      // Group words into cues (full timeline, no offset)
+      const words = data.words.map(w => ({ word: w.word, start: w.start, end: w.end }));
+      let cues = wordsToCues(words, 0);
+
+      // Run LLM cleanup
+      cues = await llmCleanupCues(cues);
+
+      cachedCues = cues;
       srtBtn.textContent = 'Grab SRT';
       srtBtn.title = 'Download SRT subtitles for the selected range';
 
@@ -2478,13 +2594,22 @@
     }
   }
 
-  function downloadSrtFromWords(words) {
-    const trimmedWords = words.filter(w => w.end > inPoint && w.start < outPoint);
-    if (!trimmedWords.length) {
+  function downloadSrtFromCues(cues) {
+    // Filter cues that overlap the in/out range
+    const trimmedCues = cues
+      .filter(c => c.end > inPoint && c.start < outPoint)
+      .map(c => ({
+        start: Math.max(0, c.start - inPoint),
+        end: Math.max(0, c.end - inPoint),
+        text: c.text
+      }));
+
+    if (!trimmedCues.length) {
       showExportError('No speech detected in the selected range');
       return;
     }
-    const srtContent = wordsToSrt(trimmedWords, inPoint);
+
+    const srtContent = cuesToSrt(trimmedCues);
     const sourceName = $('fileName').dataset.fullName || $('fileName').textContent || 'clip';
     const srtName = sourceName.replace(/\.[^.]+$/, '') + '.srt';
 
@@ -2512,8 +2637,8 @@
     }
 
     // URL mode: use cached words if available
-    if (cachedWords && cachedWords.length) {
-      downloadSrtFromWords(cachedWords);
+    if (cachedCues && cachedCues.length) {
+      downloadSrtFromCues(cachedCues);
       return;
     }
 
@@ -2535,8 +2660,8 @@
           clearInterval(poll);
           exportOverlay.classList.remove('visible');
           playerCard.classList.remove('processing');
-          if (cachedWords && cachedWords.length) {
-            downloadSrtFromWords(cachedWords);
+          if (cachedCues && cachedCues.length) {
+            downloadSrtFromCues(cachedCues);
           } else {
             // Background failed, fall through to full transcription
             handleExportSrt();
@@ -2572,7 +2697,7 @@
     isLocalFile = false;
     localSrtContent = null;
     localSrtName = null;
-    cachedWords = null;
+    cachedCues = null;
     bgTranscribing = false;
     mediaLoaded = false; isVideo = false; mediaDuration = 0;
     inPoint = 0; outPoint = 0; trimUndoStack = [];
