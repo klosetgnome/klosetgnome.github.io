@@ -1134,11 +1134,9 @@
     setTimeout(function () {
       var val = inputTextEl.value.trim();
       if (categorySelect.value === 'summarise' && isUrl(val)) {
-        try { var hostname = new URL(val).hostname; } catch (e) { return; }
         fetchedFromUrl = val;
-        showFetchBar('Link detected \u2014 ' + hostname, false);
         updateSubmitVisibility();
-        startUrlCountdown();
+        btn.click();
       }
     }, 300);
   });
@@ -1194,7 +1192,7 @@
       dropPrompt.classList.add('hidden');
       transcriptEl.style.display = 'none';
       updateSubmitVisibility();
-      setTimeout(startFileCountdown, 300);
+      setTimeout(function () { btn.click(); }, 300);
     };
     reader.onerror = function () { showError('Could not read the file. Please try again.'); };
     reader.readAsText(file);
