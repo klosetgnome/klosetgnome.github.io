@@ -1,264 +1,1832 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Media Grab</title>
+<script>
+  (function() {
+    var saved = localStorage.getItem('theme');
+    if (saved) { document.documentElement.setAttribute('data-theme', saved); }
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) { document.documentElement.setAttribute('data-theme', 'dark'); }
+  })();
+</script>
+<link rel="stylesheet" href="astyle.css">
+<script src="https://unpkg.com/wavesurfer.js@7"></script>
+<style>
+  /* ── Page tokens ── */
+  :root {
+    --cut-overlay: rgba(44, 42, 38, 0.58);
+    --in-color: #4a8c3f;
+    --out-color: #b5392e;
+  }
+  [data-theme="dark"] {
+    --cut-overlay: rgba(0, 0, 0, 0.68);
+    --in-color: #5ea852;
+    --out-color: #d4564a;
+  }
 
-const formatTime = (seconds) => {
-  const h = Math.floor(seconds / 3600).toString().padStart(2, "0");
-  const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, "0");
-  const s = Math.floor(seconds % 60).toString().padStart(2, "0");
-  const ms = Math.floor((seconds % 1) * 10);
-  return `${h}:${m}:${s}.${ms}`;
-};
+  .container {
+    position: relative; z-index: 1;
+    max-width: 820px; margin: 0 auto;
+    padding: 24px 24px 80px;
+    flex: 1; width: 100%;
+    display: flex; flex-direction: column;
+    align-items: stretch; gap: 20px;
+  }
 
-const parseTime = (str) => {
-  const parts = str.split(":");
-  if (parts.length !== 3) return null;
-  const [h, rest] = [parseInt(parts[0]), parts[2]];
-  const m = parseInt(parts[1]);
-  const sParts = rest.split(".");
-  const s = parseInt(sParts[0]);
-  const ms = sParts[1] ? parseInt(sParts[1]) / 10 : 0;
-  const total = h * 3600 + m * 60 + s + ms;
-  return isNaN(total) ? null : total;
-};
+  /* ── Settings gear ── */
+  .header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .settings-wrap { position: relative; }
+  .settings-toggle {
+    background: none; border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px; cursor: pointer; color: var(--text-secondary);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s ease; width: 38px; height: 38px; flex-shrink: 0;
+  }
+  .settings-toggle:hover { color: var(--accent); border-color: var(--accent); }
+  .settings-toggle.active { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+  .settings-toggle svg { width: 18px; height: 18px; stroke-width: 1.5; transition: transform 0.4s ease; }
+  .settings-toggle:hover svg, .settings-toggle.active svg { transform: rotate(60deg); }
+  .gear-dot {
+    position: absolute; top: 4px; right: 4px;
+    width: 7px; height: 7px; border-radius: 50%;
+    border: 1.5px solid var(--surface); pointer-events: none;
+    transition: background 0.3s, opacity 0.3s;
+  }
+  .gear-dot.ok { background: var(--success); opacity: 0; }
+  .gear-dot.loading { background: var(--accent); opacity: 1; animation: pulse 1.2s ease infinite; }
+  .gear-dot.error { background: var(--error); opacity: 1; }
+  .settings-panel {
+    display: none; position: absolute; top: calc(100% + 10px); right: 0;
+    z-index: 100; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow-sm);
+    padding: 20px; min-width: 300px; animation: fadeInDown 0.2s ease;
+  }
+  .settings-panel.visible { display: block; }
+  .settings-section { margin-bottom: 18px; }
+  .settings-section:last-child { margin-bottom: 0; }
+  .settings-section-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;
+  }
+  .settings-divider { height: 1px; background: var(--border); margin: 14px 0; }
+  .settings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .settings-field-label {
+    font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .server-status {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px; color: var(--text-secondary); line-height: 1.5;
+  }
+  .server-status .dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  }
+  .server-status .dot.ok { background: var(--success); }
+  .server-status .dot.loading { background: var(--accent); animation: pulse 1.2s ease infinite; }
+  .server-status .dot.error { background: var(--error); }
+  .format-select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px 32px 10px 12px;
+    color: var(--text-primary); font-family: var(--mono); font-size: 12px;
+    outline: none; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s, background 0.3s;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a756b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+  }
+  .format-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .format-select option { background: var(--surface); color: var(--text-primary); }
 
-const TOTAL_DURATION = 575; // 9:35
+  /* ── Toggle switch ── */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 0;
+  }
+  .toggle-row + .toggle-row { margin-top: 10px; }
+  .toggle-row-label { font-family: var(--mono); font-size: 11px; color: var(--text-secondary); letter-spacing: 0.5px; }
+  .toggle-row-hint  { font-family: var(--mono); font-size: 10px; color: var(--text-muted); letter-spacing: 0.3px; margin-top: 2px; }
+  .toggle-label-wrap { display: flex; flex-direction: column; flex: 1; }
+  .toggle-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-track {
+    position: absolute; inset: 0; background: var(--border);
+    border-radius: 10px; cursor: pointer; transition: background 0.25s ease;
+  }
+  .toggle-track::after {
+    content: ''; position: absolute; left: 2px; top: 2px;
+    width: 16px; height: 16px; background: #fff; border-radius: 50%;
+    transition: transform 0.25s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .toggle-switch input:checked + .toggle-track { background: var(--accent); }
+  .toggle-switch input:checked + .toggle-track::after { transform: translateX(16px); }
 
-export default function TransportControls() {
-  const [currentTime, setCurrentTime] = useState(229); // 3:49
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState(2);
-  const [inPoint, setInPoint] = useState(0);
-  const [outPoint, setOutPoint] = useState(574.5); // 9:34.5
-  const [inText, setInText] = useState("00:00:00.0");
-  const [outText, setOutText] = useState("00:09:34.5");
-  const intervalRef = useRef(null);
-  const waveformRef = useRef(null);
+  /* ── Keyboard shortcuts panel (header) ── */
+  .kbd-wrap { position: relative; }
+  .kbd-toggle {
+    background: none; border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px; cursor: pointer; color: var(--text-secondary);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s ease; width: 38px; height: 38px; flex-shrink: 0;
+  }
+  .kbd-toggle:hover { color: var(--accent); border-color: var(--accent); }
+  .kbd-toggle.active { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+  .kbd-toggle svg { width: 18px; height: 18px; stroke-width: 1.5; }
+  .kbd-panel {
+    display: none; position: absolute; top: calc(100% + 10px); right: 0;
+    z-index: 100; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow-sm);
+    padding: 20px; min-width: 280px; animation: fadeInDown 0.2s ease;
+  }
+  .kbd-panel.visible { display: block; }
+  .kbd-panel-title {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px;
+  }
+  .kbd-list { display: flex; flex-direction: column; gap: 8px; }
+  .kbd-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    font-family: var(--mono); font-size: 11px; color: var(--text-secondary);
+  }
+  .kbd-keys { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+  .kbd-keys kbd {
+    display: inline-block; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 3px; padding: 2px 6px; font-family: var(--mono); font-size: 9px;
+    font-weight: 500; color: var(--text-secondary); min-width: 20px; text-align: center;
+  }
 
-  const speeds = [0.5, 1, 1.5, 2, 3];
+  /* ── Card blur while processing ── */
+  .player-card { transition: background 0.3s ease, border-color 0.3s ease; }
+  .player-card.processing > *:not(.export-overlay) {
+    filter: blur(3px); pointer-events: none;
+    transition: filter 0.3s ease;
+  }
+  .player-card.processing { cursor: wait; }
+  /* Import card loading state — matches Copy Assist .creating-overlay pattern */
+  .import-card { position: relative; }
+  .import-card.processing > *:not(.import-card-overlay) {
+    filter: blur(6px);
+    opacity: 0.35;
+    pointer-events: none;
+    transition: filter 0.4s ease, opacity 0.4s ease;
+  }
+  .import-card-overlay {
+    display: none; position: absolute; inset: 0; z-index: 10;
+    flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    background: var(--surface-transparent, rgba(0,0,0,0.04));
+    border-radius: var(--radius-lg);
+  }
+  .import-card.processing .import-card-overlay { display: flex; }
+  .import-card-overlay .overlay-text {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--text-secondary);
+  }
+  .import-card-overlay .overlay-track {
+    width: 60%; max-width: 300px; height: 3px;
+    background: var(--border); border-radius: 2px; overflow: hidden;
+  }
+  .import-card-overlay .overlay-track-fill {
+    width: 40%; height: 100%; background: var(--accent); border-radius: 2px;
+    animation: regenSlide 1.4s ease-in-out infinite;
+  }
+  .import-card-overlay .overlay-track-fill.determinate {
+    width: var(--pct, 0%); animation: none; transition: width 0.3s ease;
+  }
+  @keyframes regenSlide {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+  }
+  .import-card-overlay {
+    display: none; position: absolute; inset: 0; z-index: 10;
+    flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    background: var(--surface); /* solid backdrop — no bleed-through */
+    border-radius: var(--radius-lg);
+    animation: fadeIn 0.2s ease;
+  }
+  .import-card.processing .import-card-overlay { display: flex; }
+  .import-card-overlay .overlay-spinner {
+    width: 20px; height: 20px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; flex-shrink: 0;
+  }
+  .import-card-overlay .overlay-text {
+    font-family: var(--mono); font-size: 12px; color: var(--text-primary);
+    letter-spacing: 1px; text-transform: uppercase; text-align: center;
+  }
+  .import-card-overlay .overlay-text.pulse { animation: overlayPulse 2s ease-in-out infinite; }
+  @keyframes overlayPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .import-card-overlay .overlay-track {
+    width: 180px; height: 2px; background: var(--border); border-radius: 2px; overflow: hidden;
+  }
+  .import-card-overlay .overlay-track-fill {
+    height: 100%; border-radius: 2px; background: var(--accent);
+    animation: indeterminate 1.8s ease-in-out infinite; transition: width 0.3s ease;
+  }
+  .import-card-overlay .overlay-track-fill.determinate { animation: none; }
 
-  const cycleSpeed = () => {
-    const idx = speeds.indexOf(speed);
-    setSpeed(speeds[(idx + 1) % speeds.length]);
-  };
+  .import-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+    animation: fadeInUp 0.5s ease 0.1s both;
+    transition: background 0.3s ease, border-color 0.3s ease,
+                max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.35s ease, margin 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                border-width 0.5s ease;
+    max-height: 260px; opacity: 1;
+  }
+  .import-card.collapsed {
+    max-height: 0; opacity: 0; margin: 0; border-width: 0; pointer-events: none;
+  }
+  .card-label {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-secondary); padding: 16px 20px 0; display: block;
+  }
+  .card-hint {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.5px;
+    color: var(--text-muted); padding: 3px 20px 0; display: block;
+  }
+  .input-row {
+    display: flex; gap: 8px; padding: 12px 20px 20px; align-items: center;
+  }
+  .input-row input[type="text"] {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 16px;
+    color: var(--text-primary); font-family: var(--mono); font-size: 13px;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s, background 0.3s;
+  }
+  .input-row input[type="text"]::placeholder { color: var(--text-muted); }
+  .input-row input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .btn-grab {
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    border: none; border-radius: var(--radius); padding: 12px 20px;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    background: var(--accent); color: #fff; flex-shrink: 0; display: none;
+  }
+  .btn-grab:hover { background: #d4623e; transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent-glow); }
+  .btn-grab:active { transform: translateY(0); }
+  .btn-grab:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; box-shadow: none; transform: none; }
 
-  // Playback
-  useEffect(() => {
-    if (isPlaying) {
-      intervalRef.current = setInterval(() => {
-        setCurrentTime((t) => {
-          const next = t + 0.1 * speed;
-          if (next >= outPoint) {
-            setIsPlaying(false);
-            return outPoint;
-          }
-          return next;
-        });
-      }, 100);
-    } else {
-      clearInterval(intervalRef.current);
-    }
-    return () => clearInterval(intervalRef.current);
-  }, [isPlaying, speed, outPoint]);
+  /* Import progress */
+  .import-status {
+    display: none; align-items: center; gap: 10px;
+    padding: 0 20px 16px; font-family: var(--mono); font-size: 12px; color: var(--text-secondary);
+  }
+  .import-status.visible { display: flex; }
+  .import-status .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .import-status .status-dot.working { background: var(--accent); animation: pulse 1.2s ease infinite; }
+  .import-status .status-dot.done { background: var(--success); }
+  .import-status .status-dot.error { background: var(--error); }
+  .import-track { height: 3px; background: var(--border); border-radius: 3px; margin: 0 20px 16px; overflow: hidden; display: none; }
+  .import-track.visible { display: block; }
+  .import-track-fill {
+    height: 100%; border-radius: 3px; width: 100%;
+    background: var(--accent); animation: indeterminate 1.8s ease-in-out infinite;
+  }
+  .import-track-fill.done { animation: none; width: 100%; background: var(--success); }
+  .import-track-fill.error { animation: none; width: 100%; background: var(--error); }
+  .import-track-fill.determinate { animation: none; transition: width 0.3s ease; }
 
-  // Seek backward — clamped to IN point
-  const seekBack = () => {
-    setCurrentTime((t) => Math.max(inPoint, t - 5));
-  };
+  /* ── Player card ── */
+  .player-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+    position: relative;
+    display: none; animation: fadeInUp 0.5s ease both;
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+  .player-card.visible { display: block; }
 
-  // Seek forward — clamped to OUT point
-  const seekForward = () => {
-    setCurrentTime((t) => Math.min(outPoint, t + 5));
-  };
+  /* Video preview */
+  .video-preview { display: none; background: #000; width: 100%; max-height: 260px; overflow: hidden; }
+  .video-preview.visible { display: block; }
+  .video-preview video { display: block; width: 100%; max-height: 260px; object-fit: contain; }
 
-  const commitIn = () => {
-    const val = parseTime(inText);
-    if (val !== null && val >= 0 && val < outPoint) setInPoint(val);
-    else setInText(formatTime(inPoint));
-  };
+  /* Waveform */
+  .waveform-area { position: relative; }
+  .waveform-loading {
+    position: absolute; inset: 0; z-index: 5;
+    background: var(--loading-overlay);
+    display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  }
+  .waveform-loading.visible { display: flex; }
+  .waveform-loading-label {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-secondary);
+  }
+  .waveform-loading-track { width: 200px; height: 3px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .waveform-loading-bar { height: 100%; width: 100%; background: var(--accent); animation: indeterminate 1.8s ease-in-out infinite; }
 
-  const commitOut = () => {
-    const val = parseTime(outText);
-    if (val !== null && val > inPoint && val <= TOTAL_DURATION) setOutPoint(val);
-    else setOutText(formatTime(outPoint));
-  };
+  .waveform-container {
+    position: relative; padding: 16px 20px 10px; cursor: crosshair;
+  }
 
-  const clearSelection = () => {
-    setInPoint(0);
-    setOutPoint(TOTAL_DURATION);
-    setInText(formatTime(0));
-    setOutText(formatTime(TOTAL_DURATION));
-  };
+  /* Trim overlays */
+  .trim-overlay-container { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+  .trim-mask { position: absolute; top: 0; bottom: 0; background: var(--cut-overlay); }
+  .trim-mask-left { left: 0; width: 0; }
+  .trim-mask-right { right: 0; width: 0; }
+  .trim-marker {
+    position: absolute; top: 0; bottom: 0; width: 2px; z-index: 4;
+    pointer-events: all; cursor: ew-resize;
+    touch-action: none;
+  }
+  /* Wider invisible hit area so it's easy to grab */
+  .trim-marker::before {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -10px; right: -10px;
+  }
+  .trim-marker-in { background: var(--in-color); }
+  .trim-marker-out { background: var(--out-color); }
+  .trim-marker.dragging { cursor: grabbing; z-index: 6; }
 
-  useEffect(() => { setInText(formatTime(inPoint)); }, [inPoint]);
-  useEffect(() => { setOutText(formatTime(outPoint)); }, [outPoint]);
+  /* Handle flag tab at the top of each marker */
+  .marker-handle {
+    position: absolute; top: 8px;
+    width: 30px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 8px; font-weight: 600;
+    letter-spacing: 1px; color: #fff; line-height: 1;
+    user-select: none; pointer-events: all;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+  }
+  .trim-marker-in  .marker-handle { left: 1px;  background: var(--in-color);  border-radius: 0 3px 3px 0; }
+  .trim-marker-out .marker-handle { right: 1px; background: var(--out-color); border-radius: 3px 0 0 3px; }
+  .trim-marker.dragging .marker-handle { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
 
-  // Waveform click
-  const handleWaveformClick = (e) => {
-    const rect = waveformRef.current.getBoundingClientRect();
-    const pct = (e.clientX - rect.left) / rect.width;
-    setCurrentTime(Math.max(inPoint, Math.min(outPoint, pct * TOTAL_DURATION)));
-  };
+  /* Transport */
+  .transport {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 20px 12px; border-bottom: 1px solid var(--border);
+  }
+  .transport-btn {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-primary); transition: all 0.2s; flex-shrink: 0;
+  }
+  .transport-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .transport-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .transport-btn svg { width: 12px; height: 12px; }
+  .transport-time { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--text-primary); letter-spacing: 1px; min-width: 60px; }
+  .transport-duration { font-family: var(--mono); font-size: 12px; color: var(--text-muted); }
+  .transport-spacer { flex: 1; }
+  .speed-badge {
+    font-family: var(--mono); font-size: 12px; font-weight: 500;
+    letter-spacing: 0.5px; color: var(--text-secondary);
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 4px 10px; cursor: pointer;
+    transition: all 0.2s; user-select: none; white-space: nowrap;
+  }
+  .speed-badge:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .speed-badge.modified { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
 
-  const playheadPct = (currentTime / TOTAL_DURATION) * 100;
-  const inPct = (inPoint / TOTAL_DURATION) * 100;
-  const outPct = (outPoint / TOTAL_DURATION) * 100;
+  /* Trim bar */
+  .trim-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 20px 10px; flex-wrap: wrap;
+  }
+  .trim-btn {
+    font-family: var(--mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 1px; text-transform: uppercase;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 7px 12px; cursor: pointer;
+    background: var(--bg); color: var(--text-secondary);
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .trim-btn.in-btn { border-color: var(--in-color); color: var(--in-color); }
+  .trim-btn.in-btn:hover { background: rgba(74, 140, 63, 0.1); }
+  .trim-btn.out-btn { border-color: var(--out-color); color: var(--out-color); }
+  .trim-btn.out-btn:hover { background: var(--error-glow); }
+  .trim-time-input {
+    font-family: var(--mono); font-size: 12px; font-weight: 500;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 6px 10px;
+    color: var(--text-primary); width: 96px; text-align: center;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s; letter-spacing: 0.5px;
+  }
+  .trim-time-input.in-input:focus { border-color: var(--in-color); box-shadow: 0 0 0 3px rgba(74, 140, 63, 0.12); }
+  .trim-time-input.out-input:focus { border-color: var(--out-color); box-shadow: 0 0 0 3px var(--error-glow); }
+  .trim-arrow { font-family: var(--mono); font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+  .trim-spacer { flex: 1; min-width: 8px; }
+  .trim-duration {
+    font-family: var(--mono); font-size: 11px; color: var(--text-muted); white-space: nowrap;
+  }
+  .trim-duration strong { color: var(--text-primary); font-weight: 600; }
 
-  // Generate fake waveform bars
-  const bars = Array.from({ length: 200 }, (_, i) => {
-    const x = i / 200;
-    const base = Math.sin(x * 12) * 0.3 + 0.5;
-    const noise = Math.sin(i * 7.3) * 0.2 + Math.cos(i * 13.1) * 0.15;
-    return Math.max(0.08, Math.min(1, base + noise));
-  });
+  /* File bar */
+  .file-bar {
+    display: none; align-items: center; gap: 12px; padding: 12px 20px;
+    border-top: 1px solid var(--border); font-family: var(--mono); font-size: 12px;
+  }
+  .file-bar.visible { display: flex; }
+  .file-bar .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font-weight: 500; }
+  .file-bar .file-meta { color: var(--text-muted); flex-shrink: 0; }
+  .file-bar .file-remove {
+    flex-shrink: 0; background: none; border: 1px solid var(--border);
+    border-radius: var(--radius); font-family: var(--mono); font-size: 11px;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--text-secondary);
+    padding: 5px 12px; cursor: pointer; transition: all 0.2s;
+  }
+  .file-bar .file-remove:hover { border-color: var(--error); color: var(--error); background: var(--error-glow); }
 
-  const btnBase =
-    "w-10 h-10 flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 text-neutral-200 hover:bg-neutral-700 active:bg-neutral-600 transition-colors select-none text-sm font-mono";
+  /* Export overlay (sits atop player card) */
+  .export-overlay {
+    display: none; position: absolute; inset: 0; z-index: 20;
+    background: var(--loading-overlay);
+    flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    animation: fadeIn 0.25s ease;
+  }
+  .export-overlay.visible { display: flex; }
+  .export-spinner {
+    width: 28px; height: 28px; border: 2.5px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .export-status-text {
+    font-family: var(--mono); font-size: 12px; color: var(--text-secondary);
+    letter-spacing: 0.5px; text-align: center;
+  }
+  .export-track { width: 180px; height: 3px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .export-track-fill { height: 100%; border-radius: 3px; background: var(--accent); animation: indeterminate 1.8s ease-in-out infinite; }
+  .export-track-fill.done { animation: none; width: 100%; background: var(--success); }
+  .export-track-fill.error { animation: none; width: 100%; background: var(--error); }
 
-  return (
-    <div
-      style={{
-        fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
-        background: "#1a1a1a",
-      }}
-      className="w-full max-w-4xl mx-auto p-4 rounded-xl"
-    >
-      {/* Waveform */}
-      <div
-        ref={waveformRef}
-        onClick={handleWaveformClick}
-        className="relative w-full h-20 cursor-pointer mb-4 rounded overflow-hidden"
-        style={{ background: "#222" }}
-      >
-        {/* IN/OUT region shading */}
-        <div
-          className="absolute top-0 bottom-0 opacity-10 bg-white pointer-events-none"
-          style={{ left: `${inPct}%`, width: `${outPct - inPct}%` }}
-        />
+  /* Export result states */
+  .export-result { display: none; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+  .export-result.visible { display: flex; }
+  .success-check { width: 32px; height: 32px; color: var(--success); flex-shrink: 0; }
+  .success-check svg { width: 100%; height: 100%; }
+  .success-check .check-circle-draw { stroke-dasharray: 151; stroke-dashoffset: 151; }
+  .success-check.animate .check-circle-draw { animation: drawCircle 0.6s 0.1s ease forwards; }
+  .success-check .check-mark-draw { stroke-dasharray: 36; stroke-dashoffset: 36; }
+  .success-check.animate .check-mark-draw { animation: drawCheck 0.35s 0.55s ease forwards; }
+  .export-filename { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--text-primary); }
+  .export-filemeta { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-top: -6px; }
+  .error-icon { width: 28px; height: 28px; color: var(--error); }
+  .error-icon svg { width: 100%; height: 100%; }
+  .error-text { font-family: var(--mono); font-size: 11px; color: var(--error); max-width: 360px; line-height: 1.5; }
+  .result-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 2px; }
+  .result-btn-primary {
+    font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 1px;
+    text-transform: uppercase; border: none; border-radius: var(--radius); padding: 8px 16px;
+    cursor: pointer; background: var(--accent); color: #fff; transition: all 0.2s;
+  }
+  .result-btn-primary:hover { background: #d4623e; transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent-glow); }
+  .result-btn-secondary {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-muted); background: none; border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 7px 14px; cursor: pointer; transition: all 0.2s; text-decoration: none;
+    display: inline-flex; align-items: center;
+  }
+  .result-btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 
-        {/* Waveform bars */}
-        <div className="absolute inset-0 flex items-center px-0.5">
-          {bars.map((h, i) => {
-            const barPct = (i / bars.length) * 100;
-            const isBeforePlayhead = barPct <= playheadPct;
-            const isInRange = barPct >= inPct && barPct <= outPct;
-            let color = "#555";
-            if (isInRange && isBeforePlayhead) color = "#e8833a";
-            else if (isInRange) color = "#a0845e";
-            else if (isBeforePlayhead) color = "#b05a28";
-            return (
-              <div
-                key={i}
-                className="flex-1 mx-px rounded-sm"
-                style={{
-                  height: `${h * 80}%`,
-                  background: color,
-                  transition: "background 0.15s",
-                }}
-              />
-            );
-          })}
+  /* Export action bar */
+  .export-action-bar {
+    display: none; width: 100%; align-items: center; gap: 10px;
+    animation: fadeInUp 0.4s ease both;
+  }
+  .export-action-bar.visible { display: flex; }
+  .btn-primary {
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    border: none; border-radius: var(--radius); padding: 12px 24px;
+    cursor: pointer; background: var(--accent); color: #fff; transition: all 0.2s; white-space: nowrap;
+  }
+  .btn-primary:hover { background: #d4623e; transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent-glow); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; box-shadow: none; transform: none; }
+  .btn-secondary-bar {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    background: none; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 11px 18px; cursor: pointer; color: var(--text-secondary); transition: all 0.2s;
+  }
+  .btn-secondary-bar:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .export-spacer { flex: 1; }
+  .export-clip-info {
+    font-family: var(--mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.3px;
+  }
+  .export-clip-info strong { color: var(--text-secondary); }
+
+  /* ── Waiting card ── */
+  .waiting-card {
+    display: none; flex-direction: column; align-items: center;
+    justify-content: center; gap: 14px; padding: 36px 28px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); text-align: center;
+    animation: fadeInUp 0.4s ease both; min-height: 140px;
+  }
+  .waiting-card.visible { display: flex; }
+  .waiting-stage {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--accent);
+  }
+  .waiting-msg {
+    font-family: var(--mono); font-size: 12px; line-height: 1.8;
+    color: var(--text-secondary); letter-spacing: 0.3px;
+    min-height: 2.6em; transition: opacity 0.4s ease;
+  }
+  .waiting-msg.fade { opacity: 0; }
+  .waiting-dots { display: flex; gap: 6px; align-items: center; }
+  .waiting-dots span {
+    width: 5px; height: 5px; border-radius: 50%; background: var(--border);
+    animation: waitDot 1.4s ease-in-out infinite;
+  }
+  .waiting-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .waiting-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes waitDot {
+    0%, 80%, 100% { background: var(--border); transform: scale(1); }
+    40% { background: var(--accent); transform: scale(1.3); }
+  }
+
+  /* Info hero */
+  .info-hero {
+    display: flex; align-items: center; gap: 24px; width: 100%;
+    padding: 28px 32px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius-lg);
+    animation: fadeInUp 0.5s ease 0.2s both;
+  }
+  .info-hero.hidden { display: none; }
+  .info-hero-graphic { flex-shrink: 0; width: 80px; height: 80px; color: var(--accent); opacity: 0.7; }
+  .info-hero-graphic svg { width: 100%; height: 100%; }
+  .info-hero-content { flex: 1; min-width: 0; }
+  .info-hero-title {
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase; color: var(--text-primary); margin-bottom: 8px;
+  }
+  .info-hero-desc { font-family: var(--mono); font-size: 11px; line-height: 1.8; color: var(--text-secondary); letter-spacing: 0.3px; }
+  .info-hero-desc .hl { color: var(--accent); font-weight: 500; }
+
+  /* Animations */
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes indeterminate {
+    0%   { transform: translateX(-100%) scaleX(0.4); }
+    50%  { transform: translateX(60%)   scaleX(0.6); }
+    100% { transform: translateX(200%)  scaleX(0.4); }
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeInDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes drawCircle { to { stroke-dashoffset: 0; } }
+  @keyframes drawCheck { to { stroke-dashoffset: 0; } }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .container { padding: 32px 16px 60px; }
+    .input-row { flex-direction: column; }
+    .btn-grab { display: block !important; width: 100%; }
+    .settings-panel { min-width: 260px; right: -40px; }
+    .settings-row { grid-template-columns: 1fr; }
+    .trim-bar { gap: 6px; }
+    .shortcuts-row { gap: 10px; }
+    .info-hero { flex-direction: column; text-align: center; padding: 24px 20px; gap: 16px; }
+    .info-hero-graphic { width: 60px; height: 60px; }
+    .export-action-bar { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1><span>MEDIA</span> GRAB</h1>
+  <div class="header-actions">
+    <div class="kbd-wrap">
+      <button class="kbd-toggle" id="kbdToggle" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="6" width="20" height="12" rx="2"/>
+          <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/>
+        </svg>
+      </button>
+      <div class="kbd-panel" id="kbdPanel">
+        <div class="kbd-panel-title">Keyboard Shortcuts</div>
+        <div class="kbd-list">
+          <div class="kbd-row"><span>Set in point</span><span class="kbd-keys"><kbd>F5</kbd></span></div>
+          <div class="kbd-row"><span>Set out point</span><span class="kbd-keys"><kbd>F6</kbd></span></div>
+          <div class="kbd-row"><span>Play / Pause</span><span class="kbd-keys"><kbd>Space</kbd></span></div>
+          <div class="kbd-row"><span>Skip 5s</span><span class="kbd-keys"><kbd>←</kbd> <kbd>→</kbd></span></div>
+          <div class="kbd-row"><span>Skip 1s</span><span class="kbd-keys"><kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd></span></div>
+          <div class="kbd-row"><span>Speed up / down</span><span class="kbd-keys"><kbd>D</kbd> <kbd>F</kbd></span></div>
+          <div class="kbd-row"><span>Undo trim</span><span class="kbd-keys"><kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>Z</kbd></span></div>
         </div>
-
-        {/* IN marker */}
-        <div
-          className="absolute top-0 bottom-0 w-0.5 bg-green-500"
-          style={{ left: `${inPct}%` }}
-        >
-          <div className="absolute -top-0 left-0 text-[9px] font-bold bg-green-600 text-white px-1 rounded-br">
-            IN
-          </div>
-        </div>
-
-        {/* OUT marker */}
-        <div
-          className="absolute top-0 bottom-0 w-0.5 bg-red-500"
-          style={{ left: `${outPct}%` }}
-        >
-          <div className="absolute -top-0 right-0 text-[9px] font-bold bg-red-600 text-white px-1 rounded-bl">
-            OUT
-          </div>
-        </div>
-
-        {/* Playhead */}
-        <div
-          className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg"
-          style={{ left: `${playheadPct}%` }}
-        />
-      </div>
-
-      {/* Single consolidated row */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {/* Transport: back, play, forward */}
-        <button className={btnBase} onClick={seekBack} title="Seek back (clamped to IN)">
-          «
-        </button>
-        <button
-          className={btnBase}
-          onClick={() => setIsPlaying(!isPlaying)}
-        >
-          {isPlaying ? "❚❚" : "▶"}
-        </button>
-        <button className={btnBase} onClick={seekForward} title="Seek forward (clamped to OUT)">
-          »
-        </button>
-
-        {/* Speed */}
-        <button
-          onClick={cycleSpeed}
-          className="ml-1 h-10 px-3 flex items-center justify-center rounded-full border text-sm font-bold transition-colors select-none"
-          style={{
-            borderColor: "#e8833a",
-            color: "#e8833a",
-            background: "transparent",
-          }}
-        >
-          {speed}×
-        </button>
-
-        {/* Spacer */}
-        <div className="w-6" />
-
-        {/* IN point */}
-        <button
-          onClick={() => {
-            setInPoint(currentTime);
-          }}
-          className="h-8 px-2.5 rounded text-[11px] font-bold tracking-wide border border-green-600 text-green-400 bg-transparent hover:bg-green-900/30 transition-colors select-none"
-        >
-          IN
-        </button>
-        <input
-          value={inText}
-          onChange={(e) => setInText(e.target.value)}
-          onBlur={commitIn}
-          onKeyDown={(e) => e.key === "Enter" && commitIn()}
-          className="h-8 w-28 text-center text-sm rounded bg-neutral-800 border border-neutral-600 text-neutral-200 font-mono focus:outline-none focus:border-neutral-400"
-        />
-
-        {/* OUT point */}
-        <input
-          value={outText}
-          onChange={(e) => setOutText(e.target.value)}
-          onBlur={commitOut}
-          onKeyDown={(e) => e.key === "Enter" && commitOut()}
-          className="h-8 w-28 text-center text-sm rounded bg-neutral-800 border border-neutral-600 text-neutral-200 font-mono focus:outline-none focus:border-neutral-400"
-        />
-        <button
-          onClick={() => {
-            setOutPoint(currentTime);
-          }}
-          className="h-8 px-2.5 rounded text-[11px] font-bold tracking-wide border border-red-600 text-red-400 bg-transparent hover:bg-red-900/30 transition-colors select-none"
-        >
-          OUT
-        </button>
-
-        {/* Clear */}
-        <button
-          onClick={clearSelection}
-          className="ml-auto h-8 px-3 rounded text-[11px] font-bold tracking-widest border border-neutral-600 text-neutral-400 bg-transparent hover:bg-neutral-700 transition-colors select-none uppercase"
-        >
-          Clear Selection
-        </button>
       </div>
     </div>
-  );
-}
+    <div class="settings-wrap">
+      <button class="settings-toggle" id="settingsToggle" aria-label="Settings" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        <span class="gear-dot loading" id="gearDot"></span>
+      </button>
+      <div class="settings-panel" id="settingsPanel">
+        <div class="settings-section">
+          <div class="settings-section-label">Server</div>
+          <div class="server-status" id="instanceStatus">
+            <span class="dot loading"></span>
+            <span>Connecting to server…</span>
+          </div>
+        </div>
+        <div class="settings-divider"></div>
+        <div class="settings-section">
+          <div class="settings-section-label">Export</div>
+          <div class="toggle-row">
+            <div class="toggle-label-wrap">
+              <span class="toggle-row-label">Premiere-safe transcode</span>
+              <span class="toggle-row-hint">Re-encodes to H.264 / MP4 / CFR</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="premiereSafe" checked>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div class="toggle-row" style="margin-top:12px;">
+            <div class="toggle-label-wrap">
+              <span class="toggle-row-label">Audio only</span>
+              <span class="toggle-row-hint">Downloads audio track, no video</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="audioOnlyToggle">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div class="toggle-row" style="margin-top:12px;">
+            <div class="toggle-label-wrap">
+              <span class="toggle-row-label">Loop playback</span>
+              <span class="toggle-row-hint">Loops between in and out points</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="loopToggle" checked>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+        <div class="settings-divider"></div>
+        <!-- Quality & Format hidden for now — values hardcoded -->
+        <div style="display:none">
+          <select id="qualitySelect"><option value="max" selected>Best available</option></select>
+          <select id="outputFormat"><option value="mp4" selected>MP4</option></select>
+        </div>
+      </div>
+    </div>
+    <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+      <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/>
+        <path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+        <path d="M2 12h2"/><path d="M20 12h2"/>
+        <path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ═══ IMPORT CARD ═══ -->
+  <div class="import-card" id="importCard">
+    <!-- Loading overlay — Copy Assist style -->
+    <div class="import-card-overlay" id="importCardOverlay">
+      <div class="overlay-text" id="overlayText">Connecting to server…</div>
+      <div class="overlay-track"><div class="overlay-track-fill" id="overlayTrackFill"></div></div>
+    </div>
+    <span class="card-label">Media link</span>
+    <span class="card-hint">Paste a URL — the full source downloads to the server and a preview streams to your browser</span>
+    <div class="input-row">
+      <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=…" autocomplete="off" spellcheck="false">
+      <button class="btn-grab" id="grabBtn">Grab</button>
+    </div>
+    <div class="import-status" id="importStatus">
+      <span class="status-dot working" id="importDot"></span>
+      <span id="importText">Downloading…</span>
+    </div>
+    <div class="import-track" id="importTrack">
+      <div class="import-track-fill" id="importTrackFill"></div>
+    </div>
+  </div>
+
+  <!-- ═══ PLAYER CARD ═══ -->
+  <div class="player-card" id="playerCard">
+
+    <!-- Export overlay -->
+    <div class="export-overlay" id="exportOverlay">
+      <div class="export-spinner" id="exportSpinner"></div>
+      <div class="export-status-text" id="exportStatusText">Exporting clip…</div>
+      <div class="export-track"><div class="export-track-fill" id="exportTrackFill"></div></div>
+
+      <!-- Success -->
+      <div class="export-result" id="exportSuccess">
+        <div class="success-check" id="successCheck">
+          <svg viewBox="0 0 52 52" fill="none">
+            <circle class="check-circle-draw" cx="26" cy="26" r="24" stroke="currentColor" stroke-width="2.5" fill="none"/>
+            <path class="check-mark-draw" d="M15 27l7 7 15-15" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="export-filename" id="exportFilename"></div>
+          <div class="export-filemeta" id="exportFilemeta"></div>
+        </div>
+        <div class="result-actions">
+          <button class="result-btn-primary" id="trimAnotherBtn">Trim another</button>
+          <a class="result-btn-secondary" id="exportDownloadLink" href="#" target="_blank" rel="noopener">Download again</a>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div class="export-result" id="exportErrorBox">
+        <div class="error-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <span class="error-text" id="exportErrorText"></span>
+        <div class="result-actions">
+          <button class="result-btn-secondary" id="exportRetryBtn">Try again</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video preview -->
+    <div class="video-preview" id="videoPreview">
+      <video id="videoEl" preload="auto" playsinline muted></video>
+    </div>
+
+    <!-- Waveform -->
+    <div class="waveform-area">
+      <div class="waveform-loading" id="waveformLoading">
+        <span class="waveform-loading-label">Loading waveform…</span>
+        <div class="waveform-loading-track"><div class="waveform-loading-bar"></div></div>
+      </div>
+      <div class="waveform-container" id="waveformContainer">
+        <div id="waveform"></div>
+        <div class="trim-overlay-container">
+          <div class="trim-mask trim-mask-left" id="trimLeft"></div>
+          <div class="trim-mask trim-mask-right" id="trimRight"></div>
+          <div class="trim-marker trim-marker-in" id="markerIn"><div class="marker-handle">IN</div></div>
+          <div class="trim-marker trim-marker-out" id="markerOut"><div class="marker-handle">OUT</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transport -->
+    <div class="transport">
+      <button class="transport-btn" id="btnSkipBack" title="Skip back 5s">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+      </button>
+      <button class="transport-btn" id="btnPlay" title="Play / Pause (Space)">
+        <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6,4 20,12 6,20"/></svg>
+        <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none"><rect x="5" y="4" width="4" height="16"/><rect x="15" y="4" width="4" height="16"/></svg>
+      </button>
+      <button class="transport-btn" id="btnSkipFwd" title="Skip forward 5s">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+      </button>
+      <span class="transport-time" id="transportTime">00:00:00</span>
+      <span class="transport-duration" id="transportDuration">/ 00:00:00</span>
+      <span class="speed-badge" id="speedBadge" title="Click to cycle playback speed">1×</span>
+      <span class="transport-spacer"></span>
+    </div>
+
+    <!-- Trim controls -->
+    <div class="trim-bar">
+      <button class="trim-btn in-btn" id="btnSetIn" title="Set in point at playhead (I)">In</button>
+      <input class="trim-time-input in-input" id="inTimeInput" value="00:00:00.0" spellcheck="false" autocomplete="off">
+      <input class="trim-time-input out-input" id="outTimeInput" value="00:00:00.0" spellcheck="false" autocomplete="off">
+      <button class="trim-btn out-btn" id="btnSetOut" title="Set out point at playhead (O)">Out</button>
+      <span class="trim-spacer"></span>
+      <button class="trim-btn" id="btnClearSelection" title="Reset in/out to full clip">Clear selection</button>
+    </div>
+
+    <!-- File bar -->
+    <div class="file-bar" id="fileBar">
+      <span class="file-name" id="fileName"></span>
+      <span class="file-meta" id="fileMeta"></span>
+      <button class="file-remove" id="fileRemove">Clear</button>
+    </div>
+  </div>
+
+  <!-- ═══ EXPORT ACTION BAR ═══ -->
+  <div class="export-action-bar" id="exportActionBar">
+    <span class="export-spacer"></span>
+    <button class="btn-primary" id="btnExport">Grab</button>
+  </div>
+
+  <!-- Info hero -->
+  <!-- ═══ WAITING CARD ═══ -->
+  <div class="waiting-card" id="waitingCard">
+    <div class="waiting-stage" id="waitingStage"></div>
+    <div class="waiting-msg" id="waitingMsg"></div>
+    <div class="waiting-dots"><span></span><span></span><span></span></div>
+  </div>
+
+  <div class="info-hero" id="infoHero">
+    <div class="info-hero-graphic">
+      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="8" y="12" width="44" height="30" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <polygon points="24,22 24,36 36,29" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
+        <line x1="30" y1="42" x2="30" y2="48" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="22" y1="48" x2="38" y2="48" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M58 18v22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="54" cy="40" r="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <path d="M58 18 c0 0 8-2 8 4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <line x1="16" y1="60" x2="16" y2="72" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="28" y1="56" x2="28" y2="72" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="40" y1="60" x2="40" y2="72" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="52" y1="58" x2="52" y2="72" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="12" y1="72" x2="56" y2="72" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="info-hero-content">
+      <div class="info-hero-title">Media Grab</div>
+      <div class="info-hero-desc">
+        Paste a YouTube, TikTok, Instagram, or Twitter URL. The server downloads the full video, then streams a <span class="hl">low-res preview</span> to your browser. Set <span class="hl">in and out points</span> and hit <span class="hl">Grab</span> to get just the bit you need, in full quality.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <a href="index.html"><span style="color: var(--accent);">dev.</span>nialfernandes.com</a>
+  <span style="color: var(--text-muted); margin: 0 8px;">|</span>
+  <a href="privacy.html">Privacy Policy</a>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  // ╔══════════════════════════════════════╗
+  // ║  CONFIG                              ║
+  // ╚══════════════════════════════════════╝
+  const API_BASE = '/api';
+  const SPEED_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+  // ╔══════════════════════════════════════╗
+  // ║  STATE                               ║
+  // ╚══════════════════════════════════════╝
+  let wavesurfer     = null;
+  let mediaLoaded    = false;
+  let isVideo        = false;
+  let mediaDuration  = 0;
+  let inPoint        = 0;
+  let outPoint       = 0;
+  let serverFilePath = null;
+  let mediaBlobUrl   = null;
+  let speedIndex     = 2;
+  let serverOnline   = false;
+  let working        = false;
+  let animFrameId    = null;
+  let loopGen        = 0;    // increments on every stop — kills stale rAF callbacks
+  let trimUndoStack  = [];
+  let dragging       = null; // 'in' | 'out' | null
+
+  // ╔══════════════════════════════════════╗
+  // ║  DOM                                 ║
+  // ╚══════════════════════════════════════╝
+  const $ = id => document.getElementById(id);
+
+  const importCard      = $('importCard');
+  const waitingCard     = $('waitingCard');
+  const urlInput        = $('urlInput');
+  const grabBtn         = $('grabBtn');
+  const importStatus    = $('importStatus');
+  const importDot       = $('importDot');
+  const importText      = $('importText');
+  const importTrack     = $('importTrack');
+  const importTrackFill = $('importTrackFill');
+
+  const playerCard      = $('playerCard');
+  const videoPreview    = $('videoPreview');
+  const videoEl         = $('videoEl');
+  const waveformLoading = $('waveformLoading');
+  const trimLeft        = $('trimLeft');
+  const trimRight       = $('trimRight');
+  const markerIn        = $('markerIn');
+  const markerOut       = $('markerOut');
+
+  const transportTime   = $('transportTime');
+  const transportDur    = $('transportDuration');
+  const speedBadge      = $('speedBadge');
+  const inTimeInput     = $('inTimeInput');
+  const outTimeInput    = $('outTimeInput');
+  const exportActionBar = $('exportActionBar');
+  const fileBar         = $('fileBar');
+
+  const exportOverlay   = $('exportOverlay');
+  const exportSpinner   = $('exportSpinner');
+  const exportStatusText= $('exportStatusText');
+  const exportTrackFill = $('exportTrackFill');
+  const exportSuccess   = $('exportSuccess');
+  const exportErrorBox  = $('exportErrorBox');
+
+  // ╔══════════════════════════════════════╗
+  // ║  THEME                               ║
+  // ╚══════════════════════════════════════╝
+  document.querySelector('.theme-toggle').addEventListener('click', function () {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    if (wavesurfer && mediaLoaded) updateWaveformTheme();
+  });
+
+  function updateWaveformTheme() {
+    const s = getComputedStyle(document.documentElement);
+    wavesurfer.setOptions({
+      waveColor: s.getPropertyValue('--waveform-wave').trim(),
+      progressColor: s.getPropertyValue('--waveform-progress').trim(),
+      cursorColor: s.getPropertyValue('--waveform-cursor').trim()
+    });
+  }
+
+  // ╔══════════════════════════════════════╗
+  // ║  KEYBOARD SHORTCUTS PANEL            ║
+  // ╚══════════════════════════════════════╝
+  (function () {
+    const kbdBtn   = $('kbdToggle');
+    const kbdPanel = $('kbdPanel');
+    kbdBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      kbdPanel.classList.toggle('visible');
+      kbdBtn.classList.toggle('active');
+    });
+    document.addEventListener('click', e => {
+      if (!kbdPanel.contains(e.target) && e.target !== kbdBtn) {
+        kbdPanel.classList.remove('visible');
+        kbdBtn.classList.remove('active');
+      }
+    });
+  })();
+
+  // ╔══════════════════════════════════════╗
+  // ║  SETTINGS PANEL                      ║
+  // ╚══════════════════════════════════════╝
+  (function () {
+    const toggle = $('settingsToggle');
+    const panel  = $('settingsPanel');
+    toggle.addEventListener('click', e => {
+      e.stopPropagation();
+      panel.classList.toggle('visible');
+      toggle.classList.toggle('active');
+    });
+    document.addEventListener('click', e => {
+      if (!panel.contains(e.target) && e.target !== toggle) {
+        panel.classList.remove('visible');
+        toggle.classList.remove('active');
+      }
+    });
+  })();
+
+  // ╔══════════════════════════════════════╗
+  // ║  HELPERS                             ║
+  // ╚══════════════════════════════════════╝
+  function formatTime(s) {
+    if (isNaN(s) || s < 0) s = 0;
+    const total = Math.round(s);
+    const hh = Math.floor(total / 3600);
+    const mm = Math.floor((total % 3600) / 60);
+    const ss = total % 60;
+    return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
+  }
+
+  function formatTimeInput(s) {
+    if (isNaN(s) || s < 0) s = 0;
+    const hh = Math.floor(s / 3600);
+    const mm = Math.floor((s % 3600) / 60);
+    const secInt = Math.floor(s % 60);
+    const frac   = Math.round(((s % 60) - secInt) * 10);
+    return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0') + ':' + String(secInt).padStart(2,'0') + '.' + frac;
+  }
+
+  function parseTimeInput(val) {
+    val = val.trim().replace(/[^\d:.]/g, '');
+    const parts = val.split(':');
+    let s = 0;
+    if (parts.length === 3)      s = parseInt(parts[0]||0)*3600 + parseInt(parts[1]||0)*60 + parseFloat(parts[2]||0);
+    else if (parts.length === 2) s = parseInt(parts[0]||0)*60 + parseFloat(parts[1]||0);
+    else                         s = parseFloat(val) || 0;
+    return isNaN(s) ? 0 : s;
+  }
+
+  function formatBytes(b) {
+    if (b < 1024)    return b + ' B';
+    if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+    return (b/1048576).toFixed(1) + ' MB';
+  }
+
+  // ╔══════════════════════════════════════╗
+  // ║  SERVER HEALTH                       ║
+  // ╚══════════════════════════════════════╝
+  const gearDot  = $('gearDot');
+  const statusEl = $('instanceStatus');
+
+  function setGearState(state) { gearDot.className = 'gear-dot ' + state; }
+
+  async function checkHealth() {
+    try {
+      const res  = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(5000) });
+      const data = await res.json();
+      if (data.status === 'ok') {
+        serverOnline = true;
+        const ver = (data.yt_dlp || '').replace(/^yt-dlp\s*/i, '');
+        const dl  = data.active_downloads > 0 ? ` · ${data.active_downloads}/${data.max_concurrent} active` : '';
+        statusEl.innerHTML = `<span class="dot ok"></span><span>Online${ver ? ' · '+ver : ''}${dl}</span>`;
+        setGearState('ok');
+      } else {
+        serverOnline = true;
+        statusEl.innerHTML = `<span class="dot error"></span><span>Degraded</span>`;
+        setGearState('error');
+      }
+    } catch {
+      serverOnline = false;
+      statusEl.innerHTML = `<span class="dot error"></span><span>Offline</span>`;
+      setGearState('error');
+    }
+  }
+  checkHealth();
+  setInterval(checkHealth, 30000);
+
+  // ╔══════════════════════════════════════╗
+  // ║  IMPORT STATUS HELPERS               ║
+  // ╚══════════════════════════════════════╝
+  function setImportProgress(pct, text) {
+    importCard.classList.add('processing');
+    $('overlayText').textContent = text;
+    const fill = $('overlayTrackFill');
+    if (pct !== null && pct >= 0) {
+      fill.className = 'overlay-track-fill determinate';
+      fill.style.setProperty('--pct', Math.min(100, Math.round(pct)) + '%');
+    } else {
+      fill.className = 'overlay-track-fill';
+      fill.style.removeProperty('--pct');
+    }
+    // Keep legacy status bar in sync
+    importStatus.classList.add('visible');
+    importDot.className = 'status-dot working';
+    importText.textContent = text;
+    importTrack.classList.add('visible');
+    if (pct !== null && pct >= 0) {
+      importTrackFill.className = 'import-track-fill determinate';
+      importTrackFill.style.width = Math.min(100, Math.round(pct)) + '%';
+    } else {
+      importTrackFill.className = 'import-track-fill';
+      importTrackFill.style.width = '100%';
+    }
+  }
+
+  function setImportDone(text) {
+    importCard.classList.remove('processing');
+    importStatus.classList.add('visible');
+    importDot.className = 'status-dot done';
+    importText.textContent = text;
+    importTrack.classList.remove('visible');
+    setTimeout(() => importStatus.classList.remove('visible'), 3000);
+  }
+
+  function setImportError(text) {
+    importCard.classList.remove('processing');
+    importStatus.classList.add('visible');
+    importDot.className = 'status-dot error';
+    importText.textContent = text;
+    importTrack.classList.add('visible');
+    importTrackFill.className = 'import-track-fill error';
+  }
+
+  function hideImportStatus() {
+    importCard.classList.remove('processing');
+    importStatus.classList.remove('visible');
+    importTrack.classList.remove('visible');
+  }
+
+  // ╔══════════════════════════════════════╗
+  // ║  WAITING CARD                        ║
+  // ╚══════════════════════════════════════╝
+  const WAITING_TIPS = {
+    downloading: [
+      'The full source file is being downloaded to the server — quality depends on the original.',
+      'Download speed depends on the source platform and your server's connection.',
+      'YouTube videos are downloaded at the best available quality by default.',
+      'The server will merge audio and video streams after downloading — this is normal.',
+      'For long videos, this step can take a minute or two. Hang tight.',
+    ],
+    merging: [
+      'Audio and video are being merged into a single file on the server.',
+      'This step is usually quick — just a few seconds for most videos.',
+      'Merging happens server-side, so your browser connection speed doesn't matter here.',
+    ],
+    generating_proxy: [
+      'A low-res preview is being generated so your browser can play it back smoothly.',
+      'The proxy is much smaller than the original — just enough to preview and set your in/out points.',
+      'Full quality is preserved on the server. The proxy is only used for previewing.',
+      'Proxy generation usually takes 10–30 seconds depending on video length.',
+      'Once the preview is ready, you can trim and grab your clip in full quality.',
+    ],
+    processing: [
+      'Almost there — final processing underway.',
+      'The preview will appear as soon as it's ready.',
+    ],
+    connecting: [
+      'Checking the server is online and ready…',
+      'The server runs on a Mac Mini on your local network via Tailscale.',
+      'If this takes more than 10 seconds, the server may be asleep. Check the Mac Mini.',
+    ],
+  };
+
+  let waitingStageKey = 'connecting';
+  let waitingMsgIndex = 0;
+  let waitingMsgTimer = null;
+
+  function showWaitingCard(stageKey) {
+    waitingStageKey = stageKey || 'connecting';
+    waitingCard.classList.add('visible');
+    const stageLabels = {
+      connecting: 'Connecting',
+      downloading: 'Downloading',
+      merging: 'Merging streams',
+      generating_proxy: 'Generating preview',
+      processing: 'Processing',
+    };
+    $('waitingStage').textContent = stageLabels[waitingStageKey] || waitingStageKey;
+    waitingMsgIndex = 0;
+    _showNextWaitingMsg();
+    if (waitingMsgTimer) clearInterval(waitingMsgTimer);
+    waitingMsgTimer = setInterval(_cycleWaitingMsg, 5000);
+  }
+
+  function updateWaitingStage(stageKey) {
+    if (!waitingCard.classList.contains('visible')) return;
+    if (stageKey === waitingStageKey) return;
+    showWaitingCard(stageKey);
+  }
+
+  function hideWaitingCard() {
+    waitingCard.classList.remove('visible');
+    if (waitingMsgTimer) { clearInterval(waitingMsgTimer); waitingMsgTimer = null; }
+  }
+
+  function _showNextWaitingMsg() {
+    const tips = WAITING_TIPS[waitingStageKey] || WAITING_TIPS.connecting;
+    const msgEl = $('waitingMsg');
+    msgEl.classList.add('fade');
+    setTimeout(() => {
+      msgEl.textContent = tips[waitingMsgIndex % tips.length];
+      msgEl.classList.remove('fade');
+    }, 400);
+  }
+
+  function _cycleWaitingMsg() {
+    const tips = WAITING_TIPS[waitingStageKey] || WAITING_TIPS.connecting;
+    waitingMsgIndex = (waitingMsgIndex + 1) % tips.length;
+    _showNextWaitingMsg();
+  }
+
+
+  const URL_REGEX = /^https?:\/\/[^\s]+$/i;
+
+  function updateGrabVisibility() {
+    grabBtn.style.display = urlInput.value.trim() ? '' : 'none';
+  }
+  urlInput.addEventListener('input', updateGrabVisibility);
+  urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleGrab(); });
+  urlInput.addEventListener('paste', () => {
+    setTimeout(() => {
+      updateGrabVisibility();
+      const val = urlInput.value.trim();
+      if (URL_REGEX.test(val) && !working) handleGrab();
+    }, 50);
+  });
+  grabBtn.addEventListener('click', handleGrab);
+
+  // ╔══════════════════════════════════════╗
+  // ║  MAIN GRAB — STREAMING DOWNLOAD      ║
+  // ╚══════════════════════════════════════╝
+  async function handleGrab() {
+    const url = urlInput.value.trim();
+    if (!url || working) return;
+
+    if (!serverOnline) {
+      setImportProgress(0, 'Checking server…');
+      await checkHealth();
+      if (!serverOnline) {
+        setImportError('Download server is offline. Check that the Mac Mini is running.');
+        return;
+      }
+    }
+
+    working = true;
+    grabBtn.disabled = true;
+    $('infoHero').classList.add('hidden');
+    setImportProgress(0, 'Connecting to server…');
+    showWaitingCard('connecting');
+
+    const quality = $('qualitySelect').value;
+    const fmt     = $('outputFormat').value;
+    const isAudioFmt = ['mp3','wav','ogg','aac'].includes(fmt);
+
+    try {
+      const res = await fetch(`${API_BASE}/download-stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          downloadMode: isAudioFmt ? 'audio' : 'video',
+          videoQuality: quality,
+          audioFormat: isAudioFmt ? fmt : 'wav'
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setImportError(err.error || 'Server error');
+        hideWaitingCard();
+        grabBtn.disabled = false; working = false;
+        return;
+      }
+
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let completed = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop();
+
+        for (const part of parts) {
+          const dataLine = part.split('\n').find(l => l.startsWith('data: '));
+          if (!dataLine) continue;
+          try {
+            const ev = JSON.parse(dataLine.slice(6));
+            if (ev.type === 'progress') {
+              const stage = ev.stage || '';
+              if (stage === 'downloading' && ev.percent !== null) {
+                setImportProgress(ev.percent, `Downloading… ${Math.round(ev.percent)}%`);
+                updateWaitingStage('downloading');
+              } else if (stage === 'merging') {
+                setImportProgress(null, 'Merging audio and video…');
+                updateWaitingStage('merging');
+              } else if (stage === 'generating_proxy') {
+                setImportProgress(null, 'Generating preview…');
+                updateWaitingStage('generating_proxy');
+              } else if (stage === 'processing') {
+                setImportProgress(null, 'Processing…');
+                updateWaitingStage('processing');
+              }
+            } else if (ev.type === 'complete') {
+              completed = ev;
+            } else if (ev.type === 'error') {
+              setImportError(ev.error || 'Download failed');
+              hideWaitingCard();
+              grabBtn.disabled = false; working = false;
+              return;
+            }
+          } catch {}
+        }
+      }
+
+      if (!completed) {
+        setImportError('Download ended without a result.');
+        hideWaitingCard();
+        grabBtn.disabled = false; working = false;
+        return;
+      }
+
+      serverFilePath = completed.url;
+
+      // Fetch the proxy (low-res preview) into a blob for WaveSurfer
+      const useProxy  = !!completed.proxyUrl;
+      const fetchUrl  = useProxy
+        ? `${API_BASE.replace('/api','') || ''}${completed.proxyUrl}`
+        : `${API_BASE.replace('/api','') || ''}${completed.url}`;
+
+      setImportProgress(0, 'Loading preview… 0%');
+
+      const mediaRes     = await fetch(fetchUrl);
+      const contentLength = parseInt(mediaRes.headers.get('Content-Length'), 10) || 0;
+      let blob;
+
+      if (contentLength && mediaRes.body) {
+        const bReader = mediaRes.body.getReader();
+        const chunks  = [];
+        let received  = 0;
+        while (true) {
+          const { done, value } = await bReader.read();
+          if (done) break;
+          chunks.push(value);
+          received += value.length;
+          setImportProgress((received/contentLength)*100, `Loading preview… ${Math.round((received/contentLength)*100)}%`);
+        }
+        blob = new Blob(chunks);
+      } else {
+        setImportProgress(null, 'Loading preview…');
+        blob = await mediaRes.blob();
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
+      const vidFlag = completed.isVideo !== undefined
+        ? completed.isVideo
+        : (blob.type.startsWith('video/') || /\.(mp4|mov|mkv|webm)/.test(completed.filename || ''));
+
+      const proxyNote = useProxy
+        ? `Preview ready — full-res on server (${completed.size || '?'})`
+        : `Ready — ${completed.filename || 'file loaded'}`;
+      setImportDone(proxyNote);
+      hideWaitingCard();
+
+      loadMediaIntoEditor(blobUrl, completed.filename || 'downloaded', blob.size, vidFlag);
+
+    } catch (err) {
+      let msg = 'Connection failed';
+      if (err.name === 'AbortError') msg = 'Request timed out.';
+      setImportError(msg);
+      hideWaitingCard();
+      checkHealth();
+    } finally {
+      grabBtn.disabled = false;
+      working = false;
+    }
+  }
+
+  // ╔══════════════════════════════════════╗
+  // ║  LOAD MEDIA INTO EDITOR              ║
+  // ╚══════════════════════════════════════╝
+  function loadMediaIntoEditor(blobUrl, name, size, videoFlag) {
+    resetEditor();
+    mediaBlobUrl = blobUrl;
+    isVideo      = videoFlag;
+
+    importCard.classList.add('collapsed');
+    playerCard.classList.add('visible');
+    waveformLoading.classList.add('visible');
+
+    if (isVideo) {
+      videoPreview.classList.add('visible');
+      videoEl.src = blobUrl;
+      videoEl.muted = true;
+      videoEl.load();
+    }
+
+    $('fileName').textContent = name;
+    $('fileMeta').textContent = formatBytes(size) + (isVideo ? ' · video preview' : ' · audio preview');
+    fileBar.classList.add('visible');
+
+    const s = getComputedStyle(document.documentElement);
+    wavesurfer = WaveSurfer.create({
+      container: '#waveform',
+      waveColor:     s.getPropertyValue('--waveform-wave').trim(),
+      progressColor: s.getPropertyValue('--waveform-progress').trim(),
+      cursorColor:   s.getPropertyValue('--waveform-cursor').trim(),
+      cursorWidth: 1,
+      barWidth: 2, barGap: 1, barRadius: 2,
+      height: 28, normalize: true
+    });
+
+    wavesurfer.load(blobUrl);
+
+    wavesurfer.on('ready', () => {
+      mediaLoaded   = true;
+      mediaDuration = wavesurfer.getDuration();
+      transportDur.textContent = '/ ' + formatTime(mediaDuration);
+      wavesurfer.setPlaybackRate(SPEED_STEPS[speedIndex]);
+      waveformLoading.classList.remove('visible');
+
+      // Default: full clip selected
+      inPoint  = 0;
+      outPoint = mediaDuration;
+      updateTrimUI();
+
+      exportActionBar.classList.add('visible');
+    });
+
+    wavesurfer.on('audioprocess', onTimeUpdate);
+    wavesurfer.on('seeking', onTimeUpdate);
+    wavesurfer.on('interaction', onTimeUpdate);
+
+    wavesurfer.on('play', () => {
+      $('iconPlay').style.display  = 'none';
+      $('iconPause').style.display = '';
+      $('btnPlay').classList.add('active');
+      if (isVideo) { videoEl.currentTime = wavesurfer.getCurrentTime(); videoEl.playbackRate = SPEED_STEPS[speedIndex]; videoEl.play(); }
+      startPlaybackLoop();
+    });
+
+    wavesurfer.on('pause', () => {
+      $('iconPlay').style.display  = '';
+      $('iconPause').style.display = 'none';
+      $('btnPlay').classList.remove('active');
+      if (isVideo) videoEl.pause();
+      stopPlaybackLoop();
+    });
+  }
+
+  function onTimeUpdate() {
+    if (!wavesurfer) return;
+    const t = wavesurfer.getCurrentTime();
+    transportTime.textContent = formatTime(t);
+    // Only force-seek video if drift is large relative to playback speed.
+    // At higher speeds the video naturally falls behind slightly but recovers —
+    // forced seeks cause decode stalls and choppiness. Tolerance scales with rate.
+    if (isVideo) {
+      const rate = SPEED_STEPS[speedIndex];
+      const tolerance = Math.max(0.5, rate * 0.6);
+      if (Math.abs(videoEl.currentTime - t) > tolerance) videoEl.currentTime = t;
+    }
+  }
+
+  // ╔══════════════════════════════════════╗
+  // ║  PLAYBACK LOOP (skip outside trim)   ║
+  // ╚══════════════════════════════════════╝
+  function startPlaybackLoop() {
+    stopPlaybackLoop();
+    const gen = loopGen; // capture current generation
+    function loop() {
+      if (loopGen !== gen) return; // stale — a newer loop has taken over, bail silently
+      if (!wavesurfer || !wavesurfer.isPlaying()) return;
+      if (!dragging) {
+        const t = wavesurfer.getCurrentTime();
+        if (t < inPoint) {
+          wavesurfer.seekTo(inPoint / mediaDuration);
+        } else if (t >= outPoint) {
+          if ($('loopToggle').checked) {
+            wavesurfer.seekTo(inPoint / mediaDuration);
+            if (isVideo) videoEl.currentTime = inPoint;
+          } else {
+            wavesurfer.pause();
+            wavesurfer.seekTo(inPoint / mediaDuration);
+            return;
+          }
+        }
+      }
+      onTimeUpdate();
+      animFrameId = requestAnimationFrame(loop);
+    }
+    animFrameId = requestAnimationFrame(loop);
+  }
+
+  function stopPlaybackLoop() {
+    loopGen++; // invalidates any in-flight rAF callback for previous loop
+    if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+  }
+
+  // ╔══════════════════════════════════════╗
+  // ║  TRANSPORT CONTROLS                  ║
+  // ╚══════════════════════════════════════╝
+  $('btnPlay').addEventListener('click', () => {
+    if (!wavesurfer || !mediaLoaded) return;
+    const t = wavesurfer.getCurrentTime();
+    if (!wavesurfer.isPlaying() && t >= outPoint) {
+      wavesurfer.seekTo(inPoint / mediaDuration);
+    }
+    wavesurfer.playPause();
+  });
+  $('btnSkipBack').addEventListener('click', () => { if (wavesurfer && mediaLoaded) wavesurfer.skip(-5); });
+  $('btnSkipFwd').addEventListener('click',  () => { if (wavesurfer && mediaLoaded) wavesurfer.skip(5); });
+
+  function setSpeed(idx) {
+    speedIndex = Math.max(0, Math.min(SPEED_STEPS.length - 1, idx));
+    const rate = SPEED_STEPS[speedIndex];
+    speedBadge.textContent = rate + '×';
+    speedBadge.classList.toggle('modified', rate !== 1);
+    if (wavesurfer) wavesurfer.setPlaybackRate(rate);
+    if (isVideo) videoEl.playbackRate = rate; // keep video element in lock-step
+  }
+  speedBadge.addEventListener('click', () => setSpeed((speedIndex + 1) % SPEED_STEPS.length));
+
+  // ╔══════════════════════════════════════╗
+  // ║  TRIM UNDO STACK                     ║
+  // ╚══════════════════════════════════════╝
+  function pushTrimUndo() {
+    trimUndoStack.push({ in: inPoint, out: outPoint });
+    if (trimUndoStack.length > 80) trimUndoStack.shift();
+  }
+
+  function undoTrim() {
+    if (!trimUndoStack.length || !mediaLoaded) return;
+    const prev = trimUndoStack.pop();
+    inPoint  = prev.in;
+    outPoint = prev.out;
+    updateTrimUI();
+  }
+
+  // ╔══════════════════════════════════════╗
+  // ║  TRIM POINT LOGIC                    ║
+  // ╚══════════════════════════════════════╝
+  // No-push variants used during drag (undo captured once on mousedown)
+  function setInNoPush(t) {
+    inPoint = Math.max(0, Math.min(t, outPoint - 0.1));
+    updateTrimUI();
+  }
+  function setOutNoPush(t) {
+    outPoint = Math.min(mediaDuration, Math.max(t, inPoint + 0.1));
+    updateTrimUI();
+  }
+  // Push-undo variants used for button / keyboard
+  function setIn(t)  { pushTrimUndo(); setInNoPush(t); }
+  function setOut(t) { pushTrimUndo(); setOutNoPush(t); }
+
+  function updateTrimUI() {
+    inTimeInput.value  = formatTimeInput(inPoint);
+    outTimeInput.value = formatTimeInput(outPoint);
+    renderTrimOverlays();
+  }
+
+  function renderTrimOverlays() {
+    if (!mediaDuration) return;
+    const leftPct  = (inPoint  / mediaDuration) * 100;
+    const rightPct = ((mediaDuration - outPoint) / mediaDuration) * 100;
+    trimLeft.style.width  = leftPct  + '%';
+    trimRight.style.width = rightPct + '%';
+    markerIn.style.left   = leftPct  + '%';
+    markerOut.style.left  = (100 - rightPct) + '%';
+  }
+
+  // Set In / Out buttons
+  $('btnSetIn').addEventListener('click', () => {
+    if (!wavesurfer || !mediaLoaded) return;
+    setIn(wavesurfer.getCurrentTime());
+  });
+  $('btnSetOut').addEventListener('click', () => {
+    if (!wavesurfer || !mediaLoaded) return;
+    setOut(wavesurfer.getCurrentTime());
+  });
+
+  // Direct time input editing
+  inTimeInput.addEventListener('change', () => {
+    const t = parseTimeInput(inTimeInput.value);
+    setIn(Math.min(t, mediaDuration));
+    if (wavesurfer) wavesurfer.seekTo(inPoint / mediaDuration);
+  });
+  outTimeInput.addEventListener('change', () => {
+    const t = parseTimeInput(outTimeInput.value);
+    setOut(Math.min(t, mediaDuration));
+    if (wavesurfer) wavesurfer.seekTo(outPoint / mediaDuration);
+  });
+  inTimeInput.addEventListener('keydown', e => { if (e.key === 'Enter') inTimeInput.blur(); });
+  outTimeInput.addEventListener('keydown', e => { if (e.key === 'Enter') outTimeInput.blur(); });
+
+  // ╔══════════════════════════════════════╗
+  // ║  DRAGGABLE HANDLES                   ║
+  // ╚══════════════════════════════════════╝
+  function getTimeFromClientX(clientX) {
+    const rect = $('waveformContainer').getBoundingClientRect();
+    const pct  = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return pct * mediaDuration;
+  }
+
+  function onDragMove(clientX) {
+    if (!dragging || !mediaLoaded) return;
+    const t = getTimeFromClientX(clientX);
+    if (dragging === 'in')  setInNoPush(t);
+    else                    setOutNoPush(t);
+  }
+
+  function onDragEnd() {
+    if (!dragging) return;
+    markerIn.classList.remove('dragging');
+    markerOut.classList.remove('dragging');
+    dragging = null;
+    document.removeEventListener('mousemove', onMouseDragMove);
+    document.removeEventListener('mouseup',   onDragEnd);
+    document.removeEventListener('touchmove', onTouchDragMove);
+    document.removeEventListener('touchend',  onDragEnd);
+  }
+
+  function onMouseDragMove(e) { onDragMove(e.clientX); }
+  function onTouchDragMove(e) { e.preventDefault(); onDragMove(e.touches[0].clientX); }
+
+  function startDrag(e, which) {
+    if (!mediaLoaded) return;
+    e.stopPropagation();
+    e.preventDefault(); // prevent WaveSurfer receiving the pointer event through the handle
+    pushTrimUndo();
+    dragging = which;
+    const el = which === 'in' ? markerIn : markerOut;
+    el.classList.add('dragging');
+    document.addEventListener('mousemove', onMouseDragMove);
+    document.addEventListener('mouseup',   onDragEnd);
+    document.addEventListener('touchmove', onTouchDragMove, { passive: false });
+    document.addEventListener('touchend',  onDragEnd);
+  }
+
+  markerIn.addEventListener('mousedown',  e => startDrag(e, 'in'));
+  markerOut.addEventListener('mousedown', e => startDrag(e, 'out'));
+  markerIn.addEventListener('touchstart',  e => startDrag(e.touches[0], 'in'),  { passive: false });
+  markerOut.addEventListener('touchstart', e => startDrag(e.touches[0], 'out'), { passive: false });
+  // Prevent clicks on handles from bubbling to WaveSurfer and triggering a seek
+  markerIn.addEventListener('click',  e => e.stopPropagation());
+  markerOut.addEventListener('click', e => e.stopPropagation());
+
+  // ╔══════════════════════════════════════╗
+  // ║  KEYBOARD SHORTCUTS                  ║
+  // ╚══════════════════════════════════════╝
+  document.addEventListener('keydown', e => {
+    const tag     = e.target.tagName.toLowerCase();
+    const isInput = tag === 'input' || tag === 'textarea' || tag === 'select';
+
+    if (e.code === 'Space' && !isInput) {
+      e.preventDefault();
+      if (wavesurfer && mediaLoaded) {
+        const t = wavesurfer.getCurrentTime();
+        if (!wavesurfer.isPlaying() && t >= outPoint) wavesurfer.seekTo(inPoint / mediaDuration);
+        wavesurfer.playPause();
+      }
+    }
+
+    if (!isInput && wavesurfer && mediaLoaded) {
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); wavesurfer.skip(e.shiftKey ? -1 : -5); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); wavesurfer.skip(e.shiftKey ?  1 :  5); }
+      if (e.code === 'F5' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault(); setIn(wavesurfer.getCurrentTime());
+      }
+      if (e.code === 'F6' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault(); setOut(wavesurfer.getCurrentTime());
+      }
+      if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault(); undoTrim();
+      }
+      if (e.key === 'd' || e.key === 'D') { e.preventDefault(); setSpeed(speedIndex + 1); }
+      if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setSpeed(speedIndex - 1); }
+    }
+  });
+
+  // ╔══════════════════════════════════════╗
+  // ║  EXPORT                              ║
+  // ╚══════════════════════════════════════╝
+  $('btnExport').addEventListener('click', handleExport);
+
+  async function handleExport() {
+    if (!mediaLoaded || !serverFilePath) return;
+
+    if (!serverOnline) {
+      await checkHealth();
+      if (!serverOnline) { alert('Server is offline.'); return; }
+    }
+
+    const fmt        = $('outputFormat').value;
+    const isAudioFmt = ['mp3','wav','ogg','aac'].includes(fmt);
+    const audioOnly  = $('audioOnlyToggle').checked;
+
+    const premiereSafe = !isAudioFmt && !audioOnly && $('premiereSafe').checked;
+
+    const manifest = {
+      source: serverFilePath,
+      segments: [{ start: parseFloat(inPoint.toFixed(3)), end: parseFloat(outPoint.toFixed(3)) }],
+      fadeIn: 0, fadeOut: 0, crossfade: 0,
+      format: audioOnly ? 'mp3' : (premiereSafe ? 'mp4' : fmt),
+      sourceType: (isAudioFmt || audioOnly) ? 'audio' : (isVideo ? 'video' : 'audio'),
+      premiereSafe,           // server: ffmpeg -c:v libx264 -preset fast -crf 18 -c:a aac -vsync cfr -movflags +faststart
+      audioOnly,
+    };
+
+    const exportLabel = audioOnly ? 'Extracting audio…' : premiereSafe ? 'Exporting clip (H.264/CFR)…' : 'Exporting clip…';
+
+    // Show export overlay + blur card
+    playerCard.classList.add('processing');
+    exportSpinner.style.display    = '';
+    exportStatusText.style.display = '';
+    exportStatusText.textContent   = exportLabel;
+    exportTrackFill.className      = 'export-track-fill';
+    exportSuccess.classList.remove('visible');
+    exportErrorBox.classList.remove('visible');
+    exportOverlay.classList.add('visible');
+    $('btnExport').disabled = true;
+
+    try {
+      const res  = await fetch(`${API_BASE}/edit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(manifest),
+        signal: AbortSignal.timeout(600000)
+      });
+      const data = await res.json();
+
+      if (data.status === 'redirect' || data.url) {
+        const fileUrl = data.url;
+        const name    = data.filename || 'clip';
+
+        exportSpinner.style.display    = 'none';
+        exportStatusText.style.display = 'none';
+        exportTrackFill.className      = 'export-track-fill done';
+
+        $('exportFilename').textContent = name.length > 45
+          ? name.substring(0, 40) + '…' + name.substring(name.lastIndexOf('.'))
+          : name;
+        $('exportFilemeta').textContent = data.size || '';
+
+        const checkEl = $('successCheck');
+        checkEl.classList.remove('animate');
+        void checkEl.offsetWidth;
+        checkEl.classList.add('animate');
+
+        $('exportDownloadLink').href = fileUrl;
+        $('exportDownloadLink').setAttribute('download', name);
+        exportSuccess.classList.add('visible');
+
+        // Auto-download
+        const a = document.createElement('a');
+        a.href = fileUrl; a.download = name;
+        a.style.display = 'none';
+        document.body.appendChild(a); a.click();
+        setTimeout(() => document.body.removeChild(a), 100);
+
+      } else {
+        showExportError(data.error || 'Export failed');
+      }
+    } catch (err) {
+      showExportError(err.name === 'AbortError' ? 'Export timed out.' : 'Export failed.');
+    } finally {
+      $('btnExport').disabled = false;
+    }
+  }
+
+  function showExportError(msg) {
+    exportSpinner.style.display    = 'none';
+    exportStatusText.style.display = 'none';
+    exportTrackFill.className      = 'export-track-fill error';
+    $('exportErrorText').textContent = msg;
+    exportErrorBox.classList.add('visible');
+  }
+
+  function hideExportOverlay() {
+    exportOverlay.classList.remove('visible');
+    exportSuccess.classList.remove('visible');
+    exportErrorBox.classList.remove('visible');
+    playerCard.classList.remove('processing');
+    // Reset trim to full clip so user can trim again
+    inPoint  = 0;
+    outPoint = mediaDuration;
+    updateTrimUI();
+    if (wavesurfer) wavesurfer.seekTo(0);
+  }
+
+  $('trimAnotherBtn').addEventListener('click', hideExportOverlay);
+  $('exportRetryBtn').addEventListener('click', () => {
+    exportOverlay.classList.remove('visible');
+    exportSuccess.classList.remove('visible');
+    exportErrorBox.classList.remove('visible');
+    playerCard.classList.remove('processing');
+  });
+
+  // ╔══════════════════════════════════════╗
+  // ║  RESET                               ║
+  // ╚══════════════════════════════════════╝
+  $('fileRemove').addEventListener('click', fullReset);
+
+  // Clear selection — resets in/out to full clip
+  $('btnClearSelection').addEventListener('click', () => {
+    if (!mediaLoaded) return;
+    pushTrimUndo();
+    inPoint  = 0;
+    outPoint = mediaDuration;
+    updateTrimUI();
+  });
+
+  function resetEditor() {
+    if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
+    stopPlaybackLoop();
+    if (mediaBlobUrl) { URL.revokeObjectURL(mediaBlobUrl); mediaBlobUrl = null; }
+    mediaLoaded = false; isVideo = false; mediaDuration = 0;
+    inPoint = 0; outPoint = 0; trimUndoStack = [];
+    hideWaitingCard();
+
+    playerCard.classList.remove('visible');
+    playerCard.classList.remove('processing');
+    videoPreview.classList.remove('visible');
+    exportActionBar.classList.remove('visible');
+    fileBar.classList.remove('visible');
+    exportOverlay.classList.remove('visible');
+    exportSuccess.classList.remove('visible');
+    exportErrorBox.classList.remove('visible');
+    waveformLoading.classList.remove('visible');
+
+    transportTime.textContent = '00:00:00';
+    transportDur.textContent  = '/ 00:00:00';
+    trimLeft.style.width  = '0';
+    trimRight.style.width = '0';
+
+    $('iconPlay').style.display  = '';
+    $('iconPause').style.display = 'none';
+    $('btnPlay').classList.remove('active');
+    setSpeed(2);
+  }
+
+  function fullReset() {
+    resetEditor();
+    serverFilePath = null;
+    urlInput.value = '';
+    hideImportStatus();
+    importCard.classList.remove('collapsed');
+    $('infoHero').classList.remove('hidden');
+    grabBtn.style.display = 'none';
+    urlInput.focus();
+  }
+
+})();
+</script>
+
+</body>
+</html>
