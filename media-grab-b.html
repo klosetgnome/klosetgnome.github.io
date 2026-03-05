@@ -535,19 +535,6 @@
     40% { background: var(--accent); transform: scale(1.3); }
   }
 
-  /* Waiting info card (shown below waiting card during processing) */
-  .waiting-info-card {
-    display: none; padding: 28px 32px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    animation: fadeInUp 0.5s ease 0.15s both;
-  }
-  .waiting-info-card.visible { display: block; }
-  .waiting-info-placeholder {
-    font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--text-muted); text-align: center;
-  }
-
   /* Info hero */
   .info-hero {
     display: flex; align-items: center; gap: 24px; width: 100%;
@@ -811,11 +798,6 @@
     <div class="waiting-stage" id="waitingStage"></div>
     <div class="waiting-msg" id="waitingMsg"></div>
     <div class="waiting-dots"><span></span><span></span><span></span></div>
-  </div>
-
-  <!-- ═══ WAITING INFO CARD (shown alongside waiting card) ═══ -->
-  <div class="waiting-info-card" id="waitingInfoCard">
-    <div class="waiting-info-placeholder">Placeholder</div>
   </div>
 
   <div class="info-hero" id="infoHero">
@@ -1139,7 +1121,6 @@
   function showWaitingCard(stageKey) {
     waitingStageKey = stageKey || 'connecting';
     waitingCard.classList.add('visible');
-    $('waitingInfoCard').classList.add('visible');
     const stageLabels = {
       connecting: 'Connecting',
       downloading: 'Downloading',
@@ -1177,7 +1158,6 @@
 
   function hideWaitingCard() {
     waitingCard.classList.remove('visible');
-    $('waitingInfoCard').classList.remove('visible');
     if (waitingMsgTimer) { clearInterval(waitingMsgTimer); waitingMsgTimer = null; }
   }
 
@@ -1233,7 +1213,6 @@
 
     working = true;
     grabBtn.disabled = true;
-    $('infoHero').classList.add('hidden');
     importCard.classList.add('collapsed');
     showWaitingCard('connecting');
 
@@ -1374,6 +1353,7 @@
     isVideo      = videoFlag;
 
     importCard.classList.add('collapsed');
+    $('infoHero').classList.add('hidden');
     playerCard.classList.add('visible');
     waveformLoading.classList.add('visible');
 
@@ -1462,7 +1442,7 @@
     function loop() {
       if (loopGen !== gen) return; // stale — a newer loop has taken over, bail silently
       if (!wavesurfer || !wavesurfer.isPlaying()) return;
-      if (!dragging) {
+      if (!dragging && shuttleSpeed === 0) {
         const t = wavesurfer.getCurrentTime();
         if (t < inPoint) {
           wavesurfer.seekTo(inPoint / mediaDuration);
@@ -1501,12 +1481,12 @@
   });
   $('btnSkipBack').addEventListener('click', () => {
     if (!wavesurfer || !mediaLoaded) return;
-    const t = Math.max(inPoint, wavesurfer.getCurrentTime() - 1);
+    const t = Math.max(0, wavesurfer.getCurrentTime() - 1);
     wavesurfer.seekTo(t / mediaDuration);
   });
   $('btnSkipFwd').addEventListener('click', () => {
     if (!wavesurfer || !mediaLoaded) return;
-    const t = Math.min(outPoint, wavesurfer.getCurrentTime() + 1);
+    const t = Math.min(mediaDuration, wavesurfer.getCurrentTime() + 1);
     wavesurfer.seekTo(t / mediaDuration);
   });
 
@@ -1678,7 +1658,7 @@
         shuttleSpeed = 0;
         setSpeed(2); // 1×
       }
-      const t = Math.max(inPoint, wavesurfer.getCurrentTime() - 1);
+      const t = Math.max(0, wavesurfer.getCurrentTime() - 1);
       wavesurfer.seekTo(t / mediaDuration);
     }
 
