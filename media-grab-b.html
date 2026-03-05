@@ -2114,16 +2114,27 @@
     loadMediaIntoEditor(blobUrl, file.name, sizeStr, vidFlag);
     playerCard.classList.add('local-mode');
 
-    // Hide grab buttons, show SRT status
+    // Hide all grab buttons and SRT status bar
     $('btnExportAudio').style.display = 'none';
     $('btnExportVideo').style.display = 'none';
     $('btnExportSrt').style.display = 'none';
-    $('srtStatus').classList.add('visible');
-    $('srtStatusText').textContent = 'Preparing audio…';
+    $('srtStatus').classList.remove('visible');
+    exportActionBar.classList.add('visible');
+
+    // Blur entire player card with processing overlay
+    playerCard.classList.add('processing');
+    exportSpinner.style.display    = '';
+    exportStatusText.style.display = '';
+    exportStatusText.textContent   = 'Decoding audio…';
+    exportTrackFill.className      = 'export-track-fill';
+    exportTrackFill.parentElement.style.display = '';
+    exportSuccess.classList.remove('visible');
+    exportErrorBox.classList.remove('visible');
+    exportOverlay.classList.add('visible');
 
     working = false;
 
-    // Start transcription pipeline in parallel
+    // Start transcription pipeline
     runLocalSrtPipeline(file);
   }
 
@@ -2131,19 +2142,16 @@
   // ║  LOCAL SRT PIPELINE                  ║
   // ╚══════════════════════════════════════╝
   async function runLocalSrtPipeline(file) {
-    const srtStatusEl = $('srtStatus');
-    const srtTextEl = $('srtStatusText');
-
     try {
-      // Step 1: Decode audio to AudioBuffer
-      srtTextEl.textContent = 'Decoding audio…';
+      // Step 1: Decode audio
+      exportStatusText.textContent = 'Decoding audio…';
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const arrayBuf = await file.arrayBuffer();
       const audioBuffer = await audioCtx.decodeAudioData(arrayBuf);
       audioCtx.close();
 
       // Step 2: Downsample to 16kHz mono for Whisper
-      srtTextEl.textContent = 'Converting to 16kHz…';
+      exportStatusText.textContent = 'Preparing audio for transcription…';
       const targetLen = Math.ceil(audioBuffer.duration * 16000);
       const offlineCtx = new OfflineAudioContext(1, targetLen, 16000);
       const src = offlineCtx.createBufferSource();
@@ -2157,37 +2165,45 @@
       const wavBlob = pcmToWav(pcm16k, 16000);
 
       // Step 3: Try server transcription (direct to Funnel)
-      srtTextEl.textContent = 'Uploading for transcription…';
+      exportStatusText.textContent = 'Uploading audio…';
 
       let words = null;
       try {
-        words = await serverTranscribe(wavBlob, srtTextEl);
+        words = await serverTranscribe(wavBlob, {
+          set textContent(t) { exportStatusText.textContent = t; }
+        });
       } catch (serverErr) {
         console.log('Server transcription failed, falling back to local:', serverErr);
-        srtTextEl.textContent = 'Server unavailable. Running local transcription…';
-        words = await localWhisperTranscribe(pcm16k, audioBuffer.duration, srtTextEl);
+        exportStatusText.textContent = 'Server unavailable. Transcribing locally…';
+        words = await localWhisperTranscribe(pcm16k, audioBuffer.duration, {
+          set textContent(t) { exportStatusText.textContent = t; }
+        });
       }
 
       if (!words || !words.length) {
-        srtTextEl.textContent = 'No speech detected.';
+        exportStatusText.textContent = 'No speech detected.';
+        exportSpinner.style.display = 'none';
+        exportTrackFill.parentElement.style.display = 'none';
         return;
       }
 
       // Step 4: Generate SRT
-      srtTextEl.textContent = 'Generating SRT…';
       const srt = wordsToSrt(words, 0);
       const sourceName = file.name.replace(/\.[^.]+$/, '') || 'transcription';
       localSrtContent = srt;
       localSrtName = sourceName + '.srt';
 
-      // Step 5: Show Grab SRT button
-      srtStatusEl.classList.remove('visible');
+      // Step 5: Clear overlay, show Grab SRT
+      exportOverlay.classList.remove('visible');
+      playerCard.classList.remove('processing');
       $('btnExportSrt').style.display = '';
-      $('btnExportSrt').textContent = 'Grab SRT';
+      $('btnExportSrt').textContent = 'Download SRT';
 
     } catch (err) {
       console.error('Local SRT pipeline error:', err);
-      srtTextEl.textContent = 'Transcription failed: ' + (err.message || err);
+      exportSpinner.style.display = 'none';
+      exportTrackFill.parentElement.style.display = 'none';
+      exportStatusText.textContent = 'Failed: ' + (err.message || err);
     }
   }
 
