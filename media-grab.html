@@ -2360,9 +2360,6 @@
   function handleLocalFile(file) {
     if (working) return;
     working = true;
-    isLocalFile = true;
-    localSrtContent = null;
-    localSrtName = null;
 
     importCard.classList.add('collapsed');
     $('infoHero').classList.add('hidden');
@@ -2372,6 +2369,12 @@
     const sizeStr = formatBytes(file.size);
 
     loadMediaIntoEditor(blobUrl, file.name, sizeStr, vidFlag);
+
+    // Set local-file state AFTER loadMediaIntoEditor, because
+    // resetEditor() inside it clears isLocalFile back to false.
+    isLocalFile = true;
+    localSrtContent = null;
+    localSrtName = null;
     playerCard.classList.add('local-mode');
 
     // Hide all grab buttons and SRT status bar
