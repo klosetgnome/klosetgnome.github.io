@@ -2102,12 +2102,24 @@
 
         exportSuccess.classList.add('visible');
 
-        // Auto-download
-        const a = document.createElement('a');
-        a.href = fileUrl; a.download = cleanName;
-        a.style.display = 'none';
-        document.body.appendChild(a); a.click();
-        setTimeout(() => document.body.removeChild(a), 100);
+        // Auto-download via blob so the filename is always respected
+        try {
+          const dlRes = await fetch(fileUrl);
+          const dlBlob = await dlRes.blob();
+          const dlUrl = URL.createObjectURL(dlBlob);
+          const a = document.createElement('a');
+          a.href = dlUrl; a.download = cleanName;
+          a.style.display = 'none';
+          document.body.appendChild(a); a.click();
+          setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(dlUrl); }, 100);
+        } catch (dlErr) {
+          // Fallback to direct link if blob fetch fails
+          const a = document.createElement('a');
+          a.href = fileUrl; a.download = cleanName;
+          a.style.display = 'none';
+          document.body.appendChild(a); a.click();
+          setTimeout(() => document.body.removeChild(a), 100);
+        }
 
       } else if (!completed) {
         showExportError('Export ended without a result.');
