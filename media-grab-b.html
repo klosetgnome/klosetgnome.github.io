@@ -122,7 +122,48 @@
   .toggle-switch input:checked + .toggle-track { background: var(--accent); }
   .toggle-switch input:checked + .toggle-track::after { transform: translateX(16px); }
 
-  /* ── Import card ── */
+  /* ── Keyboard shortcuts panel (header) ── */
+  .kbd-wrap { position: relative; }
+  .kbd-toggle {
+    background: none; border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px; cursor: pointer; color: var(--text-secondary);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s ease; width: 38px; height: 38px; flex-shrink: 0;
+  }
+  .kbd-toggle:hover { color: var(--accent); border-color: var(--accent); }
+  .kbd-toggle.active { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+  .kbd-toggle svg { width: 18px; height: 18px; stroke-width: 1.5; }
+  .kbd-panel {
+    display: none; position: absolute; top: calc(100% + 10px); right: 0;
+    z-index: 100; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow-sm);
+    padding: 20px; min-width: 280px; animation: fadeInDown 0.2s ease;
+  }
+  .kbd-panel.visible { display: block; }
+  .kbd-panel-title {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px;
+  }
+  .kbd-list { display: flex; flex-direction: column; gap: 8px; }
+  .kbd-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    font-family: var(--mono); font-size: 11px; color: var(--text-secondary);
+  }
+  .kbd-keys { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+  .kbd-keys kbd {
+    display: inline-block; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 3px; padding: 2px 6px; font-family: var(--mono); font-size: 9px;
+    font-weight: 500; color: var(--text-secondary); min-width: 20px; text-align: center;
+  }
+
+  /* ── Card blur while processing ── */
+  .player-card { transition: background 0.3s ease, border-color 0.3s ease; }
+  .player-card.processing > *:not(.export-overlay) {
+    filter: blur(3px); pointer-events: none;
+    transition: filter 0.3s ease;
+  }
+  .player-card.processing { cursor: wait; }
   .import-card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius-lg); overflow: hidden;
@@ -227,18 +268,30 @@
   .trim-mask-right { right: 0; width: 0; }
   .trim-marker {
     position: absolute; top: 0; bottom: 0; width: 2px; z-index: 4;
+    pointer-events: all; cursor: ew-resize;
+    touch-action: none;
+  }
+  /* Wider invisible hit area so it's easy to grab */
+  .trim-marker::before {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -10px; right: -10px;
   }
   .trim-marker-in { background: var(--in-color); }
   .trim-marker-out { background: var(--out-color); }
-  .trim-marker::after {
-    content: attr(data-label);
-    position: absolute; top: 6px;
+  .trim-marker.dragging { cursor: grabbing; z-index: 6; }
+
+  /* Handle flag tab at the top of each marker */
+  .marker-handle {
+    position: absolute; top: 8px;
+    width: 30px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
     font-family: var(--mono); font-size: 8px; font-weight: 600;
-    letter-spacing: 0.5px; color: #fff;
-    padding: 2px 4px; border-radius: 3px; white-space: nowrap; line-height: 1;
+    letter-spacing: 1px; color: #fff; line-height: 1;
+    user-select: none; pointer-events: all;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
   }
-  .trim-marker-in::after { left: 3px; background: var(--in-color); }
-  .trim-marker-out::after { right: 3px; background: var(--out-color); }
+  .trim-marker-in  .marker-handle { left: 1px;  background: var(--in-color);  border-radius: 0 3px 3px 0; }
+  .trim-marker-out .marker-handle { right: 1px; background: var(--out-color); border-radius: 3px 0 0 3px; }
+  .trim-marker.dragging .marker-handle { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
 
   /* Transport */
   .transport {
@@ -299,21 +352,6 @@
     font-family: var(--mono); font-size: 11px; color: var(--text-muted); white-space: nowrap;
   }
   .trim-duration strong { color: var(--text-primary); font-weight: 600; }
-
-  /* Shortcut chips */
-  .shortcuts-row {
-    display: flex; align-items: center; gap: 14px;
-    padding: 2px 20px 14px; flex-wrap: wrap;
-  }
-  .shortcut-chip {
-    display: flex; align-items: center; gap: 4px;
-    font-family: var(--mono); font-size: 10px; color: var(--text-muted);
-  }
-  .shortcut-chip kbd {
-    display: inline-block; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 3px; padding: 1px 5px; font-family: var(--mono); font-size: 9px;
-    font-weight: 500; color: var(--text-secondary); min-width: 18px; text-align: center;
-  }
 
   /* File bar */
   .file-bar {
@@ -461,6 +499,26 @@
 <header class="site-header">
   <h1><span>MEDIA</span> GRAB</h1>
   <div class="header-actions">
+    <div class="kbd-wrap">
+      <button class="kbd-toggle" id="kbdToggle" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="6" width="20" height="12" rx="2"/>
+          <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/>
+        </svg>
+      </button>
+      <div class="kbd-panel" id="kbdPanel">
+        <div class="kbd-panel-title">Keyboard Shortcuts</div>
+        <div class="kbd-list">
+          <div class="kbd-row"><span>Set in point</span><span class="kbd-keys"><kbd>I</kbd></span></div>
+          <div class="kbd-row"><span>Set out point</span><span class="kbd-keys"><kbd>O</kbd></span></div>
+          <div class="kbd-row"><span>Play / Pause</span><span class="kbd-keys"><kbd>Space</kbd></span></div>
+          <div class="kbd-row"><span>Skip 5s</span><span class="kbd-keys"><kbd>←</kbd> <kbd>→</kbd></span></div>
+          <div class="kbd-row"><span>Skip 1s</span><span class="kbd-keys"><kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd></span></div>
+          <div class="kbd-row"><span>Speed up / down</span><span class="kbd-keys"><kbd>D</kbd> <kbd>F</kbd></span></div>
+          <div class="kbd-row"><span>Undo trim</span><span class="kbd-keys"><kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>Z</kbd></span></div>
+        </div>
+      </div>
+    </div>
     <div class="settings-wrap">
       <button class="settings-toggle" id="settingsToggle" aria-label="Settings" title="Settings">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -487,6 +545,26 @@
             </div>
             <label class="toggle-switch">
               <input type="checkbox" id="premiereSafe" checked>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div class="toggle-row" style="margin-top:12px;">
+            <div class="toggle-label-wrap">
+              <span class="toggle-row-label">Audio only</span>
+              <span class="toggle-row-hint">Downloads audio track, no video</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="audioOnlyToggle">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div class="toggle-row" style="margin-top:12px;">
+            <div class="toggle-label-wrap">
+              <span class="toggle-row-label">Loop playback</span>
+              <span class="toggle-row-hint">Loops between in and out points</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="loopToggle" checked>
               <span class="toggle-track"></span>
             </label>
           </div>
@@ -608,8 +686,8 @@
         <div class="trim-overlay-container">
           <div class="trim-mask trim-mask-left" id="trimLeft"></div>
           <div class="trim-mask trim-mask-right" id="trimRight"></div>
-          <div class="trim-marker trim-marker-in" id="markerIn" data-label="IN"></div>
-          <div class="trim-marker trim-marker-out" id="markerOut" data-label="OUT"></div>
+          <div class="trim-marker trim-marker-in" id="markerIn"><div class="marker-handle">IN</div></div>
+          <div class="trim-marker trim-marker-out" id="markerOut"><div class="marker-handle">OUT</div></div>
         </div>
       </div>
     </div>
@@ -634,22 +712,12 @@
 
     <!-- Trim controls -->
     <div class="trim-bar">
-      <button class="trim-btn in-btn" id="btnSetIn" title="Set in point at playhead (I)">Set In</button>
+      <button class="trim-btn in-btn" id="btnSetIn" title="Set in point at playhead (I)">In</button>
       <input class="trim-time-input in-input" id="inTimeInput" value="00:00:00.0" spellcheck="false" autocomplete="off">
-      <span class="trim-arrow">→</span>
       <input class="trim-time-input out-input" id="outTimeInput" value="00:00:00.0" spellcheck="false" autocomplete="off">
-      <button class="trim-btn out-btn" id="btnSetOut" title="Set out point at playhead (O)">Set Out</button>
+      <button class="trim-btn out-btn" id="btnSetOut" title="Set out point at playhead (O)">Out</button>
       <span class="trim-spacer"></span>
-      <span class="trim-duration">Clip: <strong id="clipDuration">00:00:00</strong></span>
-    </div>
-
-    <!-- Keyboard shortcut hints -->
-    <div class="shortcuts-row">
-      <span class="shortcut-chip"><kbd>I</kbd> set in</span>
-      <span class="shortcut-chip"><kbd>O</kbd> set out</span>
-      <span class="shortcut-chip"><kbd>Space</kbd> play/pause</span>
-      <span class="shortcut-chip"><kbd>←</kbd><kbd>→</kbd> 5s</span>
-      <span class="shortcut-chip"><kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd> 1s</span>
+      <button class="trim-btn" id="btnClearSelection" title="Reset in/out to full clip">Clear selection</button>
     </div>
 
     <!-- File bar -->
@@ -662,10 +730,8 @@
 
   <!-- ═══ EXPORT ACTION BAR ═══ -->
   <div class="export-action-bar" id="exportActionBar">
-    <button class="btn-secondary-bar" id="btnReset">Clear</button>
     <span class="export-spacer"></span>
-    <span class="export-clip-info" id="exportClipInfo"></span>
-    <button class="btn-primary" id="btnExport">Grab Clip</button>
+    <button class="btn-primary" id="btnExport">Grab</button>
   </div>
 
   <!-- Info hero -->
@@ -689,7 +755,7 @@
     <div class="info-hero-content">
       <div class="info-hero-title">Media Grab</div>
       <div class="info-hero-desc">
-        Paste a YouTube, TikTok, Instagram, or Twitter URL. The server downloads the full video, then streams a <span class="hl">low-res preview</span> to your browser. Set <span class="hl">in and out points</span> and hit <span class="hl">Grab Clip</span> — you'll get just the bit you need, in full quality.
+        Paste a YouTube, TikTok, Instagram, or Twitter URL. The server downloads the full video, then streams a <span class="hl">low-res preview</span> to your browser. Set <span class="hl">in and out points</span> and hit <span class="hl">Grab</span> to get just the bit you need, in full quality.
       </div>
     </div>
   </div>
@@ -727,6 +793,8 @@
   let serverOnline   = false;
   let working        = false;
   let animFrameId    = null;
+  let trimUndoStack  = [];
+  let dragging       = null; // 'in' | 'out' | null
 
   // ╔══════════════════════════════════════╗
   // ║  DOM                                 ║
@@ -756,9 +824,7 @@
   const speedBadge      = $('speedBadge');
   const inTimeInput     = $('inTimeInput');
   const outTimeInput    = $('outTimeInput');
-  const clipDuration    = $('clipDuration');
   const exportActionBar = $('exportActionBar');
-  const exportClipInfo  = $('exportClipInfo');
   const fileBar         = $('fileBar');
 
   const exportOverlay   = $('exportOverlay');
@@ -787,6 +853,25 @@
       cursorColor: s.getPropertyValue('--waveform-cursor').trim()
     });
   }
+
+  // ╔══════════════════════════════════════╗
+  // ║  KEYBOARD SHORTCUTS PANEL            ║
+  // ╚══════════════════════════════════════╝
+  (function () {
+    const kbdBtn   = $('kbdToggle');
+    const kbdPanel = $('kbdPanel');
+    kbdBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      kbdPanel.classList.toggle('visible');
+      kbdBtn.classList.toggle('active');
+    });
+    document.addEventListener('click', e => {
+      if (!kbdPanel.contains(e.target) && e.target !== kbdBtn) {
+        kbdPanel.classList.remove('visible');
+        kbdBtn.classList.remove('active');
+      }
+    });
+  })();
 
   // ╔══════════════════════════════════════╗
   // ║  SETTINGS PANEL                      ║
@@ -1106,7 +1191,7 @@
       cursorColor:   s.getPropertyValue('--waveform-cursor').trim(),
       cursorWidth: 1,
       barWidth: 2, barGap: 1, barRadius: 2,
-      height: 56, normalize: true
+      height: 28, normalize: true
     });
 
     wavesurfer.load(blobUrl);
@@ -1165,9 +1250,14 @@
       if (t < inPoint) {
         wavesurfer.seekTo(inPoint / mediaDuration);
       } else if (t >= outPoint) {
-        wavesurfer.pause();
-        wavesurfer.seekTo(inPoint / mediaDuration);
-        return;
+        if ($('loopToggle').checked) {
+          wavesurfer.seekTo(inPoint / mediaDuration);
+          if (isVideo) videoEl.currentTime = inPoint;
+        } else {
+          wavesurfer.pause();
+          wavesurfer.seekTo(inPoint / mediaDuration);
+          return;
+        }
       }
       onTimeUpdate();
       animFrameId = requestAnimationFrame(loop);
@@ -1203,24 +1293,40 @@
   speedBadge.addEventListener('click', () => setSpeed((speedIndex + 1) % SPEED_STEPS.length));
 
   // ╔══════════════════════════════════════╗
-  // ║  TRIM POINT LOGIC                    ║
+  // ║  TRIM UNDO STACK                     ║
   // ╚══════════════════════════════════════╝
-  function setIn(t) {
-    inPoint = Math.max(0, Math.min(t, outPoint - 0.1));
+  function pushTrimUndo() {
+    trimUndoStack.push({ in: inPoint, out: outPoint });
+    if (trimUndoStack.length > 80) trimUndoStack.shift();
+  }
+
+  function undoTrim() {
+    if (!trimUndoStack.length || !mediaLoaded) return;
+    const prev = trimUndoStack.pop();
+    inPoint  = prev.in;
+    outPoint = prev.out;
     updateTrimUI();
   }
 
-  function setOut(t) {
+  // ╔══════════════════════════════════════╗
+  // ║  TRIM POINT LOGIC                    ║
+  // ╚══════════════════════════════════════╝
+  // No-push variants used during drag (undo captured once on mousedown)
+  function setInNoPush(t) {
+    inPoint = Math.max(0, Math.min(t, outPoint - 0.1));
+    updateTrimUI();
+  }
+  function setOutNoPush(t) {
     outPoint = Math.min(mediaDuration, Math.max(t, inPoint + 0.1));
     updateTrimUI();
   }
+  // Push-undo variants used for button / keyboard
+  function setIn(t)  { pushTrimUndo(); setInNoPush(t); }
+  function setOut(t) { pushTrimUndo(); setOutNoPush(t); }
 
   function updateTrimUI() {
     inTimeInput.value  = formatTimeInput(inPoint);
     outTimeInput.value = formatTimeInput(outPoint);
-    const dur = outPoint - inPoint;
-    clipDuration.textContent = formatTime(dur);
-    exportClipInfo.innerHTML = `<strong>${formatTimeInput(inPoint)}</strong> → <strong>${formatTimeInput(outPoint)}</strong> · ${formatTime(dur)}`;
     renderTrimOverlays();
   }
 
@@ -1259,6 +1365,54 @@
   outTimeInput.addEventListener('keydown', e => { if (e.key === 'Enter') outTimeInput.blur(); });
 
   // ╔══════════════════════════════════════╗
+  // ║  DRAGGABLE HANDLES                   ║
+  // ╚══════════════════════════════════════╝
+  function getTimeFromClientX(clientX) {
+    const rect = $('waveformContainer').getBoundingClientRect();
+    const pct  = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return pct * mediaDuration;
+  }
+
+  function onDragMove(clientX) {
+    if (!dragging || !mediaLoaded) return;
+    const t = getTimeFromClientX(clientX);
+    if (dragging === 'in')  setInNoPush(t);
+    else                    setOutNoPush(t);
+  }
+
+  function onDragEnd() {
+    if (!dragging) return;
+    markerIn.classList.remove('dragging');
+    markerOut.classList.remove('dragging');
+    dragging = null;
+    document.removeEventListener('mousemove', onMouseDragMove);
+    document.removeEventListener('mouseup',   onDragEnd);
+    document.removeEventListener('touchmove', onTouchDragMove);
+    document.removeEventListener('touchend',  onDragEnd);
+  }
+
+  function onMouseDragMove(e) { onDragMove(e.clientX); }
+  function onTouchDragMove(e) { e.preventDefault(); onDragMove(e.touches[0].clientX); }
+
+  function startDrag(e, which) {
+    if (!mediaLoaded) return;
+    e.stopPropagation();
+    pushTrimUndo();
+    dragging = which;
+    const el = which === 'in' ? markerIn : markerOut;
+    el.classList.add('dragging');
+    document.addEventListener('mousemove', onMouseDragMove);
+    document.addEventListener('mouseup',   onDragEnd);
+    document.addEventListener('touchmove', onTouchDragMove, { passive: false });
+    document.addEventListener('touchend',  onDragEnd);
+  }
+
+  markerIn.addEventListener('mousedown',  e => startDrag(e, 'in'));
+  markerOut.addEventListener('mousedown', e => startDrag(e, 'out'));
+  markerIn.addEventListener('touchstart',  e => startDrag(e.touches[0], 'in'),  { passive: true });
+  markerOut.addEventListener('touchstart', e => startDrag(e.touches[0], 'out'), { passive: true });
+
+  // ╔══════════════════════════════════════╗
   // ║  KEYBOARD SHORTCUTS                  ║
   // ╚══════════════════════════════════════╝
   document.addEventListener('keydown', e => {
@@ -1283,6 +1437,9 @@
       if ((e.key === 'o' || e.key === 'O') && !e.ctrlKey && !e.metaKey) {
         e.preventDefault(); setOut(wavesurfer.getCurrentTime());
       }
+      if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault(); undoTrim();
+      }
       if (e.key === 'd' || e.key === 'D') { e.preventDefault(); setSpeed(speedIndex + 1); }
       if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setSpeed(speedIndex - 1); }
     }
@@ -1301,23 +1458,26 @@
       if (!serverOnline) { alert('Server is offline.'); return; }
     }
 
-    const fmt       = $('outputFormat').value;
+    const fmt        = $('outputFormat').value;
     const isAudioFmt = ['mp3','wav','ogg','aac'].includes(fmt);
+    const audioOnly  = $('audioOnlyToggle').checked;
 
-    const premiereSafe = !isAudioFmt && $('premiereSafe').checked;
+    const premiereSafe = !isAudioFmt && !audioOnly && $('premiereSafe').checked;
 
     const manifest = {
       source: serverFilePath,
       segments: [{ start: parseFloat(inPoint.toFixed(3)), end: parseFloat(outPoint.toFixed(3)) }],
       fadeIn: 0, fadeOut: 0, crossfade: 0,
-      format: premiereSafe ? 'mp4' : fmt,
-      sourceType: isAudioFmt ? 'audio' : (isVideo ? 'video' : 'audio'),
+      format: audioOnly ? 'mp3' : (premiereSafe ? 'mp4' : fmt),
+      sourceType: (isAudioFmt || audioOnly) ? 'audio' : (isVideo ? 'video' : 'audio'),
       premiereSafe,           // server: ffmpeg -c:v libx264 -preset fast -crf 18 -c:a aac -vsync cfr -movflags +faststart
+      audioOnly,
     };
 
-    const exportLabel = premiereSafe ? 'Exporting clip (H.264/CFR)…' : 'Exporting clip…';
+    const exportLabel = audioOnly ? 'Extracting audio…' : premiereSafe ? 'Exporting clip (H.264/CFR)…' : 'Exporting clip…';
 
-    // Show export overlay
+    // Show export overlay + blur card
+    playerCard.classList.add('processing');
     exportSpinner.style.display    = '';
     exportStatusText.style.display = '';
     exportStatusText.textContent   = exportLabel;
@@ -1387,6 +1547,7 @@
     exportOverlay.classList.remove('visible');
     exportSuccess.classList.remove('visible');
     exportErrorBox.classList.remove('visible');
+    playerCard.classList.remove('processing');
     // Reset trim to full clip so user can trim again
     inPoint  = 0;
     outPoint = mediaDuration;
@@ -1399,14 +1560,21 @@
     exportOverlay.classList.remove('visible');
     exportSuccess.classList.remove('visible');
     exportErrorBox.classList.remove('visible');
+    playerCard.classList.remove('processing');
   });
 
   // ╔══════════════════════════════════════╗
   // ║  RESET                               ║
   // ╚══════════════════════════════════════╝
   $('fileRemove').addEventListener('click', fullReset);
-  $('btnReset').addEventListener('click', () => {
-    if (confirm('Clear this file and start over?')) fullReset();
+
+  // Clear selection — resets in/out to full clip
+  $('btnClearSelection').addEventListener('click', () => {
+    if (!mediaLoaded) return;
+    pushTrimUndo();
+    inPoint  = 0;
+    outPoint = mediaDuration;
+    updateTrimUI();
   });
 
   function resetEditor() {
@@ -1414,9 +1582,10 @@
     stopPlaybackLoop();
     if (mediaBlobUrl) { URL.revokeObjectURL(mediaBlobUrl); mediaBlobUrl = null; }
     mediaLoaded = false; isVideo = false; mediaDuration = 0;
-    inPoint = 0; outPoint = 0;
+    inPoint = 0; outPoint = 0; trimUndoStack = [];
 
     playerCard.classList.remove('visible');
+    playerCard.classList.remove('processing');
     videoPreview.classList.remove('visible');
     exportActionBar.classList.remove('visible');
     fileBar.classList.remove('visible');
