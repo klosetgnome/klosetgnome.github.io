@@ -164,8 +164,40 @@
     transition: filter 0.3s ease;
   }
   .player-card.processing { cursor: wait; }
-  /* Import card loading state */
+  /* Import card loading state — matches Copy Assist .creating-overlay pattern */
   .import-card { position: relative; }
+  .import-card.processing > *:not(.import-card-overlay) {
+    filter: blur(6px);
+    opacity: 0.35;
+    pointer-events: none;
+    transition: filter 0.4s ease, opacity 0.4s ease;
+  }
+  .import-card-overlay {
+    display: none; position: absolute; inset: 0; z-index: 10;
+    flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    background: var(--surface-transparent, rgba(0,0,0,0.04));
+    border-radius: var(--radius-lg);
+  }
+  .import-card.processing .import-card-overlay { display: flex; }
+  .import-card-overlay .overlay-text {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--text-secondary);
+  }
+  .import-card-overlay .overlay-track {
+    width: 60%; max-width: 300px; height: 3px;
+    background: var(--border); border-radius: 2px; overflow: hidden;
+  }
+  .import-card-overlay .overlay-track-fill {
+    width: 40%; height: 100%; background: var(--accent); border-radius: 2px;
+    animation: regenSlide 1.4s ease-in-out infinite;
+  }
+  .import-card-overlay .overlay-track-fill.determinate {
+    width: var(--pct, 0%); animation: none; transition: width 0.3s ease;
+  }
+  @keyframes regenSlide {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+  }
   .import-card-overlay {
     display: none; position: absolute; inset: 0; z-index: 10;
     flex-direction: column; align-items: center; justify-content: center; gap: 14px;
@@ -539,8 +571,8 @@
       <div class="kbd-panel" id="kbdPanel">
         <div class="kbd-panel-title">Keyboard Shortcuts</div>
         <div class="kbd-list">
-          <div class="kbd-row"><span>Set in point</span><span class="kbd-keys"><kbd>I</kbd></span></div>
-          <div class="kbd-row"><span>Set out point</span><span class="kbd-keys"><kbd>O</kbd></span></div>
+          <div class="kbd-row"><span>Set in point</span><span class="kbd-keys"><kbd>F5</kbd></span></div>
+          <div class="kbd-row"><span>Set out point</span><span class="kbd-keys"><kbd>F6</kbd></span></div>
           <div class="kbd-row"><span>Play / Pause</span><span class="kbd-keys"><kbd>Space</kbd></span></div>
           <div class="kbd-row"><span>Skip 5s</span><span class="kbd-keys"><kbd>←</kbd> <kbd>→</kbd></span></div>
           <div class="kbd-row"><span>Skip 1s</span><span class="kbd-keys"><kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd></span></div>
@@ -623,10 +655,9 @@
 
   <!-- ═══ IMPORT CARD ═══ -->
   <div class="import-card" id="importCard">
-    <!-- Blur overlay shown during fetch -->
+    <!-- Loading overlay — Copy Assist style -->
     <div class="import-card-overlay" id="importCardOverlay">
-      <div class="overlay-spinner"></div>
-      <div class="overlay-text pulse" id="overlayText">Connecting to server…</div>
+      <div class="overlay-text" id="overlayText">Connecting to server…</div>
       <div class="overlay-track"><div class="overlay-track-fill" id="overlayTrackFill"></div></div>
     </div>
     <span class="card-label">Media link</span>
@@ -981,18 +1012,17 @@
   // ║  IMPORT STATUS HELPERS               ║
   // ╚══════════════════════════════════════╝
   function setImportProgress(pct, text) {
-    // Show the blur overlay with status
     importCard.classList.add('processing');
     $('overlayText').textContent = text;
     const fill = $('overlayTrackFill');
     if (pct !== null && pct >= 0) {
       fill.className = 'overlay-track-fill determinate';
-      fill.style.width = Math.min(100, Math.round(pct)) + '%';
+      fill.style.setProperty('--pct', Math.min(100, Math.round(pct)) + '%');
     } else {
       fill.className = 'overlay-track-fill';
-      fill.style.width = '100%';
+      fill.style.removeProperty('--pct');
     }
-    // Also keep legacy status bar updated
+    // Keep legacy status bar in sync
     importStatus.classList.add('visible');
     importDot.className = 'status-dot working';
     importText.textContent = text;
@@ -1250,7 +1280,7 @@
       $('iconPlay').style.display  = 'none';
       $('iconPause').style.display = '';
       $('btnPlay').classList.add('active');
-      if (isVideo) { videoEl.currentTime = wavesurfer.getCurrentTime(); videoEl.play(); }
+      if (isVideo) { videoEl.currentTime = wavesurfer.getCurrentTime(); videoEl.playbackRate = SPEED_STEPS[speedIndex]; videoEl.play(); }
       startPlaybackLoop();
     });
 
@@ -1267,7 +1297,14 @@
     if (!wavesurfer) return;
     const t = wavesurfer.getCurrentTime();
     transportTime.textContent = formatTime(t);
-    if (isVideo && Math.abs(videoEl.currentTime - t) > 0.4) videoEl.currentTime = t;
+    // Only force-seek video if drift is large relative to playback speed.
+    // At higher speeds the video naturally falls behind slightly but recovers —
+    // forced seeks cause decode stalls and choppiness. Tolerance scales with rate.
+    if (isVideo) {
+      const rate = SPEED_STEPS[speedIndex];
+      const tolerance = Math.max(0.5, rate * 0.6);
+      if (Math.abs(videoEl.currentTime - t) > tolerance) videoEl.currentTime = t;
+    }
   }
 
   // ╔══════════════════════════════════════╗
@@ -1325,6 +1362,7 @@
     speedBadge.textContent = rate + '×';
     speedBadge.classList.toggle('modified', rate !== 1);
     if (wavesurfer) wavesurfer.setPlaybackRate(rate);
+    if (isVideo) videoEl.playbackRate = rate; // keep video element in lock-step
   }
   speedBadge.addEventListener('click', () => setSpeed((speedIndex + 1) % SPEED_STEPS.length));
 
@@ -1471,10 +1509,10 @@
     if (!isInput && wavesurfer && mediaLoaded) {
       if (e.key === 'ArrowLeft')  { e.preventDefault(); wavesurfer.skip(e.shiftKey ? -1 : -5); }
       if (e.key === 'ArrowRight') { e.preventDefault(); wavesurfer.skip(e.shiftKey ?  1 :  5); }
-      if ((e.key === 'i' || e.key === 'I') && !e.ctrlKey && !e.metaKey) {
+      if (e.code === 'F5' && !e.ctrlKey && !e.metaKey) {
         e.preventDefault(); setIn(wavesurfer.getCurrentTime());
       }
-      if ((e.key === 'o' || e.key === 'O') && !e.ctrlKey && !e.metaKey) {
+      if (e.code === 'F6' && !e.ctrlKey && !e.metaKey) {
         e.preventDefault(); setOut(wavesurfer.getCurrentTime());
       }
       if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) {
