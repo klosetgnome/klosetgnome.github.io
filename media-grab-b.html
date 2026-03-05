@@ -400,15 +400,19 @@
   .trim-btn.in-btn:hover { background: rgba(74, 140, 63, 0.1); }
   .trim-btn.out-btn { border-color: var(--out-color); color: var(--out-color); }
   .trim-btn.out-btn:hover { background: var(--error-glow); }
-  .trim-time-input {
+  .tc-drag {
     font-family: var(--mono); font-size: 12px; font-weight: 500;
     background: var(--bg); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 6px 10px;
-    color: var(--text-primary); width: 80px; text-align: center;
-    outline: none; transition: border-color 0.2s, box-shadow 0.2s; letter-spacing: 0.5px;
+    color: var(--text-primary); text-align: center;
+    letter-spacing: 0.5px; user-select: none; cursor: ns-resize;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    min-width: 72px; display: inline-block;
   }
-  .trim-time-input.in-input:focus { border-color: var(--in-color); box-shadow: 0 0 0 3px rgba(74, 140, 63, 0.12); }
-  .trim-time-input.out-input:focus { border-color: var(--out-color); box-shadow: 0 0 0 3px var(--error-glow); }
+  .tc-drag:hover { border-color: var(--accent); }
+  .tc-drag.dragging { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .tc-drag.in-drag.dragging { border-color: var(--in-color); box-shadow: 0 0 0 3px rgba(74, 140, 63, 0.12); }
+  .tc-drag.out-drag.dragging { border-color: var(--out-color); box-shadow: 0 0 0 3px var(--error-glow); }
 
   /* File bar */
   .file-bar {
@@ -577,7 +581,7 @@
   .player-card.local-mode .trim-overlay-container,
   .player-card.local-mode .transport-divider,
   .player-card.local-mode .trim-btn,
-  .player-card.local-mode .trim-time-input,
+  .player-card.local-mode .tc-drag,
   .player-card.local-mode #btnClearSelection { display: none !important; }
 
   /* ── SRT status in export bar ── */
@@ -811,8 +815,8 @@
       <span class="transport-divider"></span>
 
       <button class="trim-btn in-btn" id="btnSetIn" title="Mark IN at playhead (I)">In</button>
-      <input class="trim-time-input in-input" id="inTimeInput" value="00:00:00" spellcheck="false" autocomplete="off">
-      <input class="trim-time-input out-input" id="outTimeInput" value="00:00:00" spellcheck="false" autocomplete="off">
+      <span class="tc-drag in-drag" id="inTimeDisplay" title="Drag up/down to adjust">00:00:00</span>
+      <span class="tc-drag out-drag" id="outTimeDisplay" title="Drag up/down to adjust">00:00:00</span>
       <button class="trim-btn out-btn" id="btnSetOut" title="Mark OUT at playhead (O)">Out</button>
 
       <span class="transport-spacer"></span>
@@ -942,8 +946,8 @@
   const markerOut       = $('markerOut');
 
   const speedBadge      = $('speedBadge');
-  const inTimeInput     = $('inTimeInput');
-  const outTimeInput    = $('outTimeInput');
+  const inTimeDisplay   = $('inTimeDisplay');
+  const outTimeDisplay  = $('outTimeDisplay');
   const exportActionBar = $('exportActionBar');
   const fileBar         = $('fileBar');
 
@@ -1416,7 +1420,15 @@
       videoEl.load();
     }
 
-    $('fileName').textContent = name;
+    const fileNameEl = $('fileName');
+    fileNameEl.dataset.fullName = name;
+    if (name.length > 14) {
+      const ext = name.lastIndexOf('.') > 0 ? name.substring(name.lastIndexOf('.')) : '';
+      const avail = 14 - ext.length - 1;
+      fileNameEl.textContent = avail > 2 ? name.substring(0, avail) + '…' + ext : name.substring(0, 13) + '…';
+    } else {
+      fileNameEl.textContent = name;
+    }
     $('fileMeta').textContent = size || '';
     fileBar.classList.add('visible');
 
@@ -1612,8 +1624,8 @@
   function setOut(t) { pushTrimUndo(); setOutNoPush(t); }
 
   function updateTrimUI() {
-    inTimeInput.value  = formatTimeInput(inPoint);
-    outTimeInput.value = formatTimeInput(outPoint);
+    inTimeDisplay.textContent  = formatTimeInput(inPoint);
+    outTimeDisplay.textContent = formatTimeInput(outPoint);
     renderTrimOverlays();
   }
 
@@ -1637,19 +1649,74 @@
     setOut(wavesurfer.getCurrentTime());
   });
 
-  // Direct time input editing
-  inTimeInput.addEventListener('change', () => {
-    const t = parseTimeInput(inTimeInput.value);
-    setIn(Math.min(t, mediaDuration));
-    if (wavesurfer) wavesurfer.seekTo(inPoint / mediaDuration);
-  });
-  outTimeInput.addEventListener('change', () => {
-    const t = parseTimeInput(outTimeInput.value);
-    setOut(Math.min(t, mediaDuration));
-    if (wavesurfer) wavesurfer.seekTo(outPoint / mediaDuration);
-  });
-  inTimeInput.addEventListener('keydown', e => { if (e.key === 'Enter') inTimeInput.blur(); });
-  outTimeInput.addEventListener('keydown', e => { if (e.key === 'Enter') outTimeInput.blur(); });
+  // ╔══════════════════════════════════════╗
+  // ║  DRAG-TO-ADJUST TIMECODES           ║
+  // ╚══════════════════════════════════════╝
+  (function () {
+    const SENSITIVITY = 0.5; // seconds per pixel of vertical drag
+
+    function setupTcDrag(el, getVal, setVal) {
+      let startY = 0;
+      let startVal = 0;
+      let active = false;
+
+      function onMove(clientY) {
+        if (!active || !mediaLoaded) return;
+        const delta = (startY - clientY) * SENSITIVITY;
+        const newVal = Math.max(0, Math.min(mediaDuration, startVal + delta));
+        setVal(newVal);
+      }
+
+      function onEnd() {
+        if (!active) return;
+        active = false;
+        el.classList.remove('dragging');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onEnd);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onEnd);
+      }
+
+      function onMouseMove(e) { onMove(e.clientY); }
+      function onTouchMove(e) { e.preventDefault(); onMove(e.touches[0].clientY); }
+
+      el.addEventListener('mousedown', e => {
+        if (!mediaLoaded) return;
+        e.preventDefault();
+        pushTrimUndo();
+        active = true;
+        startY = e.clientY;
+        startVal = getVal();
+        el.classList.add('dragging');
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onEnd);
+      });
+
+      el.addEventListener('touchstart', e => {
+        if (!mediaLoaded) return;
+        e.preventDefault();
+        pushTrimUndo();
+        active = true;
+        startY = e.touches[0].clientY;
+        startVal = getVal();
+        el.classList.add('dragging');
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        document.addEventListener('touchend', onEnd);
+      }, { passive: false });
+    }
+
+    setupTcDrag(
+      inTimeDisplay,
+      () => inPoint,
+      (v) => { setInNoPush(v); if (wavesurfer) wavesurfer.seekTo(inPoint / mediaDuration); }
+    );
+
+    setupTcDrag(
+      outTimeDisplay,
+      () => outPoint,
+      (v) => { setOutNoPush(v); if (wavesurfer) wavesurfer.seekTo(outPoint / mediaDuration); }
+    );
+  })();
 
   // ╔══════════════════════════════════════╗
   // ║  DRAGGABLE HANDLES                   ║
@@ -2041,7 +2108,7 @@
       const srtContent = wordsToSrt(trimmedWords, inPoint);
 
       // Build filename from source
-      const sourceName = $('fileName').textContent || 'clip';
+      const sourceName = $('fileName').dataset.fullName || $('fileName').textContent || 'clip';
       const srtName = sourceName.replace(/\.[^.]+$/, '') + '.srt';
 
       // Trigger download
@@ -2418,7 +2485,7 @@
       return;
     }
     const srtContent = wordsToSrt(trimmedWords, inPoint);
-    const sourceName = $('fileName').textContent || 'clip';
+    const sourceName = $('fileName').dataset.fullName || $('fileName').textContent || 'clip';
     const srtName = sourceName.replace(/\.[^.]+$/, '') + '.srt';
 
     const blob = new Blob([srtContent], { type: 'text/srt' });
