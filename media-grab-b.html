@@ -404,7 +404,7 @@
     font-family: var(--mono); font-size: 12px; font-weight: 500;
     background: var(--bg); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 6px 10px;
-    color: var(--text-primary); width: 96px; text-align: center;
+    color: var(--text-primary); width: 80px; text-align: center;
     outline: none; transition: border-color 0.2s, box-shadow 0.2s; letter-spacing: 0.5px;
   }
   .trim-time-input.in-input:focus { border-color: var(--in-color); box-shadow: 0 0 0 3px rgba(74, 140, 63, 0.12); }
@@ -483,9 +483,9 @@
   }
   .export-action-bar.visible { display: flex; }
   .btn-primary {
-    font-family: var(--mono); font-size: 11px; font-weight: 500;
-    letter-spacing: 1.5px; text-transform: uppercase;
-    border: none; border-radius: var(--radius); padding: 12px 24px;
+    font-family: var(--mono); font-size: 9px; font-weight: 500;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    border: none; border-radius: var(--radius); padding: 10px 20px;
     cursor: pointer; background: var(--accent); color: #fff; transition: all 0.2s; white-space: nowrap;
   }
   .btn-primary:hover { background: #d4623e; transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent-glow); }
@@ -768,8 +768,8 @@
       <span class="transport-divider"></span>
 
       <button class="trim-btn in-btn" id="btnSetIn" title="Mark IN at playhead (I)">In</button>
-      <input class="trim-time-input in-input" id="inTimeInput" value="00:00:00.0" spellcheck="false" autocomplete="off">
-      <input class="trim-time-input out-input" id="outTimeInput" value="00:00:00.0" spellcheck="false" autocomplete="off">
+      <input class="trim-time-input in-input" id="inTimeInput" value="00:00:00" spellcheck="false" autocomplete="off">
+      <input class="trim-time-input out-input" id="outTimeInput" value="00:00:00" spellcheck="false" autocomplete="off">
       <button class="trim-btn out-btn" id="btnSetOut" title="Mark OUT at playhead (O)">Out</button>
 
       <span class="transport-spacer"></span>
@@ -975,9 +975,8 @@
     if (isNaN(s) || s < 0) s = 0;
     const hh = Math.floor(s / 3600);
     const mm = Math.floor((s % 3600) / 60);
-    const secInt = Math.floor(s % 60);
-    const frac   = Math.round(((s % 60) - secInt) * 10);
-    return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0') + ':' + String(secInt).padStart(2,'0') + '.' + frac;
+    const ss = Math.floor(s % 60);
+    return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
   }
 
   function parseTimeInput(val) {
@@ -1329,7 +1328,7 @@
 
       hideWaitingCard();
 
-      loadMediaIntoEditor(blobUrl, completed.filename || 'downloaded', blob.size, vidFlag);
+      loadMediaIntoEditor(blobUrl, completed.filename || 'downloaded', completed.size || '', vidFlag);
 
     } catch (err) {
       let msg = 'Connection failed';
@@ -1365,7 +1364,7 @@
     }
 
     $('fileName').textContent = name;
-    $('fileMeta').textContent = formatBytes(size) + (isVideo ? ' · video preview' : ' · audio preview');
+    $('fileMeta').textContent = size || '';
     fileBar.classList.add('visible');
 
     const s = getComputedStyle(document.documentElement);
@@ -1394,11 +1393,14 @@
       updateTrimUI();
 
       exportActionBar.classList.add('visible');
+
+      // Ensure keyboard shortcuts work immediately (blur any focused input)
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     });
 
     wavesurfer.on('audioprocess', onTimeUpdate);
-    wavesurfer.on('seeking', onTimeUpdate);
-    wavesurfer.on('interaction', onTimeUpdate);
+    wavesurfer.on('seeking', onSeek);
+    wavesurfer.on('interaction', onSeek);
 
     wavesurfer.on('play', () => {
       $('iconPlay').style.display  = 'none';
@@ -1423,14 +1425,33 @@
     if (!wavesurfer) return;
     const t = wavesurfer.getCurrentTime();
     
-    // Only force-seek video if drift is large relative to playback speed.
-    // At higher speeds the video naturally falls behind slightly but recovers —
-    // forced seeks cause decode stalls and choppiness. Tolerance scales with rate.
+    // Tight video sync — force-seek if drift exceeds 150ms
     if (isVideo) {
-      const rate = SPEED_STEPS[speedIndex];
-      const tolerance = Math.max(0.5, rate * 0.6);
-      if (Math.abs(videoEl.currentTime - t) > tolerance) videoEl.currentTime = t;
+      if (Math.abs(videoEl.currentTime - t) > 0.15) videoEl.currentTime = t;
     }
+
+    // Enforce in/out bounds during normal playback (not shuttle)
+    // This fires on audioprocess which is more frequent than rAF,
+    // reducing visible overshoot at the out point
+    if (wavesurfer.isPlaying() && !dragging && shuttleSpeed === 0) {
+      if (t >= outPoint) {
+        if ($('loopToggle').checked) {
+          wavesurfer.seekTo(inPoint / mediaDuration);
+          if (isVideo) videoEl.currentTime = inPoint;
+        } else {
+          wavesurfer.pause();
+          wavesurfer.seekTo(inPoint / mediaDuration);
+        }
+      } else if (t < inPoint) {
+        wavesurfer.seekTo(inPoint / mediaDuration);
+      }
+    }
+  }
+
+  function onSeek() {
+    if (!wavesurfer) return;
+    // Force hard video sync on every seek
+    if (isVideo) videoEl.currentTime = wavesurfer.getCurrentTime();
   }
 
   // ╔══════════════════════════════════════╗
