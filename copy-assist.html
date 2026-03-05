@@ -979,7 +979,7 @@
   }
   function expandInputs() {
     inputSection.classList.remove('collapsed');
-    progressWrap.parentNode.insertBefore(submitRow, progressWrap);
+    inputSection.after(submitRow);
   }
 
   // ═══════════════════════════════════════════════════════════════
