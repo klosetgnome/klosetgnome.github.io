@@ -357,8 +357,9 @@
 
   /* Transport */
   .transport {
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 20px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 20px; border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
   }
   .transport-btn {
     background: var(--bg); border: 1px solid var(--border);
@@ -371,7 +372,11 @@
   .transport-btn svg { width: 12px; height: 12px; }
   .transport-time { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--text-primary); letter-spacing: 1px; min-width: 60px; }
   .transport-duration { font-family: var(--mono); font-size: 12px; color: var(--text-muted); }
-  .transport-spacer { flex: 1; }
+  .transport-spacer { flex: 1; min-width: 8px; }
+  .transport-divider {
+    width: 1px; height: 20px; background: var(--border);
+    flex-shrink: 0; margin: 0 6px;
+  }
   .speed-badge {
     font-family: var(--mono); font-size: 12px; font-weight: 500;
     letter-spacing: 0.5px; color: var(--text-secondary);
@@ -382,11 +387,7 @@
   .speed-badge:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
   .speed-badge.modified { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
 
-  /* Trim bar */
-  .trim-bar {
-    display: flex; align-items: center; gap: 8px;
-    padding: 12px 20px 10px; flex-wrap: wrap;
-  }
+  /* Trim controls (now inline in transport row) */
   .trim-btn {
     font-family: var(--mono); font-size: 10px; font-weight: 500;
     letter-spacing: 1px; text-transform: uppercase;
@@ -408,12 +409,6 @@
   }
   .trim-time-input.in-input:focus { border-color: var(--in-color); box-shadow: 0 0 0 3px rgba(74, 140, 63, 0.12); }
   .trim-time-input.out-input:focus { border-color: var(--out-color); box-shadow: 0 0 0 3px var(--error-glow); }
-  .trim-arrow { font-family: var(--mono); font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
-  .trim-spacer { flex: 1; min-width: 8px; }
-  .trim-duration {
-    font-family: var(--mono); font-size: 11px; color: var(--text-muted); white-space: nowrap;
-  }
-  .trim-duration strong { color: var(--text-primary); font-weight: 600; }
 
   /* File bar */
   .file-bar {
@@ -771,29 +766,26 @@
 
     <!-- Transport -->
     <div class="transport">
-      <button class="transport-btn" id="btnSkipBack" title="Skip back 5s">
+      <button class="transport-btn" id="btnSkipBack" title="Skip back 5s (clamps to In point)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
       </button>
       <button class="transport-btn" id="btnPlay" title="Play / Pause (Space)">
         <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6,4 20,12 6,20"/></svg>
         <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none"><rect x="5" y="4" width="4" height="16"/><rect x="15" y="4" width="4" height="16"/></svg>
       </button>
-      <button class="transport-btn" id="btnSkipFwd" title="Skip forward 5s">
+      <button class="transport-btn" id="btnSkipFwd" title="Skip forward 5s (clamps to Out point)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
       </button>
-      <span class="transport-time" id="transportTime">00:00:00</span>
-      <span class="transport-duration" id="transportDuration">/ 00:00:00</span>
       <span class="speed-badge" id="speedBadge" title="Click to cycle playback speed">1×</span>
-      <span class="transport-spacer"></span>
-    </div>
 
-    <!-- Trim controls -->
-    <div class="trim-bar">
-      <button class="trim-btn in-btn" id="btnSetIn" title="Set in point at playhead (I)">In</button>
+      <span class="transport-divider"></span>
+
+      <button class="trim-btn in-btn" id="btnSetIn" title="Set in point at playhead (F5)">In</button>
       <input class="trim-time-input in-input" id="inTimeInput" value="00:00:00.0" spellcheck="false" autocomplete="off">
       <input class="trim-time-input out-input" id="outTimeInput" value="00:00:00.0" spellcheck="false" autocomplete="off">
-      <button class="trim-btn out-btn" id="btnSetOut" title="Set out point at playhead (O)">Out</button>
-      <span class="trim-spacer"></span>
+      <button class="trim-btn out-btn" id="btnSetOut" title="Set out point at playhead (F6)">Out</button>
+
+      <span class="transport-spacer"></span>
       <button class="trim-btn" id="btnClearSelection" title="Reset in/out to full clip">Clear selection</button>
     </div>
 
@@ -905,8 +897,6 @@
   const markerIn        = $('markerIn');
   const markerOut       = $('markerOut');
 
-  const transportTime   = $('transportTime');
-  const transportDur    = $('transportDuration');
   const speedBadge      = $('speedBadge');
   const inTimeInput     = $('inTimeInput');
   const outTimeInput    = $('outTimeInput');
@@ -1390,7 +1380,7 @@
     wavesurfer.on('ready', () => {
       mediaLoaded   = true;
       mediaDuration = wavesurfer.getDuration();
-      transportDur.textContent = '/ ' + formatTime(mediaDuration);
+      
       wavesurfer.setPlaybackRate(SPEED_STEPS[speedIndex]);
       waveformLoading.classList.remove('visible');
 
@@ -1426,7 +1416,7 @@
   function onTimeUpdate() {
     if (!wavesurfer) return;
     const t = wavesurfer.getCurrentTime();
-    transportTime.textContent = formatTime(t);
+    
     // Only force-seek video if drift is large relative to playback speed.
     // At higher speeds the video naturally falls behind slightly but recovers —
     // forced seeks cause decode stalls and choppiness. Tolerance scales with rate.
@@ -1483,8 +1473,16 @@
     }
     wavesurfer.playPause();
   });
-  $('btnSkipBack').addEventListener('click', () => { if (wavesurfer && mediaLoaded) wavesurfer.skip(-5); });
-  $('btnSkipFwd').addEventListener('click',  () => { if (wavesurfer && mediaLoaded) wavesurfer.skip(5); });
+  $('btnSkipBack').addEventListener('click', () => {
+    if (!wavesurfer || !mediaLoaded) return;
+    const t = Math.max(inPoint, wavesurfer.getCurrentTime() - 5);
+    wavesurfer.seekTo(t / mediaDuration);
+  });
+  $('btnSkipFwd').addEventListener('click', () => {
+    if (!wavesurfer || !mediaLoaded) return;
+    const t = Math.min(outPoint, wavesurfer.getCurrentTime() + 5);
+    wavesurfer.seekTo(t / mediaDuration);
+  });
 
   function setSpeed(idx) {
     speedIndex = Math.max(0, Math.min(SPEED_STEPS.length - 1, idx));
@@ -1637,8 +1635,16 @@
     }
 
     if (!isInput && wavesurfer && mediaLoaded) {
-      if (e.key === 'ArrowLeft')  { e.preventDefault(); wavesurfer.skip(e.shiftKey ? -1 : -5); }
-      if (e.key === 'ArrowRight') { e.preventDefault(); wavesurfer.skip(e.shiftKey ?  1 :  5); }
+      if (e.key === 'ArrowLeft')  {
+        e.preventDefault();
+        const t = Math.max(inPoint, wavesurfer.getCurrentTime() - (e.shiftKey ? 1 : 5));
+        wavesurfer.seekTo(t / mediaDuration);
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const t = Math.min(outPoint, wavesurfer.getCurrentTime() + (e.shiftKey ? 1 : 5));
+        wavesurfer.seekTo(t / mediaDuration);
+      }
       if (e.code === 'F5' && !e.ctrlKey && !e.metaKey) {
         e.preventDefault(); setIn(wavesurfer.getCurrentTime());
       }
@@ -1803,8 +1809,8 @@
     exportErrorBox.classList.remove('visible');
     waveformLoading.classList.remove('visible');
 
-    transportTime.textContent = '00:00:00';
-    transportDur.textContent  = '/ 00:00:00';
+    
+    
     trimLeft.style.width  = '0';
     trimRight.style.width = '0';
 
