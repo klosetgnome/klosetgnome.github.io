@@ -994,7 +994,7 @@
     if (!model || !cues.length) return cues;
 
     // Batch cues into chunks so we can report progress between them
-    const BATCH_SIZE = 40;
+    const BATCH_SIZE = 12;
     const batches = [];
     for (let i = 0; i < cues.length; i += BATCH_SIZE) {
       batches.push(cues.slice(i, i + BATCH_SIZE));
@@ -2292,7 +2292,8 @@
 
       let data;
       const onUploadProgress = pct => {
-        exportStatusText.textContent = `Uploading media… ${pct}%`;
+        if (pct >= 100) exportStatusText.textContent = 'Transcribing on server…';
+        else exportStatusText.textContent = `Uploading media… ${pct}%`;
       };
 
       if (directUrl) {
@@ -2604,10 +2605,10 @@
     const formData = new FormData();
     formData.append('file', wavBlob, 'audio.wav');
     const data = await uploadWithProgress(tokenData.upload_url, formData, pct => {
-      statusEl.textContent = `Uploading media… ${pct}%`;
+      if (pct >= 100) statusEl.textContent = 'Transcribing on server…';
+      else statusEl.textContent = `Uploading media… ${pct}%`;
     });
 
-    statusEl.textContent = 'Transcribing on server…';
     if (data.status !== 'ok' || !data.words || !data.words.length) {
       throw new Error(data.error || 'No words returned');
     }
@@ -2712,14 +2713,13 @@
       const formData = new FormData();
       formData.append('file', proxyBlob, 'proxy-audio.mp4');
       const data = await uploadWithProgress(tokenData.upload_url, formData, pct => {
-        srtBtn.innerHTML = `<span class="btn-spinner"></span>SRT (uploading ${pct}%)`;
+        if (pct >= 100) srtBtn.innerHTML = '<span class="btn-spinner"></span>SRT (transcribing)';
+        else srtBtn.innerHTML = `<span class="btn-spinner"></span>SRT (uploading ${pct}%)`;
       });
 
       if (data.status !== 'ok' || !data.words || !data.words.length) {
         throw new Error(data.error || 'No words returned');
       }
-
-      srtBtn.innerHTML = '<span class="btn-spinner"></span>SRT (transcribing)';
 
       // Group words into cues (full timeline, no offset)
       const words = data.words.map(w => ({ word: w.word, start: w.start, end: w.end }));
