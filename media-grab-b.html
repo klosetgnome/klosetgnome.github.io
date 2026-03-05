@@ -1339,9 +1339,12 @@
   urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleGrab(); });
   urlInput.addEventListener('paste', () => {
     setTimeout(() => {
-      updateGrabVisibility();
       const val = urlInput.value.trim();
-      if (URL_REGEX.test(val) && !working) handleGrab();
+      if (URL_REGEX.test(val) && !working) {
+        handleGrab();
+      } else {
+        updateGrabVisibility();
+      }
     }, 50);
   });
   grabBtn.addEventListener('click', handleGrab);
