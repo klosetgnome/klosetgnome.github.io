@@ -2733,11 +2733,13 @@
   function fullReset() {
     resetEditor();
     serverFilePath = null;
+    working = false;
     urlInput.value = '';
     hideImportStatus();
     importCard.classList.remove('collapsed');
     $('infoHero').classList.remove('hidden');
     grabBtn.style.display = 'none';
+    grabBtn.disabled = false;
     urlInput.focus();
   }
 
