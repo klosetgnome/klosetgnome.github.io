@@ -786,9 +786,9 @@
 
   <!-- ═══ EXPORT ACTION BAR ═══ -->
   <div class="export-action-bar" id="exportActionBar">
-    <button class="btn-primary" id="btnExportAudio">Grab Audio</button>
+    <button class="btn-secondary-bar" id="btnExportAudio">Grab Audio</button>
     <span class="export-spacer"></span>
-    <button class="btn-primary" id="btnExportSrt">Grab SRT</button>
+    <button class="btn-secondary-bar" id="btnExportSrt">Grab SRT</button>
     <span class="export-spacer"></span>
     <button class="btn-primary" id="btnExportVideo">Grab Video</button>
   </div>
@@ -1321,7 +1321,6 @@
       }
 
       const blobUrl = URL.createObjectURL(blob);
-      proxyBlob = blob;
       const vidFlag = completed.isVideo !== undefined
         ? completed.isVideo
         : (blob.type.startsWith('video/') || /\.(mp4|mov|mkv|webm)/.test(completed.filename || ''));
@@ -1329,6 +1328,7 @@
       hideWaitingCard();
 
       loadMediaIntoEditor(blobUrl, completed.filename || 'downloaded', completed.size || '', vidFlag);
+      proxyBlob = blob;
 
     } catch (err) {
       let msg = 'Connection failed';
