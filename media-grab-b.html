@@ -611,13 +611,12 @@
       <div class="kbd-panel" id="kbdPanel">
         <div class="kbd-panel-title">Keyboard Shortcuts</div>
         <div class="kbd-list">
-          <div class="kbd-row"><span>Set in point</span><span class="kbd-keys"><kbd>F5</kbd></span></div>
-          <div class="kbd-row"><span>Set out point</span><span class="kbd-keys"><kbd>F6</kbd></span></div>
-          <div class="kbd-row"><span>Play / Pause</span><span class="kbd-keys"><kbd>Space</kbd></span></div>
-          <div class="kbd-row"><span>Skip 5s</span><span class="kbd-keys"><kbd>←</kbd> <kbd>→</kbd></span></div>
-          <div class="kbd-row"><span>Skip 1s</span><span class="kbd-keys"><kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd></span></div>
-          <div class="kbd-row"><span>Speed up / down</span><span class="kbd-keys"><kbd>D</kbd> <kbd>F</kbd></span></div>
-          <div class="kbd-row"><span>Undo trim</span><span class="kbd-keys"><kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>Z</kbd></span></div>
+          <div class="kbd-row"><span>Shuttle back</span><span class="kbd-keys"><kbd>J</kbd></span></div>
+          <div class="kbd-row"><span>Play / Pause</span><span class="kbd-keys"><kbd>Space</kbd> <kbd>K</kbd></span></div>
+          <div class="kbd-row"><span>Shuttle forward</span><span class="kbd-keys"><kbd>L</kbd></span></div>
+          <hr style="border:none;border-top:1px solid var(--border);width:100%;margin:4px 0;">
+          <div class="kbd-row"><span>Mark IN</span><span class="kbd-keys"><kbd>I</kbd></span></div>
+          <div class="kbd-row"><span>Mark OUT</span><span class="kbd-keys"><kbd>O</kbd></span></div>
         </div>
       </div>
     </div>
@@ -769,24 +768,24 @@
 
     <!-- Transport -->
     <div class="transport">
-      <button class="transport-btn" id="btnSkipBack" title="Skip back 5s (clamps to In point)">
+      <button class="transport-btn" id="btnSkipBack" title="Shuttle back (J)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
       </button>
-      <button class="transport-btn" id="btnPlay" title="Play / Pause (Space)">
+      <button class="transport-btn" id="btnPlay" title="Play / Pause (Space / K)">
         <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6,4 20,12 6,20"/></svg>
         <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none"><rect x="5" y="4" width="4" height="16"/><rect x="15" y="4" width="4" height="16"/></svg>
       </button>
-      <button class="transport-btn" id="btnSkipFwd" title="Skip forward 5s (clamps to Out point)">
+      <button class="transport-btn" id="btnSkipFwd" title="Shuttle forward (L)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
       </button>
       <span class="speed-badge" id="speedBadge" title="Click to cycle playback speed">1×</span>
 
       <span class="transport-divider"></span>
 
-      <button class="trim-btn in-btn" id="btnSetIn" title="Set in point at playhead (F5)">In</button>
+      <button class="trim-btn in-btn" id="btnSetIn" title="Mark IN at playhead (I)">In</button>
       <input class="trim-time-input in-input" id="inTimeInput" value="00:00:00.0" spellcheck="false" autocomplete="off">
       <input class="trim-time-input out-input" id="outTimeInput" value="00:00:00.0" spellcheck="false" autocomplete="off">
-      <button class="trim-btn out-btn" id="btnSetOut" title="Set out point at playhead (F6)">Out</button>
+      <button class="trim-btn out-btn" id="btnSetOut" title="Mark OUT at playhead (O)">Out</button>
 
       <span class="transport-spacer"></span>
       <button class="trim-btn" id="btnClearSelection" title="Reset in/out to full clip">Clear selection</button>
@@ -880,6 +879,7 @@
   let loopGen        = 0;    // increments on every stop — kills stale rAF callbacks
   let trimUndoStack  = [];
   let dragging       = null; // 'in' | 'out' | null
+  let shuttleSpeed   = 0;    // L shuttle: index into SPEED_STEPS, reset on pause
 
   // ╔══════════════════════════════════════╗
   // ║  DOM                                 ║
@@ -1160,6 +1160,20 @@
     showWaitingCard(stageKey);
   }
 
+  function updateWaitingPercent(pct) {
+    if (!waitingCard.classList.contains('visible')) return;
+    const stageLabels = {
+      connecting: 'Connecting',
+      downloading: 'Downloading',
+      merging: 'Merging streams',
+      generating_proxy: 'Generating preview',
+      loading_preview: 'Loading preview',
+      processing: 'Processing',
+    };
+    const base = stageLabels[waitingStageKey] || waitingStageKey;
+    $('waitingStage').textContent = pct !== null ? `${base} · ${Math.round(pct)}%` : base;
+  }
+
   function hideWaitingCard() {
     waitingCard.classList.remove('visible');
     $('waitingInfoCard').classList.remove('visible');
@@ -1268,10 +1282,12 @@
               const stage = ev.stage || '';
               if (stage === 'downloading') {
                 updateWaitingStage('downloading');
+                if (ev.percent !== null) updateWaitingPercent(ev.percent);
               } else if (stage === 'merging') {
                 updateWaitingStage('merging');
               } else if (stage === 'generating_proxy') {
                 updateWaitingStage('generating_proxy');
+                if (ev.percent !== null) updateWaitingPercent(ev.percent);
               } else if (stage === 'processing') {
                 updateWaitingStage('processing');
               }
@@ -1416,6 +1432,8 @@
       $('btnPlay').classList.remove('active');
       if (isVideo) videoEl.pause();
       stopPlaybackLoop();
+      shuttleSpeed = 0;
+      setSpeed(2); // reset to 1×
     });
   }
 
@@ -1481,12 +1499,12 @@
   });
   $('btnSkipBack').addEventListener('click', () => {
     if (!wavesurfer || !mediaLoaded) return;
-    const t = Math.max(inPoint, wavesurfer.getCurrentTime() - 5);
+    const t = Math.max(inPoint, wavesurfer.getCurrentTime() - 1);
     wavesurfer.seekTo(t / mediaDuration);
   });
   $('btnSkipFwd').addEventListener('click', () => {
     if (!wavesurfer || !mediaLoaded) return;
-    const t = Math.min(outPoint, wavesurfer.getCurrentTime() + 5);
+    const t = Math.min(outPoint, wavesurfer.getCurrentTime() + 1);
     wavesurfer.seekTo(t / mediaDuration);
   });
 
@@ -1627,41 +1645,76 @@
   // ╔══════════════════════════════════════╗
   // ║  KEYBOARD SHORTCUTS                  ║
   // ╚══════════════════════════════════════╝
+  // ╔══════════════════════════════════════╗
+  // ║  KEYBOARD SHORTCUTS (JKL + I/O)     ║
+  // ╚══════════════════════════════════════╝
   document.addEventListener('keydown', e => {
     const tag     = e.target.tagName.toLowerCase();
     const isInput = tag === 'input' || tag === 'textarea' || tag === 'select';
+    if (isInput) return;
 
-    if (e.code === 'Space' && !isInput) {
+    // Space — Play / Pause
+    if (e.code === 'Space') {
       e.preventDefault();
-      if (wavesurfer && mediaLoaded) {
+      if (!wavesurfer || !mediaLoaded) return;
+      shuttleSpeed = 0;
+      const t = wavesurfer.getCurrentTime();
+      if (!wavesurfer.isPlaying() && t >= outPoint) wavesurfer.seekTo(inPoint / mediaDuration);
+      wavesurfer.playPause();
+      if (!wavesurfer.isPlaying()) setSpeed(2); // reset to 1×
+      return;
+    }
+
+    if (!wavesurfer || !mediaLoaded) return;
+
+    // J — Skip back 1s
+    if (e.key === 'j' || e.key === 'J') {
+      e.preventDefault();
+      // If playing, pause and reset speed
+      if (wavesurfer.isPlaying()) {
+        wavesurfer.pause();
+        shuttleSpeed = 0;
+        setSpeed(2); // 1×
+      }
+      const t = Math.max(inPoint, wavesurfer.getCurrentTime() - 1);
+      wavesurfer.seekTo(t / mediaDuration);
+    }
+
+    // K — Pause
+    if (e.key === 'k' || e.key === 'K') {
+      e.preventDefault();
+      shuttleSpeed = 0;
+      if (wavesurfer.isPlaying()) wavesurfer.pause();
+      setSpeed(2); // reset to 1×
+    }
+
+    // L — Shuttle forward (play, then increase speed each tap)
+    if (e.key === 'l' || e.key === 'L') {
+      e.preventDefault();
+      if (!wavesurfer.isPlaying()) {
+        // First tap: start playing at 1×
+        shuttleSpeed = 2; // index 2 = 1×
+        setSpeed(shuttleSpeed);
         const t = wavesurfer.getCurrentTime();
-        if (!wavesurfer.isPlaying() && t >= outPoint) wavesurfer.seekTo(inPoint / mediaDuration);
-        wavesurfer.playPause();
+        if (t >= outPoint) wavesurfer.seekTo(inPoint / mediaDuration);
+        wavesurfer.play();
+      } else {
+        // Subsequent taps: increase speed
+        shuttleSpeed = Math.min(shuttleSpeed + 1, SPEED_STEPS.length - 1);
+        setSpeed(shuttleSpeed);
       }
     }
 
-    if (!isInput && wavesurfer && mediaLoaded) {
-      if (e.key === 'ArrowLeft')  {
-        e.preventDefault();
-        const t = Math.max(inPoint, wavesurfer.getCurrentTime() - (e.shiftKey ? 1 : 5));
-        wavesurfer.seekTo(t / mediaDuration);
-      }
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        const t = Math.min(outPoint, wavesurfer.getCurrentTime() + (e.shiftKey ? 1 : 5));
-        wavesurfer.seekTo(t / mediaDuration);
-      }
-      if (e.code === 'F5' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault(); setIn(wavesurfer.getCurrentTime());
-      }
-      if (e.code === 'F6' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault(); setOut(wavesurfer.getCurrentTime());
-      }
-      if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault(); undoTrim();
-      }
-      if (e.key === 'd' || e.key === 'D') { e.preventDefault(); setSpeed(speedIndex + 1); }
-      if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setSpeed(speedIndex - 1); }
+    // I — Mark In
+    if (e.key === 'i' || e.key === 'I') {
+      e.preventDefault();
+      setIn(wavesurfer.getCurrentTime());
+    }
+
+    // O — Mark Out
+    if (e.key === 'o' || e.key === 'O') {
+      e.preventDefault();
+      setOut(wavesurfer.getCurrentTime());
     }
   });
 
