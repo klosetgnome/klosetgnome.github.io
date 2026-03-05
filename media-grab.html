@@ -695,8 +695,8 @@
           <div class="settings-section-label">Transcription</div>
           <div class="toggle-row" style="margin-bottom:12px;">
             <div class="toggle-label-wrap">
-              <span class="toggle-row-label">AI cleanup</span>
-              <span class="toggle-row-hint">Fixes spelling, grammar &amp; punctuation via LLM</span>
+              <span class="toggle-row-label">Enhanced</span>
+              <span class="toggle-row-hint">Spelling &amp; grammar</span>
             </div>
             <label class="toggle-switch">
               <input type="checkbox" id="aiTranscribeToggle" checked>
@@ -1187,8 +1187,11 @@
     base = base.replace(/_+/g, '_').replace(/^_|_$/g, '');
     // Sentence case: first letter upper, rest lower
     base = base.charAt(0).toUpperCase() + base.slice(1).toLowerCase();
-    // Append branding suffix
-    return base + '_devNFcom';
+    // Cap base so total (base + _devNFcom) is max 33 chars
+    const suffix = '_devNFcom';
+    const maxBase = 33 - suffix.length; // 24
+    if (base.length > maxBase) base = base.substring(0, maxBase);
+    return base + suffix;
   }
 
   // ╔══════════════════════════════════════╗
@@ -1378,10 +1381,13 @@
   function updateGrabVisibility() {
     grabBtn.style.display = urlInput.value.trim() ? 'inline-block' : 'none';
   }
-  urlInput.addEventListener('input', updateGrabVisibility);
+  let isPasting = false;
+  urlInput.addEventListener('input', () => { if (!isPasting) updateGrabVisibility(); });
   urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleGrab(); });
   urlInput.addEventListener('paste', () => {
+    isPasting = true;
     setTimeout(() => {
+      isPasting = false;
       const val = urlInput.value.trim();
       if (URL_REGEX.test(val) && !working) {
         handleGrab();
@@ -2082,9 +2088,10 @@
         exportStatusText.style.display = 'none';
         exportTrackFill.parentElement.style.display = 'none';
 
-        // Build branded filename
+        // Build branded filename from original source name (not server's _edited name)
+        const sourceName = $('fileName').dataset.fullName || name;
         const ext = name.includes('.') ? name.substring(name.lastIndexOf('.')) : '.mp4';
-        const cleanName = sanitizeFilename(name) + ext;
+        const cleanName = sanitizeFilename(sourceName) + ext;
 
         $('exportFilename').textContent = cleanName;
 
