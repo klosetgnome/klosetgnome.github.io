@@ -1148,6 +1148,21 @@
     return (b/1048576).toFixed(1) + ' MB';
   }
 
+  // Sanitise a raw filename into a branded, consistent download name
+  // e.g. "Kim is a hommoseksuelle_edited.mp4" → "Kim_is_a_hommoseksuelle_edited_devNFcom"
+  function sanitizeFilename(rawName) {
+    // Strip extension
+    let base = rawName.replace(/\.[^.]+$/, '');
+    // Replace any non-alphanumeric character with _
+    base = base.replace(/[^a-zA-Z0-9]/g, '_');
+    // Collapse multiple underscores and trim leading/trailing
+    base = base.replace(/_+/g, '_').replace(/^_|_$/g, '');
+    // Sentence case: first letter upper, rest lower
+    base = base.charAt(0).toUpperCase() + base.slice(1).toLowerCase();
+    // Append branding suffix
+    return base + '_devNFcom';
+  }
+
   // ╔══════════════════════════════════════╗
   // ║  SERVER HEALTH                       ║
   // ╚══════════════════════════════════════╝
@@ -1870,9 +1885,6 @@
   markerOut.addEventListener('click', e => e.stopPropagation());
 
   // ╔══════════════════════════════════════╗
-  // ║  KEYBOARD SHORTCUTS                  ║
-  // ╚══════════════════════════════════════╝
-  // ╔══════════════════════════════════════╗
   // ║  KEYBOARD SHORTCUTS (JKL + I/O)     ║
   // ╚══════════════════════════════════════╝
   document.addEventListener('keydown', e => {
@@ -2042,9 +2054,11 @@
         exportStatusText.style.display = 'none';
         exportTrackFill.parentElement.style.display = 'none';
 
-        $('exportFilename').textContent = name.length > 45
-          ? name.substring(0, 40) + '…' + name.substring(name.lastIndexOf('.'))
-          : name;
+        // Build branded filename
+        const ext = name.includes('.') ? name.substring(name.lastIndexOf('.')) : '.mp4';
+        const cleanName = sanitizeFilename(name) + ext;
+
+        $('exportFilename').textContent = cleanName;
 
         const checkEl = $('successCheck');
         checkEl.classList.remove('animate');
@@ -2055,7 +2069,7 @@
 
         // Auto-download
         const a = document.createElement('a');
-        a.href = fileUrl; a.download = name;
+        a.href = fileUrl; a.download = cleanName;
         a.style.display = 'none';
         document.body.appendChild(a); a.click();
         setTimeout(() => document.body.removeChild(a), 100);
@@ -2216,9 +2230,9 @@
       cues = await llmCleanupCues(cues);
       const srtContent = cuesToSrt(cues);
 
-      // Build filename from source
+      // Build branded filename
       const sourceName = $('fileName').dataset.fullName || $('fileName').textContent || 'clip';
-      const srtName = sourceName.replace(/\.[^.]+$/, '') + '.srt';
+      const srtName = sanitizeFilename(sourceName) + '.srt';
 
       // Trigger download
       const srtBlob = new Blob([srtContent], { type: 'text/srt' });
@@ -2410,7 +2424,7 @@
       const srt = cuesToSrt(cues);
       const sourceName = file.name.replace(/\.[^.]+$/, '') || 'transcription';
       localSrtContent = srt;
-      localSrtName = sourceName + '.srt';
+      localSrtName = sanitizeFilename(sourceName) + '.srt';
 
       // Step 5: Clear overlay, show Grab SRT
       exportOverlay.classList.remove('visible');
@@ -2613,7 +2627,7 @@
 
     const srtContent = cuesToSrt(trimmedCues);
     const sourceName = $('fileName').dataset.fullName || $('fileName').textContent || 'clip';
-    const srtName = sourceName.replace(/\.[^.]+$/, '') + '.srt';
+    const srtName = sanitizeFilename(sourceName) + '.srt';
 
     const blob = new Blob([srtContent], { type: 'text/srt' });
     const url = URL.createObjectURL(blob);
