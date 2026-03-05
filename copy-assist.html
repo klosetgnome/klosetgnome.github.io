@@ -748,7 +748,7 @@
     <div class="info-hero-graphic"><svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="8" width="40" height="50" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="18" y1="18" x2="42" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="26" x2="42" y2="26" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="34" x2="34" y2="34" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="42" x2="42" y2="42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="18" y1="50" x2="36" y2="50" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.25"/><path d="M56 22 L56 48" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><polyline points="50,28 56,22 62,28" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="48" y="48" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="52" y1="53" x2="60" y2="53" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="52" y1="57" x2="58" y2="57" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>
     <div class="info-hero-content">
       <div class="info-hero-title">Copy Assist — Summarise</div>
-      <div class="info-hero-desc">Paste a block of text, or <span class="hl">drop a link</span> to any webpage, and Copy Assist will generate a concise summary. Links are fetched automatically and summarisation begins after a short countdown. Hit <span class="hl">Recreate</span> to try again with different wording.</div>
+      <div class="info-hero-desc">Paste a block of text, or <span class="hl">drop a link</span> to any webpage, and Copy Assist will generate a concise summary. Links are sent directly to the model for summarisation after a short countdown. Hit <span class="hl">Recreate</span> to try again with different wording.</div>
     </div>
   </div>
 
@@ -1073,7 +1073,7 @@
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // COPY MODE: URL FETCH + COUNTDOWN
+  // COPY MODE: URL DETECTION + COUNTDOWN (direct passthrough)
   // ═══════════════════════════════════════════════════════════════
   var URL_REGEX = /^https?:\/\/[^\s]+$/i;
   function isUrl(text) { return URL_REGEX.test(text.trim()); }
@@ -1109,14 +1109,14 @@
       urlRingFg.style.transition = 'stroke-dashoffset 1s linear';
       urlRingFg.style.strokeDashoffset = (RING_CIRCUMFERENCE / 3).toFixed(2);
     });
-    fetchLabel.textContent = 'Summarising in ' + remaining + 's…';
+    fetchLabel.textContent = 'Summarising in ' + remaining + 's\u2026';
     fetchClearBtn.textContent = 'Cancel';
     fetchClearBtn.classList.add('visible');
     urlCountdownTimer = setInterval(function () {
       remaining--;
       if (remaining <= 0) { cancelUrlCountdown(); btn.click(); return; }
       urlCountdownNum.textContent = remaining;
-      fetchLabel.textContent = 'Summarising in ' + remaining + 's…';
+      fetchLabel.textContent = 'Summarising in ' + remaining + 's\u2026';
       urlRingFg.style.strokeDashoffset = (RING_CIRCUMFERENCE * ((3 - remaining) / 3)).toFixed(2);
     }, 1000);
   }
@@ -1129,51 +1129,17 @@
     updateSubmitVisibility();
   });
 
-  function extractText(html) {
-    var doc = new DOMParser().parseFromString(html, 'text/html');
-    doc.querySelectorAll('script, style, nav, header, footer, aside, iframe, noscript, svg, form, [role="navigation"], [role="banner"], [role="complementary"]').forEach(function (el) { el.remove(); });
-    var main = doc.querySelector('article, [role="main"], main, .post-content, .entry-content, .article-body');
-    var source = main || doc.body;
-    if (!source) return '';
-    var text = source.innerText || source.textContent || '';
-    return text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-  }
-
-  async function fetchPageContent(url) {
-    fetchedFromUrl = url;
-    showFetchBar('Fetching page content…', true);
-    inputTextEl.disabled = true;
-    updateSubmitVisibility();
-    if (fetchAbort) fetchAbort.abort();
-    fetchAbort = new AbortController();
-    try {
-      var res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(url), { signal: fetchAbort.signal });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      var data = await res.json();
-      if (!data.contents) throw new Error('Empty response');
-      var text = extractText(data.contents);
-      if (!text || text.length < 50) throw new Error('Could not extract meaningful content from this page.');
-      if (text.length > 12000) text = text.substring(0, 12000) + '\n\n[Content truncated]';
-      inputTextEl.value = text;
-      showFetchBar('Fetched from ' + new URL(url).hostname, false);
-      updateSubmitVisibility();
-      startUrlCountdown();
-    } catch (err) {
-      if (err.name === 'AbortError') return;
-      inputTextEl.value = url;
-      fetchedFromUrl = null;
-      hideFetchBar();
-      showError('Could not fetch page content. Try copying and pasting the text directly.\n\n' + (err.message || ''));
-      updateSubmitVisibility();
-    } finally {
-      inputTextEl.disabled = false;
-    }
-  }
-
+  // ── URL paste: send link directly to the LLM (no client-side fetch) ──
   inputTextEl.addEventListener('paste', function () {
     setTimeout(function () {
       var val = inputTextEl.value.trim();
-      if (categorySelect.value === 'summarise' && isUrl(val)) fetchPageContent(val);
+      if (categorySelect.value === 'summarise' && isUrl(val)) {
+        try { var hostname = new URL(val).hostname; } catch (e) { return; }
+        fetchedFromUrl = val;
+        showFetchBar('Link detected \u2014 ' + hostname, false);
+        updateSubmitVisibility();
+        startUrlCountdown();
+      }
     }, 300);
   });
 
@@ -1196,7 +1162,7 @@
     var remaining = 3;
     fileCountdownBar.classList.add('visible');
     fileCountdownNum.textContent = remaining;
-    fileCountdownLabel.textContent = 'Creating in ' + remaining + 's…';
+    fileCountdownLabel.textContent = 'Creating in ' + remaining + 's\u2026';
     fileRingFg.style.transition = 'none';
     fileRingFg.style.strokeDashoffset = '0';
     requestAnimationFrame(function () {
@@ -1207,7 +1173,7 @@
       remaining--;
       if (remaining <= 0) { cancelFileCountdown(); btn.click(); return; }
       fileCountdownNum.textContent = remaining;
-      fileCountdownLabel.textContent = 'Creating in ' + remaining + 's…';
+      fileCountdownLabel.textContent = 'Creating in ' + remaining + 's\u2026';
       fileRingFg.style.strokeDashoffset = (RING_CIRCUMFERENCE * ((3 - remaining) / 3)).toFixed(2);
     }, 1000);
   }
