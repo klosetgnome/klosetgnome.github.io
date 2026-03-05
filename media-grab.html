@@ -300,9 +300,22 @@
   .player-card.visible { display: block; }
 
   /* Video preview */
-  .video-preview { display: none; background: #000; width: 100%; max-height: 260px; overflow: hidden; }
+  .video-preview { display: none; background: #000; width: 100%; max-height: 260px; overflow: hidden; position: relative; }
   .video-preview.visible { display: block; }
   .video-preview video { display: block; width: 100%; max-height: 260px; object-fit: contain; }
+
+  /* ── SRT subtitle overlay ── */
+  .srt-overlay {
+    position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    max-width: 90%; padding: 4px 12px;
+    font-family: var(--mono); font-size: 13px; line-height: 1.5;
+    color: #fff; text-align: center;
+    background: rgba(0, 0, 0, 0.7); border-radius: 4px;
+    pointer-events: none; user-select: none;
+    opacity: 0; transition: opacity 0.15s ease;
+    z-index: 5;
+  }
+  .srt-overlay.visible { opacity: 1; }
 
   /* Waveform */
   .waveform-area { position: relative; }
@@ -629,7 +642,7 @@
 <body>
 
 <header class="site-header">
-  <h1><a href="index.html" style="text-decoration:none;color:inherit;"><span>MEDIA</span> GRAB</a></h1>
+  <h1><span>MEDIA</span> GRAB</h1>
   <div class="header-actions">
     <div class="kbd-wrap">
       <button class="kbd-toggle" id="kbdToggle" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">
@@ -794,6 +807,7 @@
     <!-- Video preview -->
     <div class="video-preview" id="videoPreview">
       <video id="videoEl" preload="auto" playsinline muted></video>
+      <div class="srt-overlay" id="srtOverlay"></div>
     </div>
 
     <!-- Waveform -->
@@ -1045,6 +1059,7 @@
   let localSrtName   = null;  // filename for the SRT download
   let cachedCues     = null;  // background-transcribed & LLM-cleaned cues (URL mode)
   let bgTranscribing = false; // true while background transcription is running
+  let lastCueIndex   = -1;   // SRT overlay: index of currently displayed cue
 
   // ╔══════════════════════════════════════╗
   // ║  DOM                                 ║
@@ -1081,6 +1096,8 @@
   const exportTrackFill = $('exportTrackFill');
   const exportSuccess   = $('exportSuccess');
   const exportErrorBox  = $('exportErrorBox');
+
+  const srtOverlay      = $('srtOverlay');
 
   // ╔══════════════════════════════════════╗
   // ║  THEME                               ║
@@ -1549,6 +1566,42 @@
   }
 
   // ╔══════════════════════════════════════╗
+  // ║  SRT OVERLAY                         ║
+  // ╚══════════════════════════════════════╝
+  function updateSrtOverlay(currentTime) {
+    if (!cachedCues || !cachedCues.length || !isVideo) {
+      srtOverlay.classList.remove('visible');
+      lastCueIndex = -1;
+      return;
+    }
+
+    // Quick check — if we're still inside the same cue, do nothing
+    if (lastCueIndex >= 0 && lastCueIndex < cachedCues.length) {
+      const c = cachedCues[lastCueIndex];
+      if (currentTime >= c.start && currentTime < c.end) return;
+    }
+
+    // Find the active cue
+    let found = -1;
+    for (let i = 0; i < cachedCues.length; i++) {
+      if (currentTime >= cachedCues[i].start && currentTime < cachedCues[i].end) {
+        found = i;
+        break;
+      }
+    }
+
+    if (found !== lastCueIndex) {
+      lastCueIndex = found;
+      if (found >= 0) {
+        srtOverlay.textContent = cachedCues[found].text;
+        srtOverlay.classList.add('visible');
+      } else {
+        srtOverlay.classList.remove('visible');
+      }
+    }
+  }
+
+  // ╔══════════════════════════════════════╗
   // ║  LOAD MEDIA INTO EDITOR              ║
   // ╚══════════════════════════════════════╝
   function loadMediaIntoEditor(blobUrl, name, size, videoFlag) {
@@ -1642,6 +1695,8 @@
   function onTimeUpdate() {
     if (!wavesurfer) return;
     const t = wavesurfer.getCurrentTime();
+
+    updateSrtOverlay(t);
     
     // Tight video sync — force-seek if drift exceeds 150ms
     if (isVideo) {
@@ -1670,6 +1725,7 @@
     if (!wavesurfer) return;
     // Force hard video sync on every seek
     if (isVideo) videoEl.currentTime = wavesurfer.getCurrentTime();
+    updateSrtOverlay(wavesurfer.getCurrentTime());
   }
 
   // ╔══════════════════════════════════════╗
@@ -2455,6 +2511,7 @@
       let cues = wordsToCues(words, 0);
       cues = await llmCleanupCues(cues);
 
+      cachedCues = cues;  // store for subtitle overlay
       const srt = cuesToSrt(cues);
       const sourceName = file.name.replace(/\.[^.]+$/, '') || 'transcription';
       localSrtContent = srt;
@@ -2749,6 +2806,7 @@
     localSrtName = null;
     cachedCues = null;
     bgTranscribing = false;
+    lastCueIndex = -1;
     mediaLoaded = false; isVideo = false; mediaDuration = 0;
     inPoint = 0; outPoint = 0; trimUndoStack = [];
     hideWaitingCard();
@@ -2771,8 +2829,9 @@
     $('btnExportSrt').textContent = 'Grab SRT';
     $('srtStatus').classList.remove('visible');
 
-    
-    
+    // Clear SRT overlay
+    if (srtOverlay) { srtOverlay.classList.remove('visible'); srtOverlay.textContent = ''; }
+
     trimLeft.style.width  = '0';
     trimRight.style.width = '0';
 
