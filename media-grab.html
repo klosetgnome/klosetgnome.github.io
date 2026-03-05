@@ -986,52 +986,65 @@
     sync();
   })();
 
-  async function llmCleanupCues(cues) {
+  async function llmCleanupCues(cues, onProgress) {
     // Skip LLM cleanup if the user has turned it off
     if (!$('aiTranscribeToggle').checked) return cues;
 
     const model = $('srtModelSelect').value;
     if (!model || !cues.length) return cues;
 
-    // Build numbered lines for the LLM
-    const rawLines = cues.map((c, i) => `${i + 1}. ${c.text}`).join('\n');
-
-    try {
-      const res = await fetch(LLM_WORKER_URL + '/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model,
-          max_tokens: 4096,
-          messages: [
-            { role: 'system', content: SRT_CLEANUP_PROMPT },
-            { role: 'user', content: rawLines }
-          ]
-        }),
-        signal: AbortSignal.timeout(60000)
-      });
-
-      if (!res.ok) throw new Error('LLM API error');
-      const data = await res.json();
-      const out = data.choices?.[0]?.message?.content;
-      if (!out) throw new Error('Empty response');
-
-      // Parse cleaned lines — strip any numbering the model may have kept
-      const cleanedLines = out.trim().split('\n')
-        .map(l => l.replace(/^\d+[\.\)]\s*/, '').trim())
-        .filter(l => l.length > 0);
-
-      // Map back to cues — if line count matches, replace text; otherwise keep originals
-      if (cleanedLines.length === cues.length) {
-        return cues.map((c, i) => ({ ...c, text: cleanedLines[i] }));
-      }
-      // Mismatch — return originals (LLM didn't follow instructions)
-      console.log(`LLM returned ${cleanedLines.length} lines vs ${cues.length} cues, keeping originals`);
-      return cues;
-    } catch (err) {
-      console.log('LLM cleanup failed, keeping raw transcription:', err.message);
-      return cues;
+    // Batch cues into chunks so we can report progress between them
+    const BATCH_SIZE = 40;
+    const batches = [];
+    for (let i = 0; i < cues.length; i += BATCH_SIZE) {
+      batches.push(cues.slice(i, i + BATCH_SIZE));
     }
+
+    const results = [];
+
+    for (let b = 0; b < batches.length; b++) {
+      const batch = batches[b];
+      const rawLines = batch.map((c, i) => `${i + 1}. ${c.text}`).join('\n');
+
+      try {
+        const res = await fetch(LLM_WORKER_URL + '/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            max_tokens: 4096,
+            messages: [
+              { role: 'system', content: SRT_CLEANUP_PROMPT },
+              { role: 'user', content: rawLines }
+            ]
+          }),
+          signal: AbortSignal.timeout(60000)
+        });
+
+        if (!res.ok) throw new Error('LLM API error');
+        const data = await res.json();
+        const out = data.choices?.[0]?.message?.content;
+        if (!out) throw new Error('Empty response');
+
+        const cleanedLines = out.trim().split('\n')
+          .map(l => l.replace(/^\d+[\.\)]\s*/, '').trim())
+          .filter(l => l.length > 0);
+
+        if (cleanedLines.length === batch.length) {
+          results.push(...batch.map((c, i) => ({ ...c, text: cleanedLines[i] })));
+        } else {
+          console.log(`LLM batch ${b + 1}: returned ${cleanedLines.length} lines vs ${batch.length} cues, keeping originals`);
+          results.push(...batch);
+        }
+      } catch (err) {
+        console.log(`LLM batch ${b + 1} failed, keeping originals:`, err.message);
+        results.push(...batch);
+      }
+
+      if (onProgress) onProgress(Math.round(((b + 1) / batches.length) * 100));
+    }
+
+    return results;
   }
 
   // ╔══════════════════════════════════════╗
@@ -2271,34 +2284,31 @@
         }
       }
 
-      exportStatusText.textContent = 'Transcribing audio…';
+      exportStatusText.textContent = 'Uploading media… 0%';
 
       // Upload proxy blob for Whisper transcription
       const formData = new FormData();
       formData.append('file', proxyBlob, 'proxy-audio.mp4');
 
-      let res;
+      let data;
+      const onUploadProgress = pct => {
+        exportStatusText.textContent = `Uploading media… ${pct}%`;
+      };
+
       if (directUrl) {
         // Upload directly to Funnel (bypasses CF for large file)
         try {
-          res = await fetch(directUrl, { method: 'POST', body: formData, signal: AbortSignal.timeout(300000) });
-          if (!res.ok) throw new Error('Direct upload failed');
+          data = await uploadWithProgress(directUrl, formData, onUploadProgress);
         } catch (directErr) {
           // Fall back to CF Worker
+          exportStatusText.textContent = 'Uploading media… 0%';
           const formData2 = new FormData();
           formData2.append('file', proxyBlob, 'proxy-audio.mp4');
-          res = await fetch(`${API_BASE}/transcribe`, { method: 'POST', body: formData2, signal: AbortSignal.timeout(300000) });
+          data = await uploadWithProgress(`${API_BASE}/transcribe`, formData2, onUploadProgress);
         }
       } else {
-        res = await fetch(`${API_BASE}/transcribe`, { method: 'POST', body: formData, signal: AbortSignal.timeout(300000) });
+        data = await uploadWithProgress(`${API_BASE}/transcribe`, formData, onUploadProgress);
       }
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Transcription failed');
-      }
-
-      const data = await res.json();
 
       if (data.status !== 'ok' || !data.words || !data.words.length) {
         throw new Error(data.error || 'No words returned from server');
@@ -2312,9 +2322,11 @@
       }
 
       // Group into cues, run LLM cleanup, generate SRT
-      exportStatusText.textContent = 'Refining transcript…';
+      exportStatusText.textContent = 'Refining transcript… 0%';
       let cues = wordsToCues(trimmedWords, inPoint);
-      cues = await llmCleanupCues(cues);
+      cues = await llmCleanupCues(cues, pct => {
+        exportStatusText.textContent = `Refining transcript… ${pct}%`;
+      });
       const srtContent = cuesToSrt(cues);
 
       // Build branded filename
@@ -2484,7 +2496,7 @@
       const wavBlob = pcmToWav(pcm16k, 16000);
 
       // Step 3: Try server transcription (direct to Funnel)
-      exportStatusText.textContent = 'Uploading media…';
+      exportStatusText.textContent = 'Uploading media… 0%';
 
       let words = null;
       try {
@@ -2507,9 +2519,11 @@
       }
 
       // Step 4: Group into cues and run LLM cleanup
-      exportStatusText.textContent = 'Refining transcript…';
+      exportStatusText.textContent = 'Refining transcript… 0%';
       let cues = wordsToCues(words, 0);
-      cues = await llmCleanupCues(cues);
+      cues = await llmCleanupCues(cues, pct => {
+        exportStatusText.textContent = `Refining transcript… ${pct}%`;
+      });
 
       cachedCues = cues;  // store for subtitle overlay
       const srt = cuesToSrt(cues);
@@ -2548,6 +2562,34 @@
     return new Blob([buf], { type: 'audio/wav' });
   }
 
+  // ── Upload with XHR progress tracking ──
+  function uploadWithProgress(url, formData, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.timeout = 300000;
+
+      xhr.upload.addEventListener('progress', e => {
+        if (e.lengthComputable && onProgress) {
+          onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText)); }
+          catch { resolve(xhr.responseText); }
+        } else {
+          reject(new Error('Upload failed: ' + xhr.status));
+        }
+      });
+
+      xhr.addEventListener('error', () => reject(new Error('Upload failed')));
+      xhr.addEventListener('timeout', () => reject(new Error('Upload timed out')));
+      xhr.send(formData);
+    });
+  }
+
   // ── Server transcription (direct to Funnel) ──
   async function serverTranscribe(wavBlob, statusEl) {
     // Get signed upload URL
@@ -2557,17 +2599,15 @@
     const tokenData = await tokenRes.json();
     if (tokenData.status !== 'ok' || !tokenData.upload_url) throw new Error('No upload URL');
 
-    // Upload WAV direct to Funnel
-    statusEl.textContent = 'Uploading media…';
+    // Upload WAV direct to Funnel with progress
+    statusEl.textContent = 'Uploading media… 0%';
     const formData = new FormData();
     formData.append('file', wavBlob, 'audio.wav');
-    const res = await fetch(tokenData.upload_url, {
-      method: 'POST', body: formData, signal: AbortSignal.timeout(300000)
+    const data = await uploadWithProgress(tokenData.upload_url, formData, pct => {
+      statusEl.textContent = `Uploading media… ${pct}%`;
     });
-    if (!res.ok) throw new Error('Upload failed');
 
     statusEl.textContent = 'Transcribing on server…';
-    const data = await res.json();
     if (data.status !== 'ok' || !data.words || !data.words.length) {
       throw new Error(data.error || 'No words returned');
     }
@@ -2658,7 +2698,7 @@
     cachedCues = null;
 
     const srtBtn = $('btnExportSrt');
-    srtBtn.innerHTML = '<span class="btn-spinner"></span>SRT (transcribing)';
+    srtBtn.innerHTML = '<span class="btn-spinner"></span>SRT (uploading 0%)';
     srtBtn.title = 'Transcription in progress. Click to wait for result.';
 
     try {
@@ -2668,25 +2708,27 @@
       const tokenData = await tokenRes.json();
       if (tokenData.status !== 'ok' || !tokenData.upload_url) throw new Error('No upload URL');
 
-      // Upload proxy direct to Funnel
+      // Upload proxy direct to Funnel with progress
       const formData = new FormData();
       formData.append('file', proxyBlob, 'proxy-audio.mp4');
-      const res = await fetch(tokenData.upload_url, {
-        method: 'POST', body: formData, signal: AbortSignal.timeout(300000)
+      const data = await uploadWithProgress(tokenData.upload_url, formData, pct => {
+        srtBtn.innerHTML = `<span class="btn-spinner"></span>SRT (uploading ${pct}%)`;
       });
-      if (!res.ok) throw new Error('Upload failed');
 
-      const data = await res.json();
       if (data.status !== 'ok' || !data.words || !data.words.length) {
         throw new Error(data.error || 'No words returned');
       }
+
+      srtBtn.innerHTML = '<span class="btn-spinner"></span>SRT (transcribing)';
 
       // Group words into cues (full timeline, no offset)
       const words = data.words.map(w => ({ word: w.word, start: w.start, end: w.end }));
       let cues = wordsToCues(words, 0);
 
       // Run LLM cleanup
-      cues = await llmCleanupCues(cues);
+      cues = await llmCleanupCues(cues, pct => {
+        srtBtn.innerHTML = `<span class="btn-spinner"></span>SRT (refining ${pct}%)`;
+      });
 
       cachedCues = cues;
       srtBtn.textContent = 'Grab SRT';
