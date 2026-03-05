@@ -915,6 +915,8 @@
   ];
   const PREFERRED_MODEL = 'google/gemini-2.0-flash-exp:free';
 
+  const $ = id => document.getElementById(id);
+  
   (function loadModels() {
     const selectEl = $('srtModelSelect');
     const statusEl = $('srtModelStatus');
@@ -1019,7 +1021,6 @@
   // ╔══════════════════════════════════════╗
   // ║  DOM                                 ║
   // ╚══════════════════════════════════════╝
-  const $ = id => document.getElementById(id);
 
   const importCard      = $('importCard');
   const waitingCard     = $('waitingCard');
