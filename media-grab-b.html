@@ -1103,6 +1103,10 @@
       'Almost there. Final processing underway.',
       'Your preview will appear as soon as it\'s ready.',
     ],
+    loading_preview: [
+      'Streaming the preview to your browser.',
+      'Nearly there. The trimming interface will appear shortly.',
+    ],
     connecting: [
       'Reaching out to the server…',
       'Waiting for a response. This should only take a moment.',
@@ -1122,6 +1126,7 @@
       downloading: 'Downloading',
       merging: 'Merging streams',
       generating_proxy: 'Generating preview',
+      loading_preview: 'Loading preview',
       processing: 'Processing',
     };
     $('waitingStage').textContent = stageLabels[waitingStageKey] || waitingStageKey;
@@ -1183,9 +1188,10 @@
     if (!url || working) return;
 
     if (!serverOnline) {
-      setImportProgress(0, 'Checking server…');
+      showWaitingCard('connecting');
       await checkHealth();
       if (!serverOnline) {
+        hideWaitingCard();
         setImportError('Server is offline. Please try again shortly.');
         return;
       }
@@ -1194,7 +1200,7 @@
     working = true;
     grabBtn.disabled = true;
     $('infoHero').classList.add('hidden');
-    setImportProgress(0, 'Connecting to server…');
+    importCard.classList.add('collapsed');
     showWaitingCard('connecting');
 
     const quality = $('qualitySelect').value;
@@ -1215,8 +1221,9 @@
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setImportError(err.error || 'Server error');
         hideWaitingCard();
+        importCard.classList.remove('collapsed');
+        setImportError(err.error || 'Server error');
         grabBtn.disabled = false; working = false;
         return;
       }
@@ -1240,24 +1247,21 @@
             const ev = JSON.parse(dataLine.slice(6));
             if (ev.type === 'progress') {
               const stage = ev.stage || '';
-              if (stage === 'downloading' && ev.percent !== null) {
-                setImportProgress(ev.percent, `Downloading… ${Math.round(ev.percent)}%`);
+              if (stage === 'downloading') {
                 updateWaitingStage('downloading');
               } else if (stage === 'merging') {
-                setImportProgress(null, 'Merging audio and video…');
                 updateWaitingStage('merging');
               } else if (stage === 'generating_proxy') {
-                setImportProgress(null, 'Generating preview…');
                 updateWaitingStage('generating_proxy');
               } else if (stage === 'processing') {
-                setImportProgress(null, 'Processing…');
                 updateWaitingStage('processing');
               }
             } else if (ev.type === 'complete') {
               completed = ev;
             } else if (ev.type === 'error') {
-              setImportError(ev.error || 'Download failed');
               hideWaitingCard();
+              importCard.classList.remove('collapsed');
+              setImportError(ev.error || 'Download failed');
               grabBtn.disabled = false; working = false;
               return;
             }
@@ -1266,8 +1270,9 @@
       }
 
       if (!completed) {
-        setImportError('Download ended without a result.');
         hideWaitingCard();
+        importCard.classList.remove('collapsed');
+        setImportError('Download ended without a result.');
         grabBtn.disabled = false; working = false;
         return;
       }
@@ -1280,7 +1285,7 @@
         ? `${API_BASE.replace('/api','') || ''}${completed.proxyUrl}`
         : `${API_BASE.replace('/api','') || ''}${completed.url}`;
 
-      setImportProgress(0, 'Loading preview… 0%');
+      updateWaitingStage('loading_preview');
 
       const mediaRes     = await fetch(fetchUrl);
       const contentLength = parseInt(mediaRes.headers.get('Content-Length'), 10) || 0;
@@ -1295,11 +1300,9 @@
           if (done) break;
           chunks.push(value);
           received += value.length;
-          setImportProgress((received/contentLength)*100, `Loading preview… ${Math.round((received/contentLength)*100)}%`);
         }
         blob = new Blob(chunks);
       } else {
-        setImportProgress(null, 'Loading preview…');
         blob = await mediaRes.blob();
       }
 
@@ -1308,10 +1311,6 @@
         ? completed.isVideo
         : (blob.type.startsWith('video/') || /\.(mp4|mov|mkv|webm)/.test(completed.filename || ''));
 
-      const proxyNote = useProxy
-        ? `Preview ready — full-res on server (${completed.size || '?'})`
-        : `Ready — ${completed.filename || 'file loaded'}`;
-      setImportDone(proxyNote);
       hideWaitingCard();
 
       loadMediaIntoEditor(blobUrl, completed.filename || 'downloaded', blob.size, vidFlag);
@@ -1319,8 +1318,9 @@
     } catch (err) {
       let msg = 'Connection failed';
       if (err.name === 'AbortError') msg = 'Request timed out.';
-      setImportError(msg);
       hideWaitingCard();
+      importCard.classList.remove('collapsed');
+      setImportError(msg);
       checkHealth();
     } finally {
       grabBtn.disabled = false;
