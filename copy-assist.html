@@ -1135,7 +1135,6 @@
       var val = inputTextEl.value.trim();
       if (categorySelect.value === 'summarise' && isUrl(val)) {
         fetchedFromUrl = val;
-        updateSubmitVisibility();
         btn.click();
       }
     }, 300);
