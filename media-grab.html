@@ -2428,7 +2428,7 @@
       const wavBlob = pcmToWav(pcm16k, 16000);
 
       // Step 3: Try server transcription (direct to Funnel)
-      exportStatusText.textContent = 'Uploading audio…';
+      exportStatusText.textContent = 'Uploading media…';
 
       let words = null;
       try {
@@ -2501,7 +2501,7 @@
     if (tokenData.status !== 'ok' || !tokenData.upload_url) throw new Error('No upload URL');
 
     // Upload WAV direct to Funnel
-    statusEl.textContent = 'Uploading audio…';
+    statusEl.textContent = 'Uploading media…';
     const formData = new FormData();
     formData.append('file', wavBlob, 'audio.wav');
     const res = await fetch(tokenData.upload_url, {
