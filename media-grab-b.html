@@ -728,7 +728,6 @@
       <div class="overlay-track"><div class="overlay-track-fill" id="overlayTrackFill"></div></div>
     </div>
     <span class="card-label">Media link</span>
-    <span class="card-hint">Paste a URL to grab video, audio or SRT. Or <span id="localBrowse" style="color:var(--accent);cursor:pointer;">drop a file</span> for instant SRT transcription.</span>
     <input type="file" id="localFileInput" accept="video/*,audio/*,.mp4,.mov,.mkv,.webm,.mp3,.wav,.m4a,.ogg,.flac" style="display:none;" />
     <div class="input-row">
       <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=…" autocomplete="off" spellcheck="false">
@@ -2283,7 +2282,6 @@
   const importDropOverlay = $('importDropOverlay');
   let importDragCounter = 0;
 
-  $('localBrowse').addEventListener('click', () => localFileInput.click());
   localFileInput.addEventListener('change', () => {
     if (localFileInput.files.length) handleLocalFile(localFileInput.files[0]);
     localFileInput.value = '';
