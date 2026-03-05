@@ -1278,17 +1278,20 @@
     stopPlaybackLoop();
     function loop() {
       if (!wavesurfer || !wavesurfer.isPlaying()) return;
-      const t = wavesurfer.getCurrentTime();
-      if (t < inPoint) {
-        wavesurfer.seekTo(inPoint / mediaDuration);
-      } else if (t >= outPoint) {
-        if ($('loopToggle').checked) {
+      // Don't enforce boundaries mid-drag — the handle positions are in flux
+      if (!dragging) {
+        const t = wavesurfer.getCurrentTime();
+        if (t < inPoint) {
           wavesurfer.seekTo(inPoint / mediaDuration);
-          if (isVideo) videoEl.currentTime = inPoint;
-        } else {
-          wavesurfer.pause();
-          wavesurfer.seekTo(inPoint / mediaDuration);
-          return;
+        } else if (t >= outPoint) {
+          if ($('loopToggle').checked) {
+            wavesurfer.seekTo(inPoint / mediaDuration);
+            if (isVideo) videoEl.currentTime = inPoint;
+          } else {
+            wavesurfer.pause();
+            wavesurfer.seekTo(inPoint / mediaDuration);
+            return;
+          }
         }
       }
       onTimeUpdate();
