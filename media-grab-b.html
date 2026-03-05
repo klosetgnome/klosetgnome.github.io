@@ -1826,17 +1826,51 @@
     $('btnExportSrt').disabled = true;
 
     try {
-      const res  = await fetch(`${API_BASE}/edit`, {
+      const res = await fetch(`${API_BASE}/edit-stream`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(manifest),
         signal: AbortSignal.timeout(600000)
       });
-      const data = await res.json();
 
-      if (data.status === 'redirect' || data.url) {
-        const fileUrl = data.url;
-        const name    = data.filename || 'clip';
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showExportError(err.error || 'Server error');
+        return;
+      }
+
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let completed = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop();
+
+        for (const part of parts) {
+          const dataLine = part.split('\n').find(l => l.startsWith('data: '));
+          if (!dataLine) continue;
+          try {
+            const ev = JSON.parse(dataLine.slice(6));
+            if (ev.type === 'progress' && ev.percent !== null) {
+              exportStatusText.textContent = `${exportLabel} ${Math.round(ev.percent)}%`;
+            } else if (ev.type === 'complete') {
+              completed = ev;
+            } else if (ev.type === 'error') {
+              showExportError(ev.error || 'Export failed');
+              return;
+            }
+          } catch {}
+        }
+      }
+
+      if (completed && (completed.status === 'redirect' || completed.url)) {
+        const fileUrl = completed.url;
+        const name    = completed.filename || 'clip';
 
         exportSpinner.style.display    = 'none';
         exportStatusText.style.display = 'none';
@@ -1860,8 +1894,8 @@
         document.body.appendChild(a); a.click();
         setTimeout(() => document.body.removeChild(a), 100);
 
-      } else {
-        showExportError(data.error || 'Export failed');
+      } else if (!completed) {
+        showExportError('Export ended without a result.');
       }
     } catch (err) {
       showExportError(err.name === 'AbortError' ? 'Export timed out.' : 'Export failed.');
