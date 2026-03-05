@@ -164,34 +164,32 @@
     transition: filter 0.3s ease;
   }
   .player-card.processing { cursor: wait; }
-  /* Import card blur while fetching */
+  /* Import card loading state */
   .import-card { position: relative; }
-  .import-card.processing > *:not(.import-card-overlay) {
-    filter: blur(3px); pointer-events: none;
-    transition: filter 0.3s ease;
-  }
   .import-card-overlay {
     display: none; position: absolute; inset: 0; z-index: 10;
-    flex-direction: column; align-items: center; justify-content: center; gap: 12px;
-    animation: fadeIn 0.25s ease;
+    flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    background: var(--surface); /* solid backdrop — no bleed-through */
+    border-radius: var(--radius-lg);
+    animation: fadeIn 0.2s ease;
   }
   .import-card.processing .import-card-overlay { display: flex; }
   .import-card-overlay .overlay-spinner {
-    width: 22px; height: 22px; border: 2px solid var(--border);
+    width: 20px; height: 20px; border: 2px solid var(--border);
     border-top-color: var(--accent); border-radius: 50%;
     animation: spin 0.8s linear infinite; flex-shrink: 0;
   }
   .import-card-overlay .overlay-text {
-    font-family: var(--mono); font-size: 12px; color: var(--text-secondary);
-    letter-spacing: 0.5px; text-align: center;
+    font-family: var(--mono); font-size: 12px; color: var(--text-primary);
+    letter-spacing: 1px; text-transform: uppercase; text-align: center;
   }
   .import-card-overlay .overlay-text.pulse { animation: overlayPulse 2s ease-in-out infinite; }
-  @keyframes overlayPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  @keyframes overlayPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
   .import-card-overlay .overlay-track {
-    width: 160px; height: 3px; background: var(--border); border-radius: 3px; overflow: hidden;
+    width: 180px; height: 2px; background: var(--border); border-radius: 2px; overflow: hidden;
   }
   .import-card-overlay .overlay-track-fill {
-    height: 100%; border-radius: 3px; background: var(--accent);
+    height: 100%; border-radius: 2px; background: var(--accent);
     animation: indeterminate 1.8s ease-in-out infinite; transition: width 0.3s ease;
   }
   .import-card-overlay .overlay-track-fill.determinate { animation: none; }
@@ -529,7 +527,7 @@
 <body>
 
 <header class="site-header">
-  <h1><a href="index.html" style="text-decoration:none;color:inherit;"><span>MEDIA</span> GRAB</a></h1>
+  <h1><span>MEDIA</span> GRAB</h1>
   <div class="header-actions">
     <div class="kbd-wrap">
       <button class="kbd-toggle" id="kbdToggle" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">
@@ -810,6 +808,7 @@
   let serverOnline   = false;
   let working        = false;
   let animFrameId    = null;
+  let loopGen        = 0;    // increments on every stop — kills stale rAF callbacks
   let trimUndoStack  = [];
   let dragging       = null; // 'in' | 'out' | null
 
@@ -1276,9 +1275,10 @@
   // ╚══════════════════════════════════════╝
   function startPlaybackLoop() {
     stopPlaybackLoop();
+    const gen = loopGen; // capture current generation
     function loop() {
+      if (loopGen !== gen) return; // stale — a newer loop has taken over, bail silently
       if (!wavesurfer || !wavesurfer.isPlaying()) return;
-      // Don't enforce boundaries mid-drag — the handle positions are in flux
       if (!dragging) {
         const t = wavesurfer.getCurrentTime();
         if (t < inPoint) {
@@ -1301,6 +1301,7 @@
   }
 
   function stopPlaybackLoop() {
+    loopGen++; // invalidates any in-flight rAF callback for previous loop
     if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
   }
 
@@ -1432,6 +1433,7 @@
   function startDrag(e, which) {
     if (!mediaLoaded) return;
     e.stopPropagation();
+    e.preventDefault(); // prevent WaveSurfer receiving the pointer event through the handle
     pushTrimUndo();
     dragging = which;
     const el = which === 'in' ? markerIn : markerOut;
@@ -1444,8 +1446,11 @@
 
   markerIn.addEventListener('mousedown',  e => startDrag(e, 'in'));
   markerOut.addEventListener('mousedown', e => startDrag(e, 'out'));
-  markerIn.addEventListener('touchstart',  e => startDrag(e.touches[0], 'in'),  { passive: true });
-  markerOut.addEventListener('touchstart', e => startDrag(e.touches[0], 'out'), { passive: true });
+  markerIn.addEventListener('touchstart',  e => startDrag(e.touches[0], 'in'),  { passive: false });
+  markerOut.addEventListener('touchstart', e => startDrag(e.touches[0], 'out'), { passive: false });
+  // Prevent clicks on handles from bubbling to WaveSurfer and triggering a seek
+  markerIn.addEventListener('click',  e => e.stopPropagation());
+  markerOut.addEventListener('click', e => e.stopPropagation());
 
   // ╔══════════════════════════════════════╗
   // ║  KEYBOARD SHORTCUTS                  ║
