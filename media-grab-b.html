@@ -498,6 +498,7 @@
     padding: 11px 18px; cursor: pointer; color: var(--text-secondary); transition: all 0.2s;
   }
   .btn-secondary-bar:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .btn-secondary-bar:disabled { border-color: var(--border); color: var(--text-muted); cursor: not-allowed; background: none; }
   .export-spacer { flex: 1; }
   .export-clip-info {
     font-family: var(--mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.3px;
@@ -633,16 +634,6 @@
             </div>
             <label class="toggle-switch">
               <input type="checkbox" id="premiereSafe" checked>
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-          <div class="toggle-row" style="margin-top:12px;">
-            <div class="toggle-label-wrap">
-              <span class="toggle-row-label">Audio only</span>
-              <span class="toggle-row-hint">Downloads audio track, no video</span>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="audioOnlyToggle">
               <span class="toggle-track"></span>
             </label>
           </div>
@@ -799,11 +790,11 @@
 
   <!-- ═══ EXPORT ACTION BAR ═══ -->
   <div class="export-action-bar" id="exportActionBar">
+    <button class="btn-secondary-bar" id="btnExportAudio">Grab Audio</button>
     <span class="export-spacer"></span>
-    <button class="btn-primary" id="btnExport">Grab</button>
+    <button class="btn-primary" id="btnExportVideo">Grab Video</button>
   </div>
 
-  <!-- Info hero -->
   <!-- ═══ WAITING CARD ═══ -->
   <div class="waiting-card" id="waitingCard">
     <div class="waiting-stage" id="waitingStage"></div>
@@ -1094,32 +1085,28 @@
   // ╚══════════════════════════════════════╝
   const WAITING_TIPS = {
     downloading: [
-      'The full source file is being downloaded to the server — quality depends on the original.',
-      'Download speed depends on the source platform and your server connection.',
-      'YouTube videos are downloaded at the best available quality by default.',
-      'The server will merge audio and video streams after downloading — this is normal.',
-      'For long videos, this step can take a minute or two. Hang tight.',
+      'Fetching your media at the best available quality.',
+      'This usually takes under a minute. Longer videos may need a little more time.',
+      'Audio and video streams will be merged automatically once the download finishes.',
+      'Nearly there. Hang tight.',
     ],
     merging: [
-      'Audio and video are being merged into a single file on the server.',
-      'This step is usually quick — just a few seconds for most videos.',
-      'Merging happens server-side, so your browser connection speed does not matter here.',
+      'Stitching audio and video together. This is usually quick.',
+      'Just a few more seconds while the streams are combined.',
     ],
     generating_proxy: [
-      'A low-res preview is being generated so your browser can play it back smoothly.',
-      'The proxy is much smaller than the original — just enough to preview and set your in/out points.',
-      'Full quality is preserved on the server. The proxy is only used for previewing.',
-      'Proxy generation usually takes 10–30 seconds depending on video length.',
-      'Once the preview is ready, you can trim and grab your clip in full quality.',
+      'Building a lightweight preview so you can scrub through smoothly.',
+      'The original stays at full quality. This preview is just for trimming.',
+      'Almost ready. You\'ll be able to set your in and out points shortly.',
     ],
     processing: [
-      'Almost there — final processing underway.',
-      'The preview will appear as soon as it is ready.',
+      'Almost there. Final processing underway.',
+      'Your preview will appear as soon as it\'s ready.',
     ],
     connecting: [
-      'Checking the server is online and ready…',
-      'The server runs on a Mac Mini on your local network via Tailscale.',
-      'If this takes more than 10 seconds, the server may be asleep. Check the Mac Mini.',
+      'Reaching out to the server…',
+      'Waiting for a response. This should only take a moment.',
+      'Still connecting. If this persists, try refreshing the page.',
     ],
   };
 
@@ -1199,7 +1186,7 @@
       setImportProgress(0, 'Checking server…');
       await checkHealth();
       if (!serverOnline) {
-        setImportError('Download server is offline. Check that the Mac Mini is running.');
+        setImportError('Server is offline. Please try again shortly.');
         return;
       }
     }
@@ -1662,9 +1649,10 @@
   // ╔══════════════════════════════════════╗
   // ║  EXPORT                              ║
   // ╚══════════════════════════════════════╝
-  $('btnExport').addEventListener('click', handleExport);
+  $('btnExportVideo').addEventListener('click', () => handleExport('video'));
+  $('btnExportAudio').addEventListener('click', () => handleExport('audio'));
 
-  async function handleExport() {
+  async function handleExport(mode) {
     if (!mediaLoaded || !serverFilePath) return;
 
     if (!serverOnline) {
@@ -1672,23 +1660,23 @@
       if (!serverOnline) { alert('Server is offline.'); return; }
     }
 
-    const fmt        = $('outputFormat').value;
-    const isAudioFmt = ['mp3','wav','ogg','aac'].includes(fmt);
-    const audioOnly  = $('audioOnlyToggle').checked;
-
-    const premiereSafe = !isAudioFmt && !audioOnly && $('premiereSafe').checked;
+    const audioOnly = (mode === 'audio');
+    const fmt       = $('outputFormat').value;
+    const premiereSafe = !audioOnly && $('premiereSafe').checked;
 
     const manifest = {
       source: serverFilePath,
       segments: [{ start: parseFloat(inPoint.toFixed(3)), end: parseFloat(outPoint.toFixed(3)) }],
       fadeIn: 0, fadeOut: 0, crossfade: 0,
       format: audioOnly ? 'mp3' : (premiereSafe ? 'mp4' : fmt),
-      sourceType: (isAudioFmt || audioOnly) ? 'audio' : (isVideo ? 'video' : 'audio'),
-      premiereSafe,           // server: ffmpeg -c:v libx264 -preset fast -crf 18 -c:a aac -vsync cfr -movflags +faststart
+      sourceType: audioOnly ? 'audio' : (isVideo ? 'video' : 'audio'),
+      premiereSafe,
       audioOnly,
     };
 
-    const exportLabel = audioOnly ? 'Extracting audio…' : premiereSafe ? 'Exporting clip (H.264/CFR)…' : 'Exporting clip…';
+    const exportLabel = audioOnly
+      ? 'Extracting audio…'
+      : premiereSafe ? 'Exporting clip (H.264/CFR)…' : 'Exporting clip…';
 
     // Show export overlay + blur card
     playerCard.classList.add('processing');
@@ -1699,7 +1687,8 @@
     exportSuccess.classList.remove('visible');
     exportErrorBox.classList.remove('visible');
     exportOverlay.classList.add('visible');
-    $('btnExport').disabled = true;
+    $('btnExportVideo').disabled = true;
+    $('btnExportAudio').disabled = true;
 
     try {
       const res  = await fetch(`${API_BASE}/edit`, {
@@ -1745,7 +1734,8 @@
     } catch (err) {
       showExportError(err.name === 'AbortError' ? 'Export timed out.' : 'Export failed.');
     } finally {
-      $('btnExport').disabled = false;
+      $('btnExportVideo').disabled = false;
+      $('btnExportAudio').disabled = false;
     }
   }
 
