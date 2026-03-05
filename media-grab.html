@@ -2017,6 +2017,7 @@
       sourceType: audioOnly ? 'audio' : (isVideo ? 'video' : 'audio'),
       premiereSafe,
       audioOnly,
+      outputFilename: sanitizeFilename($('fileName').dataset.fullName || 'clip') + '.' + (audioOnly ? 'mp3' : (premiereSafe ? 'mp4' : fmt)),
     };
 
     const exportLabel = audioOnly
@@ -2088,12 +2089,7 @@
         exportStatusText.style.display = 'none';
         exportTrackFill.parentElement.style.display = 'none';
 
-        // Build branded filename from original source name (not server's _edited name)
-        const sourceName = $('fileName').dataset.fullName || name;
-        const ext = name.includes('.') ? name.substring(name.lastIndexOf('.')) : '.mp4';
-        const cleanName = sanitizeFilename(sourceName) + ext;
-
-        $('exportFilename').textContent = cleanName;
+        $('exportFilename').textContent = name;
 
         const checkEl = $('successCheck');
         checkEl.classList.remove('animate');
@@ -2102,10 +2098,9 @@
 
         exportSuccess.classList.add('visible');
 
-        // Auto-download — append desired filename to URL for Content-Disposition
-        const dlUrl = fileUrl + (fileUrl.includes('?') ? '&' : '?') + 'filename=' + encodeURIComponent(cleanName);
+        // Auto-download
         const a = document.createElement('a');
-        a.href = dlUrl; a.download = cleanName;
+        a.href = fileUrl; a.download = name;
         a.style.display = 'none';
         document.body.appendChild(a); a.click();
         setTimeout(() => document.body.removeChild(a), 100);
