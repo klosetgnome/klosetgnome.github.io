@@ -960,8 +960,9 @@
       btn.style.display = hasPasted ? 'inline-block' : 'none';
     } else {
       var hasText = !!inputTextEl.value.trim();
+      var isUrlInput = categorySelect.value === 'summarise' && isUrl(inputTextEl.value.trim());
       var isUrlPaste = fetchedFromUrl && categorySelect.value === 'summarise';
-      btn.style.display = (hasText && !isUrlPaste) ? 'inline-block' : 'none';
+      btn.style.display = (hasText && !isUrlPaste && !isUrlInput) ? 'inline-block' : 'none';
     }
   }
 
