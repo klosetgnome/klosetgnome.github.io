@@ -191,8 +191,11 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
   <div class="view active" id="view-dashboard">
     <div class="info-hero"><div class="info-hero-graphic"><svg viewBox="0 0 80 80" fill="none"><rect x="6" y="14" width="48" height="32" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="30" cy="30" r="8" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M27 27l8 6-8 6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/><path d="M60 20v18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="60" cy="22" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M12 56h8M24 52h8M36 56h8M48 52h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="64" x2="58" y2="64" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><div><div class="info-hero-title">Match Tape</div><div class="info-hero-desc">NRL highlights production tool. Log <span class="hl">tries</span>, <span class="hl">scoring events</span>, and <span class="hl">key moments</span> during live games. Drop commentary audio to auto-generate tagged filenames with <span class="hl">producer comments</span>.</div></div></div>
     <div class="card"><div class="card-header"><span class="card-label">Start a Game Session</span></div><div class="card-body">
-      <div class="form-row"><div class="form-group"><span class="form-label">Home Team</span><select class="form-select" id="newGameHome"></select></div><div class="form-group"><span class="form-label">Away Team</span><select class="form-select" id="newGameAway"></select></div></div>
+      <div class="form-row"><div class="form-group" style="flex:3"><span class="form-label">Pick from draw</span><select class="form-select" id="fixturePicker"><option value="">— Manual entry —</option></select></div></div>
+      <div id="manualGameFields">
+      <div class="form-row" style="margin-top:10px"><div class="form-group"><span class="form-label">Home Team</span><select class="form-select" id="newGameHome"></select></div><div class="form-group"><span class="form-label">Away Team</span><select class="form-select" id="newGameAway"></select></div></div>
       <div class="form-row" style="margin-top:12px"><div class="form-group" style="max-width:120px"><span class="form-label">Round</span><input type="number" class="form-input" id="newGameRound" placeholder="5" min="1" max="30"></div><div class="form-group"><span class="form-label">Venue</span><input type="text" class="form-input" id="newGameVenue" placeholder="e.g. Accor Stadium" list="venueSuggest"><datalist id="venueSuggest"></datalist></div><div class="form-group"><span class="form-label">Kickoff</span><input type="datetime-local" class="form-input" id="newGameKickoff" step="60"></div></div>
+      </div>
       <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><span class="form-label">Call Team</span><input type="text" class="form-input" id="ctInput" placeholder="Type a name..." list="ctSuggest" style="margin-bottom:6px"><datalist id="ctSuggest"></datalist><div style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;padding:6px 8px" id="ctChips"></div></div><div class="form-group" style="align-self:flex-end"><button class="btn btn-primary" id="btnStartGame">Start Game Session</button></div></div>
     </div></div>
     <div class="card"><div class="card-header"><span class="card-label">Recent Games</span></div><div class="card-body"><div class="game-grid" id="recentGamesGrid"></div></div></div>
@@ -219,12 +222,20 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
   </div>
   <div class="view" id="view-mission-control">
     <div class="info-hero" style="animation-delay:0s"><div class="info-hero-graphic" style="width:50px;height:50px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></div><div><div class="info-hero-title">Mission Control</div><div class="info-hero-desc">Manage call team talent, event types, and system settings.</div></div></div>
-    <div class="mc-tabs"><button class="mc-tab active" data-mc="callers">Call Team</button><button class="mc-tab" data-mc="etypes">Event Types</button><button class="mc-tab" data-mc="teams">Teams</button><button class="mc-tab" data-mc="venues">Venues</button><button class="mc-tab" data-mc="players">Players</button></div>
+    <div class="mc-tabs"><button class="mc-tab active" data-mc="callers">Call Team</button><button class="mc-tab" data-mc="etypes">Event Types</button><button class="mc-tab" data-mc="teams">Teams</button><button class="mc-tab" data-mc="venues">Venues</button><button class="mc-tab" data-mc="players">Players</button><button class="mc-tab" data-mc="draw">Draw</button></div>
     <div class="mc-panel active" id="mc-callers"><div class="card"><div class="card-body"><div class="mc-list" id="mcCL"></div><div class="mc-add-row"><input type="text" class="form-input" id="mcCN" placeholder="Full name" style="flex:2"><input type="text" class="form-input" id="mcCK" placeholder="Nickname" style="flex:1"><select class="form-select" id="mcCR" style="flex:1"><option value="Play-by-play">Play-by-play</option><option value="Host">Host</option><option value="Sideline">Sideline</option><option value="Expert">Expert</option><option value="Analyst">Analyst</option></select><button class="btn btn-primary btn-sm" id="btnAddC">Add</button></div></div></div></div>
     <div class="mc-panel" id="mc-etypes"><div class="card"><div class="card-body"><div class="mc-list" id="mcETL"></div><div class="mc-add-row"><input type="text" class="form-input" id="mcETN" placeholder="Event type name" style="flex:2"><select class="form-select" id="mcETC" style="flex:1"><option value="try">Try</option><option value="scoring">Scoring</option><option value="discipline">Discipline</option><option value="moment">Key Moment</option><option value="grab">Grab</option></select><button class="btn btn-primary btn-sm" id="btnAddET">Add</button></div></div></div></div>
     <div class="mc-panel" id="mc-teams"><div class="card"><div class="card-body"><div class="mc-list" id="mcTL"></div></div></div></div>
     <div class="mc-panel" id="mc-venues"><div class="card"><div class="card-body"><div class="mc-list" id="mcVL"></div><div class="mc-add-row"><input type="text" class="form-input" id="mcVN" placeholder="Venue name" style="flex:2"><button class="btn btn-primary btn-sm" id="btnAddV">Add</button></div></div></div></div>
     <div class="mc-panel" id="mc-players"><div class="card"><div class="card-header" style="border-bottom:none;padding-bottom:0"><select class="form-select" id="mcPTeam" style="width:auto;padding:6px 30px 6px 12px;font-size:10px"></select></div><div class="card-body"><div class="mc-list" id="mcPL"></div><div class="mc-add-row"><input type="text" class="form-input" id="mcPN" placeholder="Player name" style="flex:2"><button class="btn btn-primary btn-sm" id="btnAddP">Add</button></div></div></div></div>
+    <div class="mc-panel" id="mc-draw"><div class="card"><div class="card-body">
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text-secondary);line-height:1.8">Import the 2026 NRL draw from <a href="https://fixturedownload.com/results/nrl-2026" target="_blank" style="color:var(--accent)">fixturedownload.com</a>. Download the JSON file, then drop it below.</div>
+        <div class="audio-drop" id="drawDropZone" style="width:100%;padding:20px;cursor:pointer">Drop NRL 2026 JSON file here or click to browse<input type="file" id="drawFileInput" accept=".json" style="display:none"></div>
+        <div id="drawStatus" style="font-family:var(--mono);font-size:11px;color:var(--text-muted)"></div>
+        <div id="drawList" class="mc-list" style="width:100%"></div>
+      </div>
+    </div></div></div>
   </div>
 </div>
 <footer><a href="index.html"><span style="color:var(--accent)">dev.</span>nialfernandes.com</a><span style="color:var(--text-muted);margin:0 8px">|</span><a href="privacy.html">Privacy Policy</a></footer>
@@ -448,7 +459,7 @@ function renderCtChips(){const c=$('ctChips');if(!c)return;
 document.querySelectorAll('.phase-btn').forEach(b=>{b.addEventListener('click',()=>{S.activePhase=b.dataset.phase;document.querySelectorAll('.phase-btn').forEach(p=>{p.classList.remove('active','live');});b.classList.add('active');if(b.dataset.phase==='live')b.classList.add('live');if(S.activeGame)location.hash='session:'+S.activeGame+':'+S.activePhase;applyPh();renderEL();});});
 
 // ═══ DASHBOARD ═══
-async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();selectedCT=[];renderCtChips();
+async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();selectedCT=[];renderCtChips();populateFixturePicker();
   try{S.games=await api('/games');}catch{S.games=[];}
   const gr=$('recentGamesGrid');if(!gr)return;if(!S.games.length){gr.innerHTML='<div class="empty-state">No games yet.</div>';return;}
   const showAll=gr.dataset.showAll==='1';const display=showAll?S.games:S.games.slice(0,10);
@@ -459,17 +470,30 @@ async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKicko
     S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();});});
   gr.querySelectorAll('[data-a="delgame"]').forEach(b=>{b.addEventListener('click',async(e)=>{e.stopPropagation();const gm=S.games.find(g=>g.id===b.dataset.id);if(!gm)return;if(!await mtConfirm('Delete '+tn(gm.home_team)+' v '+tn(gm.away_team)+'? All events and audio will be permanently removed.',true))return;try{await apiDel('/games/'+b.dataset.id);renderD();}catch(e){mtAlert(e.message);}});});
   const saBtn=$('btnShowAllGames');if(saBtn)saBtn.addEventListener('click',()=>{gr.dataset.showAll='1';renderD();});}
-$('btnStartGame').addEventListener('click',async()=>{const h=$('newGameHome').value,a=$('newGameAway').value;if(!h||!a)return mtAlert('Select both teams.');if(h===a)return mtAlert('Different teams.');
-  const rn=parseInt(String($('newGameRound').value).replace(/\D/g,''),10);
-  const venue=titleCase($('newGameVenue').value.trim());
-  const kickoff=$('newGameKickoff').value||null;
-  // Auto-save venue to DB if new
-  if(venue){try{await apiPost('/venues',{name:venue});}catch{}}
-  try{const res=await apiPost('/games',{homeTeam:h,awayTeam:a,round:isNaN(rn)?null:rn,venue:venue||null,kickoff:kickoff,callTeam:[...selectedCT]});
-  S.activeGame=res.id;await loadGame(res.id);
-  // Pre-load players for both teams
-  try{const hp=await loadPlayers(h);const ap=await loadPlayers(a);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}
-  S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();}catch(e){mtAlert('Failed: '+e.message);}});
+// Fixture picker toggle
+$('fixturePicker').addEventListener('change',()=>{const v=$('fixturePicker').value;$('manualGameFields').style.display=v?'none':'';});
+
+$('btnStartGame').addEventListener('click',async()=>{
+  const picked=$('fixturePicker').value;
+  if(picked){
+    // Start from imported fixture — game already exists in D1
+    S.activeGame=picked;await loadGame(picked);
+    // Assign call team to the game
+    if(selectedCT.length){try{for(const cid of selectedCT)await apiPost('/games/'+picked+'/callers',{callerId:cid}).catch(()=>{});}catch{}}
+    try{const g=gg();if(g){const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}}catch{S._gamePlayers=[];}
+    S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();
+  }else{
+    // Manual entry
+    const h=$('newGameHome').value,a=$('newGameAway').value;if(!h||!a)return mtAlert('Select both teams.');if(h===a)return mtAlert('Different teams.');
+    const rn=parseInt(String($('newGameRound').value).replace(/\D/g,''),10);
+    const venue=titleCase($('newGameVenue').value.trim());
+    const kickoff=$('newGameKickoff').value||null;
+    if(venue){try{await apiPost('/venues',{name:venue});}catch{}}
+    try{const res=await apiPost('/games',{homeTeam:h,awayTeam:a,round:isNaN(rn)?null:rn,venue:venue||null,kickoff:kickoff,callTeam:[...selectedCT]});
+    S.activeGame=res.id;await loadGame(res.id);
+    try{const hp=await loadPlayers(h);const ap=await loadPlayers(a);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}
+    S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();}catch(e){mtAlert('Failed: '+e.message);}
+  }});
 async function loadGame(id){try{const g=await api('/games/'+id);S.currentGame=normGame(g);}catch(e){S.currentGame=null;}}
 
 // ═══ SESSION ═══
@@ -665,7 +689,7 @@ $('btnArchVP').addEventListener('click',async()=>{try{const p=new URLSearchParam
 
 // ═══ MISSION CONTROL ═══
 document.querySelectorAll('.mc-tab').forEach(t=>{t.addEventListener('click',()=>{document.querySelectorAll('.mc-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.mc-panel').forEach(x=>x.classList.remove('active'));t.classList.add('active');$('mc-'+t.dataset.mc).classList.add('active');});});
-async function renderMC(){await rMCC();await rMCET();rMCT();await rMCV();await rMCP();}
+async function renderMC(){await rMCC();await rMCET();rMCT();await rMCV();await rMCP();renderDrawList();}
 async function rMCC(){try{S.callers=await api('/callers');}catch{S.callers=[];}
   const l=$('mcCL');if(!S.callers.length){l.innerHTML='<div class="empty-state" style="padding:16px">No callers.</div>';return;}
   l.innerHTML=S.callers.map(c=>'<div class="mc-item" data-cid="'+c.id+'"><span class="mc-item-name">'+c.name+(c.nick?' <span style="color:var(--accent)">('+c.nick+')</span>':'')+'</span><span class="mc-item-meta">'+c.role+'</span><div class="mc-item-actions"><button class="mc-item-btn" data-a="ec" data-id="'+c.id+'">Edit</button><button class="mc-item-btn delete" data-a="dc" data-id="'+c.id+'">Remove</button></div></div>').join('');
@@ -714,6 +738,66 @@ async function rMCP(){
     $('pX_'+p.id).addEventListener('click',()=>rMCP());
   });});}
 $('btnAddP').addEventListener('click',async()=>{const n=$('mcPN').value.trim(),team=$('mcPTeam').value;if(!n||!team)return;try{await apiPost('/players',{name:n,team:team});$('mcPN').value='';await rMCP();}catch(e){mtAlert(e.message);}});
+
+// ── Draw import ──
+const _teamMap={'broncos':'broncos','bulldogs':'bulldogs','cowboys':'cowboys','dolphins':'dolphins','dragons':'dragons','eels':'eels','knights':'knights','panthers':'panthers','rabbitohs':'rabbitohs','raiders':'raiders','roosters':'roosters','sea eagles':'sea-eagles','sharks':'sharks','storm':'storm','titans':'titans','warriors':'warriors','wests tigers':'tigers','tigers':'tigers'};
+function mapTeam(name){const k=(name||'').toLowerCase().trim();return _teamMap[k]||NRL_TEAMS.find(t=>t.name.toLowerCase()===k||t.full.toLowerCase()===k||t.id===k)?.id||k;}
+
+(function(){
+  const dz=$('drawDropZone'),fi=$('drawFileInput'),st=$('drawStatus');
+  dz.addEventListener('click',()=>fi.click());
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');if(e.dataTransfer.files[0])importDrawFile(e.dataTransfer.files[0]);});
+  fi.addEventListener('change',()=>{if(fi.files[0])importDrawFile(fi.files[0]);fi.value='';});
+})();
+
+async function importDrawFile(file){
+  const st=$('drawStatus');st.textContent='Reading file...';
+  try{
+    const text=await file.text();const data=JSON.parse(text);
+    if(!Array.isArray(data)||!data.length)throw new Error('Invalid JSON format');
+    // Map fixturedownload.com format to our schema
+    const fixtures=data.map(f=>({
+      homeTeam:mapTeam(f.HomeTeam||f.homeTeam||f.home_team||''),
+      awayTeam:mapTeam(f.AwayTeam||f.awayTeam||f.away_team||''),
+      round:f.RoundNumber||f.round||null,
+      venue:f.Location||f.Venue||f.venue||null,
+      kickoff:f.DateUtc||f.kickoff||f.date||null,
+      season:2026
+    })).filter(f=>f.homeTeam&&f.awayTeam);
+    st.textContent='Importing '+fixtures.length+' fixtures...';
+    const res=await apiPost('/games/import',{fixtures});
+    st.innerHTML='<span style="color:var(--success)">\u2713 '+res.imported+' imported</span>'+(res.skipped?' \xb7 '+res.skipped+' skipped (duplicates)':'');
+    // Also auto-save venues
+    const venues=[...new Set(fixtures.map(f=>f.venue).filter(Boolean))];
+    for(const v of venues){try{await apiPost('/venues',{name:v});}catch{}}
+    renderDrawList();
+  }catch(e){st.innerHTML='<span style="color:var(--error)">\u2717 '+e.message+'</span>';}
+}
+
+async function renderDrawList(){
+  try{const games=await api('/games');
+    const dl=$('drawList');if(!dl)return;
+    if(!games.length){dl.innerHTML='<div class="empty-state">No fixtures imported yet.</div>';return;}
+    // Group by round
+    const rounds={};games.forEach(g=>{const r=g.round||0;if(!rounds[r])rounds[r]=[];rounds[r].push(g);});
+    dl.innerHTML=Object.keys(rounds).sort((a,b)=>a-b).map(r=>{
+      const gs=rounds[r];
+      return'<div style="margin-bottom:8px"><div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Round '+r+'</div>'+
+      gs.map(g=>{const ko=g.kickoff?new Date(g.kickoff).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}):'TBC';
+        return'<div class="mc-item" style="padding:6px 10px"><span class="mc-item-name" style="font-size:11px">'+tn(g.home_team)+' v '+tn(g.away_team)+'</span><span class="mc-item-meta">'+ko+(g.venue?' \xb7 '+g.venue:'')+'</span></div>';}).join('')+'</div>';}).join('');
+  }catch{}}
+
+// ── Dashboard fixture picker ──
+async function populateFixturePicker(){
+  try{const games=await api('/games');
+    const upcoming=games.filter(g=>!g.eventCount||g.eventCount===0).sort((a,b)=>(a.round||0)-(b.round||0));
+    const sel=$('fixturePicker');if(!sel)return;
+    sel.innerHTML='<option value="">— Manual entry —</option>'+upcoming.map(g=>{
+      const ko=g.kickoff?new Date(g.kickoff).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}):'';
+      return'<option value="'+g.id+'">R'+g.round+' \xb7 '+tn(g.home_team)+' v '+tn(g.away_team)+(ko?' \xb7 '+ko:'')+'</option>';}).join('');
+  }catch{}}
 
 // Server health check
 async function checkServerHealth(){
