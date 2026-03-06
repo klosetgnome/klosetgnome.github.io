@@ -74,6 +74,14 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 .caller-multi:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
 .caller-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:10px;color:var(--text-primary);letter-spacing:0.3px}
 .caller-chip .chip-x{cursor:pointer;color:var(--text-muted);font-size:12px;line-height:1}.caller-chip .chip-x:hover{color:var(--error)}
+.caller-grid{display:flex;flex-wrap:wrap;gap:3px}
+.caller-pill{display:flex;align-items:center;gap:4px;cursor:pointer;padding:3px 8px;border-radius:4px;border:1px solid var(--border);transition:all 0.15s;user-select:none}
+.caller-pill:hover{border-color:var(--accent)}
+.caller-pill.on{background:color-mix(in srgb,var(--accent) 12%,transparent);border-color:var(--accent)}
+.caller-pill .cp-mark{width:10px;height:10px;border:1px solid var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:7px;flex-shrink:0;transition:all 0.15s}
+.caller-pill.on .cp-mark{background:var(--accent);border-color:var(--accent);color:#fff}
+.caller-pill .cp-name{font-family:var(--mono);font-size:9px;color:var(--text-muted);white-space:nowrap}
+.caller-pill.on .cp-name{color:var(--text-primary)}
 .caller-dropdown{position:relative}
 .caller-list{display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 24px var(--shadow);max-height:200px;overflow-y:auto;margin-top:4px}
 .caller-list.open{display:block}
@@ -214,7 +222,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     <div class="phase-bar"><button class="phase-btn active" data-phase="pre">Pre-game</button><button class="phase-btn" data-phase="live">Live</button><button class="phase-btn" data-phase="post">Post-game</button></div>
     <div class="card"><div class="card-header"><span class="card-label">Log Event</span><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>MINUTE</span></div></div><div class="card-body">
       <div class="form-row"><div class="form-group"><span class="form-label">Event Type</span><select class="form-select" id="eventType"></select></div><div class="form-group"><span class="form-label">Team</span><select class="form-select" id="eventTeam"></select></div></div>
-      <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s)</span><input type="text" class="form-input" id="callerInput" placeholder="Type caller name..." list="callerSuggest"><datalist id="callerSuggest"></datalist><div style="display:flex;flex-wrap:wrap;gap:4px;max-height:36px;overflow-y:auto;padding:4px 0" id="callerChips"></div></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s)</span><div class="caller-grid" id="callerGrid"></div></div></div>
       <input type="hidden" id="eventComment" value="">
       <div class="form-row" style="margin-top:16px"><div class="form-group" style="flex:2"><div class="audio-drop audio-drop-lg" id="eventAudioDrop"><div class="audio-drop-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div><div class="audio-drop-text">Drop grab here or click to browse</div><div class="audio-drop-hint">Event logs automatically when audio is dropped</div><input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div></div>
       <button class="btn btn-success" id="btnLogEvent" style="display:none">Log Event</button>
@@ -432,8 +440,8 @@ function stopClk(){if(clockI){clearInterval(clockI);clockI=null;}$('liveClock').
 function applyPh(){const ph=S.activePhase,live=ph==='live';$('callerGroup').classList.toggle('hidden-phase',!live);$('playerLabel').textContent=live?'Player':'Player / Speaker';
   if(live){const t=$('eventType').querySelector('option[value="try"]');if(t)$('eventType').value='try';}else{const g=$('eventType').querySelector('option[value="grab"]');if(g)$('eventType').value='grab';const na=$('eventTeam').querySelector('option[value=""]');if(na)$('eventTeam').value='';}
   if(!live)selectedCallers=[];
-  else{const g=gg();const cids=g&&g.callTeam&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);if(!selectedCallers.length)selectedCallers=[...cids];}
-  renderCallerMulti();updateSug();if(live)startClk();else stopClk();}
+  else{selectedCallers=[];}
+  renderCallerGrid();updateSug();if(live)startClk();else stopClk();}
 function updateSug(){const dl=$('playerSuggestions'),g=gg(),live=S.activePhase==='live';let names=[];
   if(live){
     // Suggest players from DB for current teams + previously mentioned
@@ -442,21 +450,17 @@ function updateSug(){const dl=$('playerSuggestions'),g=gg(),live=S.activePhase==
   }else{names=S.callers.map(c=>c.nick?c.name+' ('+c.nick+')':c.name);if(g)(g.events||[]).forEach(e=>{if(e.player&&!names.includes(e.player))names.push(e.player);});}
   dl.innerHTML=[...new Set(names)].map(n=>'<option value="'+n+'">').join('');}
 
-// Caller tag input (in-game session)
+// Caller checkbox grid (in-game session)
 let selectedCallers=[];
-function renderCallerMulti(){
-  const c=$('callerChips');if(!c)return;
-  c.innerHTML=selectedCallers.length?selectedCallers.map(id=>'<span class="caller-chip" style="margin:0">'+cNick(id)+'<span class="chip-x" data-cid="'+id+'">\xd7</span></span>').join(''):'';
-  c.querySelectorAll('.chip-x').forEach(x=>{x.addEventListener('click',()=>{selectedCallers=selectedCallers.filter(id=>id!==x.dataset.cid);renderCallerMulti();});});
-  // Update datalist with game call team only
+function renderCallerGrid(){
+  const c=$('callerGrid');if(!c)return;
   const g=gg();const cids=g&&g.callTeam&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);
-  const dl=$('callerSuggest');if(dl)dl.innerHTML=cids.filter(id=>!selectedCallers.includes(id)).map(id=>{const c=S.callers.find(c=>c.id===id);return c?'<option value="'+(c.nick?c.name+' ('+c.nick+')':c.name)+'">':'';}).join('');
+  c.innerHTML=cids.map(id=>{const cal=S.callers.find(c=>c.id===id);if(!cal)return'';const on=selectedCallers.includes(id);
+    return'<label class="caller-pill'+(on?' on':'')+'" data-cid="'+id+'"><span class="cp-mark">'+(on?'\u2713':'')+'</span><span class="cp-name">'+(cal.nick||cal.name)+'</span></label>';}).join('');
+  c.querySelectorAll('.caller-pill').forEach(p=>{p.addEventListener('click',()=>{
+    const id=p.dataset.cid;if(selectedCallers.includes(id))selectedCallers=selectedCallers.filter(x=>x!==id);else selectedCallers.push(id);renderCallerGrid();});});
 }
-(function(){const inp=$('callerInput');if(!inp)return;
-  inp.addEventListener('change',function(){const v=inp.value.trim();if(!v)return;
-    const match=S.callers.find(c=>c.name.toLowerCase()===v.toLowerCase()||(c.nick&&(c.name+' ('+c.nick+')').toLowerCase()===v.toLowerCase())||c.nick&&c.nick.toLowerCase()===v.toLowerCase());
-    if(match&&!selectedCallers.includes(match.id)){selectedCallers.push(match.id);inp.value='';renderCallerMulti();}else{inp.value='';}});
-})();
+function resetCallerGrid(){selectedCallers=[];renderCallerGrid();}
 
 // Call team tag input (dashboard)
 let selectedCT=[];
@@ -524,7 +528,7 @@ async function loadGame(id){try{const g=await api('/games/'+id);S.currentGame=no
 function renderS(){const g=gg();if(!g){const bt=$('gameBannerTeams');if(bt)bt.textContent='No active game';return;}
   $('gameBannerTeams').innerHTML=tn(g.homeTeam)+' <span class="vs">v</span> '+tn(g.awayTeam);$('gameBannerMeta').innerHTML=rd(g.round)+(g.venue?'<br>'+g.venue:'');
   $('eventTeam').innerHTML='<option value="'+g.homeTeam+'">'+tn(g.homeTeam)+'</option><option value="'+g.awayTeam+'">'+tn(g.awayTeam)+'</option><option value="">N/A (grab)</option>';
-  pET();const gcids=g.callTeam&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);selectedCallers=[...gcids];document.querySelectorAll('.phase-btn').forEach(b=>{b.classList.remove('active','live');if(b.dataset.phase===S.activePhase){b.classList.add('active');if(S.activePhase==='live')b.classList.add('live');}});applyPh();renderEL();}
+  pET();selectedCallers=[];document.querySelectorAll('.phase-btn').forEach(b=>{b.classList.remove('active','live');if(b.dataset.phase===S.activePhase){b.classList.add('active');if(S.activePhase==='live')b.classList.add('live');}});applyPh();renderEL();}
 
 function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!ec2)return;if(!g){el.innerHTML='<div class="empty-state">Select a game.</div>';ec2.textContent='0';return;}
   const pe=(g.events||[]).filter(e=>e.phase===S.activePhase);
@@ -648,7 +652,7 @@ async function doLogEvent(){
   const audioFile=pA;const team=$('eventTeam').value||null;
   if(player&&live&&team){try{await apiPost('/players',{name:player,team:team});}catch{}}
   try{const res=await apiPost('/games/'+S.activeGame+'/events',{type,phase:S.activePhase,minute,team,player:player||null,callers:live?[...selectedCallers]:[],comment:'',hasAudio:!!audioFile,audioFileName:audioFile?audioFile.name:null});
-  $('eventPlayer').value='';$('eventComment').value='';pA=null;
+  $('eventPlayer').value='';$('eventComment').value='';pA=null;resetCallerGrid();
   if(audioFile)enqueueAudio(S.activeGame,res.id,audioFile);await loadGame(S.activeGame);
   if(player&&live&&team){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{}}
   renderEL();updateSug();}catch(e){mtAlert('Failed: '+e.message);}}
