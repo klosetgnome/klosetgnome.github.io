@@ -233,7 +233,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     <div class="card"><div class="card-header"><span class="card-label">Search Archive</span></div>
       <div class="search-bar"><input type="text" class="form-input" id="archSearch" placeholder="Search by player, team, caller, comment..."></div>
       <div class="card-body" style="padding-top:0"><div class="form-row" style="gap:8px"><div class="form-group" style="min-width:100px"><span class="form-label">Game</span><select class="form-select" id="archGame"><option value="">All games</option></select></div><div class="form-group" style="min-width:100px"><span class="form-label">Team</span><select class="form-select" id="archTeam"><option value="">All teams</option></select></div><div class="form-group" style="min-width:100px"><span class="form-label">Type</span><select class="form-select" id="archType"><option value="">All types</option></select></div><div class="form-group" style="min-width:100px"><span class="form-label">Caller</span><select class="form-select" id="archCaller"><option value="">All callers</option></select></div></div></div>
-      <div class="archive-toolbar"><button class="filter-toggle" id="starFilter">&#9733; Starred only</button><span style="flex:1"></span><button class="btn btn-secondary btn-sm" id="btnArchVP">Export for VoxPro</button></div>
+      <div class="archive-toolbar"><button class="filter-toggle" id="starFilter">&#9733; Starred only</button><span style="flex:1"></span><button class="btn btn-secondary btn-sm" id="btnArchVP">VoxPro Export</button></div>
       <div class="archive-results" id="archResults"><div class="empty-state">Search or filter to find events.</div></div>
     </div>
   </div>
@@ -244,7 +244,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     <div class="mc-panel" id="mc-etypes"><div class="card"><div class="card-body"><div class="mc-list" id="mcETL"></div><div class="mc-add-row"><input type="text" class="form-input" id="mcETN" placeholder="Event type name" style="flex:2"><select class="form-select" id="mcETC" style="flex:1"><option value="try">Try</option><option value="scoring">Scoring</option><option value="discipline">Discipline</option><option value="moment">Key Moment</option><option value="grab">Grab</option></select><button class="btn btn-primary btn-sm" id="btnAddET">Add</button></div></div></div></div>
     <div class="mc-panel" id="mc-teams"><div class="card"><div class="card-body"><div class="mc-list" id="mcTL"></div></div></div></div>
     <div class="mc-panel" id="mc-venues"><div class="card"><div class="card-body"><div class="mc-list" id="mcVL"></div><div class="mc-add-row"><input type="text" class="form-input" id="mcVN" placeholder="Venue name" style="flex:2"><button class="btn btn-primary btn-sm" id="btnAddV">Add</button></div></div></div></div>
-    <div class="mc-panel" id="mc-players"><div class="card"><div class="card-header" style="border-bottom:none;padding-bottom:0"><select class="form-select" id="mcPTeam" style="width:auto;padding:6px 30px 6px 12px;font-size:10px"></select></div><div class="card-body"><div class="mc-list" id="mcPL"></div><div class="mc-add-row"><input type="text" class="form-input" id="mcPN" placeholder="Player name" style="flex:2"><button class="btn btn-primary btn-sm" id="btnAddP">Add</button></div></div></div></div>
+    <div class="mc-panel" id="mc-players"><div class="card"><div class="card-header" style="border-bottom:none;padding-bottom:0"><select class="form-select" id="mcPTeam" style="width:auto;padding:6px 30px 6px 12px;font-size:10px"></select></div><div class="card-body"><div class="mc-list" id="mcPL"></div><div class="mc-add-row"><input type="text" class="form-input" id="mcPN" placeholder="Player name" style="flex:2"><button class="btn btn-primary btn-sm" id="btnAddP">Add</button></div><div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><div class="audio-drop" id="playerDropZone" style="width:100%;padding:14px;cursor:pointer;font-size:9px">Drop player JSON to import<input type="file" id="playerFileInput" accept=".json" style="display:none"></div><div id="playerImportStatus" style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:6px"></div></div></div></div></div>
     <div class="mc-panel" id="mc-draw"><div class="card" style="position:relative;min-height:200px"><div class="card-body" id="drawBody">
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
         <div style="font-family:var(--mono);font-size:11px;color:var(--text-secondary);line-height:1.8">Import the 2026 NRL draw from <a href="https://fixturedownload.com/results/nrl-2026" target="_blank" style="color:var(--accent)">fixturedownload.com</a>. Download the JSON file, then drop it below.</div>
@@ -685,7 +685,7 @@ async function bVP(games,onProgress){const z=new JSZip(),r=z.folder('NRL_HIGHLIG
   return{z,n};}
 async function dlZ(z,fn){const b=await z.generateAsync({type:'blob'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=fn;a.click();setTimeout(()=>URL.revokeObjectURL(u),200);}
 $('btnSessionVoxpro').addEventListener('click',async()=>{const g=gg();if(!g||!(g.events||[]).some(e=>e.hasAudio))return mtAlert('No audio.');const btn=$('btnSessionVoxpro');btn.disabled=true;btn.textContent='Fetching audio...';
-  try{const{z,n}=await bVP([g],(done,total)=>{btn.textContent='Fetching '+done+'/'+total+'...';});btn.textContent='Zipping...';await dlZ(z,'VoxPro_'+gF(g)+'.zip');btn.textContent=n+' exported';setTimeout(()=>{btn.textContent='Export for VoxPro';btn.disabled=false;},3000);}catch(e){mtAlert(e.message);btn.textContent='Export for VoxPro';btn.disabled=false;}});
+  try{const{z,n}=await bVP([g],(done,total)=>{btn.textContent='Fetching '+done+'/'+total+'...';});btn.textContent='Zipping...';await dlZ(z,'VoxPro_'+gF(g)+'.zip');btn.textContent=n+' exported';setTimeout(()=>{btn.textContent='VoxPro Export';btn.disabled=false;},3000);}catch(e){mtAlert(e.message);btn.textContent='VoxPro Export';btn.disabled=false;}});
 
 // ═══ ARCHIVE ═══
 let starO=false;
@@ -715,7 +715,7 @@ $('btnArchVP').addEventListener('click',async()=>{try{const p=new URLSearchParam
   const res=await api('/archive?'+p.toString());if(!res.length)return mtAlert('No results.');const gm=new Map();
   res.forEach(r=>{r.callers=r.callers||[];r.hasAudio=!!r.has_audio;r.starred=!!r.starred;if(!gm.has(r.game_id))gm.set(r.game_id,{homeTeam:r.home_team,awayTeam:r.away_team,round:r.round,events:[]});gm.get(r.game_id).events.push(r);});
   const btn=$('btnArchVP');btn.disabled=true;btn.textContent='Fetching audio...';const{z,n}=await bVP([...gm.values()],(done,total)=>{btn.textContent='Fetching '+done+'/'+total+'...';});btn.textContent='Zipping...';await dlZ(z,'VoxPro_'+new Date().toISOString().slice(0,10)+'.zip');
-  btn.textContent=n+' files';setTimeout(()=>{btn.textContent='Export for VoxPro';btn.disabled=false;},3000);}catch(e){mtAlert(e.message);}});
+  btn.textContent=n+' files';setTimeout(()=>{btn.textContent='VoxPro Export';btn.disabled=false;},3000);}catch(e){mtAlert(e.message);}});
 
 // ═══ MISSION CONTROL ═══
 document.querySelectorAll('.mc-tab').forEach(t=>{t.addEventListener('click',()=>{document.querySelectorAll('.mc-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.mc-panel').forEach(x=>x.classList.remove('active'));t.classList.add('active');$('mc-'+t.dataset.mc).classList.add('active');});});
@@ -768,6 +768,32 @@ async function rMCP(){
     $('pX_'+p.id).addEventListener('click',()=>rMCP());
   });});}
 $('btnAddP').addEventListener('click',async()=>{const n=$('mcPN').value.trim(),team=$('mcPTeam').value;if(!n||!team)return;try{await apiPost('/players',{name:n,team:team});$('mcPN').value='';await rMCP();}catch(e){mtAlert(e.message);}});
+
+// Player import
+(function(){
+  const dz=$('playerDropZone'),fi=$('playerFileInput'),st=$('playerImportStatus');
+  dz.addEventListener('click',()=>fi.click());
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');if(e.dataTransfer.files[0])importPlayerFile(e.dataTransfer.files[0]);});
+  fi.addEventListener('change',()=>{if(fi.files[0])importPlayerFile(fi.files[0]);fi.value='';});
+})();
+async function importPlayerFile(file){
+  const st=$('playerImportStatus');st.textContent='Importing...';
+  try{
+    const data=JSON.parse(await file.text());
+    if(!Array.isArray(data)||!data.length)throw new Error('Invalid JSON');
+    const batch=50;let imported=0,skipped=0;
+    for(let i=0;i<data.length;i+=batch){
+      const chunk=data.slice(i,i+batch);
+      const res=await apiPost('/players/import',{players:chunk});
+      imported+=res.imported;skipped+=res.skipped;
+      st.textContent='Importing... '+Math.round(((i+chunk.length)/data.length)*100)+'%';
+    }
+    st.innerHTML='<span style="color:var(--success)">\u2713 '+imported+' imported</span>'+(skipped?' \xb7 '+skipped+' existing':'');
+    await rMCP();
+  }catch(e){st.innerHTML='<span style="color:var(--error)">\u2717 '+e.message+'</span>';}
+}
 
 // ── Draw import ──
 const _teamMap={
