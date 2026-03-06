@@ -66,11 +66,9 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 @keyframes livePulse{0%,100%{opacity:1}50%{opacity:0.8}}
 .session-actions{display:flex;gap:10px;flex-wrap:wrap}
 /* Log event row with inline clock */
-.log-row{display:flex;gap:12px;align-items:center;margin-top:12px}
-.log-row .btn{flex-shrink:0}
-.live-clock-inline{display:none;margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--text-muted);letter-spacing:0.5px;align-items:center;gap:4px}
+.live-clock-inline{display:none;margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;align-items:center;gap:4px}
 .live-clock-inline.visible{display:flex}
-.live-clock-inline .clock-num{color:var(--error);font-weight:600;font-size:14px}
+.live-clock-inline .clock-num{color:var(--error);font-weight:600;font-size:13px}
 /* Caller multi-select */
 .caller-multi{display:flex;flex-wrap:wrap;gap:6px;min-height:38px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:border-color 0.2s}
 .caller-multi:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
@@ -163,12 +161,11 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     <div class="game-banner"><div class="game-banner-teams" id="gameBannerTeams"></div><div class="game-banner-meta" id="gameBannerMeta"></div><button class="game-banner-close" id="btnEndSession">End Session</button></div>
     <div class="session-actions"><button class="btn btn-secondary" id="btnSessionVoxpro">Export for VoxPro</button><button class="btn btn-secondary" id="btnExportSummary">Export Match Summary</button></div>
     <div class="phase-bar"><button class="phase-btn active" data-phase="pre">Pre-game</button><button class="phase-btn" data-phase="live">Live</button><button class="phase-btn" data-phase="post">Post-game</button></div>
-    <div class="card"><div class="card-header"><span class="card-label">Log Event</span></div><div class="card-body">
+    <div class="card"><div class="card-header"><span class="card-label">Log Event</span><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>GAME MINUTE</span></div></div><div class="card-body">
       <div class="form-row"><div class="form-group"><span class="form-label">Event Type</span><select class="form-select" id="eventType"></select></div><div class="form-group"><span class="form-label">Team</span><select class="form-select" id="eventTeam"></select></div></div>
       <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s)</span><div class="caller-dropdown" id="callerDropdown"><div class="caller-multi" id="callerMulti"><span style="color:var(--text-muted);font-family:var(--mono);font-size:11px">Select caller(s)</span></div><div class="caller-list" id="callerList"></div></div></div></div>
-      <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><span class="form-label">Comment (or drop audio to auto-generate)</span><input type="text" class="form-input" id="eventComment" placeholder="e.g. Great call, Under pressure..."></div></div>
-      <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><div class="audio-drop" id="eventAudioDrop">Drop commentary audio here or click to browse<input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div></div>
-      <div class="log-row"><button class="btn btn-success" id="btnLogEvent">Log Event</button><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>game minute</span></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><span class="form-label">Comment (or drop audio to auto-generate)</span><div style="display:flex;gap:6px;align-items:center"><input type="text" class="form-input" id="eventComment" placeholder="e.g. Great call, Under pressure..." style="flex:1"><button class="regen-btn" id="btnRegenComment" title="Regenerate comment from audio transcript" disabled>&#8635;</button></div></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><div class="audio-drop" id="eventAudioDrop">Drop commentary audio here or click to browse<input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div><div class="form-group" style="align-self:flex-end"><button class="btn btn-success" id="btnLogEvent">Log Event</button></div></div>
     </div></div>
     <div class="card" id="fnCard" style="display:none"><div class="card-header"><span class="card-label">Generated Filename</span></div><div class="card-body"><div class="event-filename"><span class="event-filename-text" id="fnPreview"></span><button class="copy-btn" id="btnCopyFn">Copy</button></div></div></div>
     <div class="card"><div class="card-header"><span class="card-label">Event Timeline</span><span class="card-label" id="evCount" style="color:var(--accent)">0</span></div><div class="card-body"><div class="event-list" id="evList"><div class="empty-state">No events logged yet.</div></div></div></div>
@@ -300,12 +297,16 @@ function applyPh(){
   if(live)startClk();else stopClk();
 }
 function updateSug(){
-  const dl=$('playerSuggestions'),g=gg();let names=[];
-  // All phases: suggest callers/experts/hosts
-  names=S.callers.map(c=>c.nick?c.name+' ('+c.nick+')':c.name);
-  // All phases: add previously mentioned players
-  if(g)g.events.forEach(e=>{if(e.player&&!names.includes(e.player))names.push(e.player);});
-  // TODO: add actual roster data from hybrid system
+  const dl=$('playerSuggestions'),g=gg(),live=S.activePhase==='live';let names=[];
+  if(live){
+    // Live: only player names (from previous events), NOT talent/caller names
+    if(g)g.events.forEach(e=>{if(e.player&&e.phase==='live')names.push(e.player);});
+    // TODO: add actual roster data from hybrid system
+  }else{
+    // Pre/post: suggest all talent + any players mentioned
+    names=S.callers.map(c=>c.nick?c.name+' ('+c.nick+')':c.name);
+    if(g)g.events.forEach(e=>{if(e.player&&!names.includes(e.player))names.push(e.player);});
+  }
   dl.innerHTML=[...new Set(names)].map(n=>'<option value="'+n+'">').join('');
 }
 
@@ -343,7 +344,7 @@ $('eventPlayer').addEventListener('input',updateFP);
 function renderEL(){
   const g=gg();if(!g){$('evList').innerHTML='<div class="empty-state">Select a game.</div>';$('evCount').textContent='0';return;}
   const pe=g.events.filter(e=>e.phase===S.activePhase);
-  $('evCount').textContent=g.events.length+' total \xb7 '+pe.length+' '+S.activePhase;
+  $('evCount').textContent=pe.length+' '+S.activePhase+(pe.length!==1?' events':' event')+(g.events.length!==pe.length?' ('+g.events.length+' total)':'');
   if(!pe.length){$('evList').innerHTML='<div class="empty-state">No events in this phase.</div>';return;}
   $('evList').innerHTML=pe.slice().reverse().map(ev=>{
     const cat=ec(ev.type),fn=gfn(ev,g,false),ef=fn.replace(/'/g,"\\'").replace(/"/g,'&quot;');
@@ -354,7 +355,7 @@ function renderEL(){
     (ev.minute!=null?'<span class="event-minute">'+ev.minute+"'</span>":'')+
     '<span class="event-type-badge '+cat+'">'+en(ev.type)+'</span>'+
     '<span class="event-desc">'+(ev.player||'')+(ev.team?' \u2014 '+tn(ev.team):'')+'</span>'+
-    '<div class="event-actions">'+(ht?'<button class="regen-btn" data-a="rg" data-id="'+ev.id+'" title="Regenerate comment">\u21bb</button>':'')+
+    '<div class="event-actions">'+(ev.hasAudio?'<button class="regen-btn" data-a="rg" data-id="'+ev.id+'" title="Regenerate comment from transcript">\u21bb</button>':'')+
     '<button class="star-btn'+(ev.starred?' starred':'')+'" data-a="st" data-id="'+ev.id+'">'+(ev.starred?'\u2605':'\u2606')+'</button>'+
     '<button class="edit-btn" data-a="ed" data-id="'+ev.id+'">Edit</button></div></div>'+
     '<div class="event-filename"><span class="event-filename-text">'+fn+'</span><button class="copy-btn" data-a="cp" data-t="'+ef+'">Copy</button></div>'+
@@ -363,7 +364,7 @@ function renderEL(){
   $('evList').querySelectorAll('[data-a="cp"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.t).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
   $('evList').querySelectorAll('[data-a="ed"]').forEach(b=>{b.addEventListener('click',()=>editEv(b.dataset.id));});
   $('evList').querySelectorAll('[data-a="st"]').forEach(b=>{b.addEventListener('click',()=>{const ev=g.events.find(e=>e.id===b.dataset.id);if(ev){ev.starred=!ev.starred;sv();renderEL();}});});
-  $('evList').querySelectorAll('[data-a="rg"]').forEach(b=>{b.addEventListener('click',async()=>{b.classList.add('spinning');await regenCmt(b.dataset.id);b.classList.remove('spinning');});});}
+  $('evList').querySelectorAll('[data-a="rg"]').forEach(b=>{b.addEventListener('click',async()=>{const g=gg();const ev=g&&g.events.find(e=>e.id===b.dataset.id);if(!ev||!ev.transcript){alert('No transcript yet. Audio needs to be processed first.');return;}b.classList.add('spinning');await regenCmt(b.dataset.id);b.classList.remove('spinning');});});}
 
 function editEv(eid){const g=gg();if(!g)return;const ev=g.events.find(e=>e.id===eid);if(!ev)return;
   const el=$('evList').querySelector('[data-eid="'+eid+'"]');if(!el)return;
@@ -371,11 +372,11 @@ function editEv(eid){const g=gg();if(!g)return;const ev=g.events.find(e=>e.id===
   const dlId='dl_'+eid;
   el.innerHTML='<div class="mc-edit-row">'+(ev.phase==='live'?'<input type="number" class="form-input" value="'+(ev.minute!=null?ev.minute:'')+'" min="0" max="120" style="max-width:70px" id="eM_'+eid+'">':'')+
   '<input type="text" class="form-input" value="'+(ev.player||'')+'" id="eP_'+eid+'" list="'+dlId+'"><datalist id="'+dlId+'">'+uq.map(n=>'<option value="'+n+'">').join('')+'</datalist>'+
-  '<input type="text" class="form-input" value="'+(ev.comment||'')+'" placeholder="Comment" id="eC_'+eid+'">'+(ev.transcript?'<button class="regen-btn" id="eR_'+eid+'" title="Regenerate">\u21bb</button>':'')+
+  '<input type="text" class="form-input" value="'+(ev.comment||'')+'" placeholder="Comment" id="eC_'+eid+'"><button class="regen-btn" id="eR_'+eid+'" title="Regenerate comment from transcript">\u21bb</button>'+
   '<button class="btn btn-primary btn-sm" id="eS_'+eid+'">Save</button><button class="btn btn-secondary btn-sm" id="eX_'+eid+'">Cancel</button></div>';
   $('eS_'+eid).addEventListener('click',()=>{if(ev.phase==='live'){const m=parseInt($('eM_'+eid).value);ev.minute=isNaN(m)?ev.minute:m;}ev.player=$('eP_'+eid).value.trim()||ev.player;ev.comment=$('eC_'+eid).value.trim();sv();renderEL();});
   $('eX_'+eid).addEventListener('click',()=>renderEL());
-  if(ev.transcript&&$('eR_'+eid)){$('eR_'+eid).addEventListener('click',async()=>{$('eR_'+eid).classList.add('spinning');await regenCmt(eid);$('eR_'+eid).classList.remove('spinning');});}}
+  if($('eR_'+eid)){$('eR_'+eid).addEventListener('click',async()=>{if(!ev.transcript){alert('No transcript yet. Drop audio and process it first.');return;}$('eR_'+eid).classList.add('spinning');await regenCmt(eid);$('eR_'+eid).classList.remove('spinning');});}}
 
 function updateFP(){const g=gg();if(!g){$('fnCard').style.display='none';return;}
   const p=$('eventPlayer').value.trim();if(!p){$('fnCard').style.display='none';return;}
@@ -457,7 +458,7 @@ function doSearch(){
     return'<div class="archive-item'+(r.ev.starred?' starred':'')+'">'+
     (r.ev.minute!=null?'<span class="event-minute">'+r.ev.minute+"'</span>":'')+
     '<span class="event-type-badge '+cat+'">'+en(r.ev.type)+'</span><div style="flex:1"><div class="event-desc">'+(r.ev.player||'Grab')+
-    (r.ev.team?' \u2014 '+tn(r.ev.team):'')+'</div><div class="archive-game-info">'+tn(r.g.homeTeam)+' v '+tn(r.g.awayTeam)+' \xb7 '+rd(r.g.round)+'</div></div>'+
+    (r.ev.team?' \u2014 '+tn(r.ev.team):'')+'</div>'+(r.ev.comment?'<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:2px">\ud83d\udcac '+r.ev.comment+'</div>':'')+'<div class="archive-game-info">'+tn(r.g.homeTeam)+' v '+tn(r.g.awayTeam)+' \xb7 '+rd(r.g.round)+'</div></div>'+
     (r.ev.starred?'<span style="color:var(--warning)">\u2605</span>':'')+
     (r.ev.hasAudio?'<span style="font-size:10px;color:var(--success)">\ud83c\udf99</span>':'')+
     '<button class="copy-btn" data-a="ac" data-t="'+ef+'">Copy</button></div>';}).join('');
