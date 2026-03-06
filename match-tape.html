@@ -225,7 +225,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     <div class="phase-bar"><button class="phase-btn active" data-phase="pre">Pre-game</button><button class="phase-btn" data-phase="live">Live</button><button class="phase-btn" data-phase="post">Post-game</button></div>
     <div class="card"><div class="card-header"><span class="card-label">Log Event</span><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>MINUTE</span></div></div><div class="card-body">
       <div class="form-row"><div class="form-group"><span class="form-label">Event Type</span><select class="form-select" id="eventType"></select></div><div class="form-group"><span class="form-label">Team</span><select class="form-select" id="eventTeam"></select></div></div>
-      <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s) <button id="btnEditCT" style="background:none;border:none;font-family:var(--mono);font-size:8px;color:var(--text-muted);cursor:pointer;letter-spacing:0.5px;padding:0 0 0 6px;opacity:0.5;display:none" title="Change call team">edit</button></span><div class="caller-grid" id="callerGrid"></div><button class="btn btn-primary btn-sm" id="btnSetCT" style="display:none;margin-top:6px;font-size:8px;padding:4px 12px">Set</button></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s) <button id="btnEditCT" style="background:none;border:none;font-family:var(--mono);font-size:8px;color:var(--text-muted);cursor:pointer;letter-spacing:0.5px;padding:0 0 0 6px;opacity:0.5;display:none" title="Change call team">edit</button></span><div class="caller-grid" id="callerGrid"></div></div></div>
       <input type="hidden" id="eventComment" value="">
       <div class="form-row" style="margin-top:16px"><div class="form-group" style="flex:2"><div class="audio-drop audio-drop-lg" id="eventAudioDrop"><div class="audio-drop-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div><div class="audio-drop-text">Drop grab here or click to browse</div><div class="audio-drop-hint">Event logs automatically when audio is dropped</div><input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div></div>
       <button class="btn btn-success" id="btnLogEvent" style="display:none">Log Event</button>
@@ -460,11 +460,6 @@ function applyPh(){const ph=S.activePhase,live=ph==='live';$('playerLabel').text
   else{selectedCallers=[];}
   renderCallerGrid();updateSug();if(live)startClk();else stopClk();}
 $('btnEditCT').addEventListener('click',()=>{callerEditMode=true;renderCallerGrid();});
-$('btnSetCT').addEventListener('click',async()=>{
-  if(!selectedCallers.length)return mtAlert('Tick at least one name.');
-  if(S.activeGame){await saveCallTeam(S.activeGame,selectedCallers);}
-  callerEditMode=false;selectedCallers=[];renderCallerGrid();
-});
 function updateSug(){const dl=$('playerSuggestions'),g=gg(),live=S.activePhase==='live';let names=[];
   if(live){
     // Suggest players from DB for current teams + previously mentioned
@@ -486,9 +481,12 @@ function renderCallerGrid(){
   c.querySelectorAll('.caller-pill').forEach(p=>{p.addEventListener('click',()=>{
     const id=p.dataset.cid;if(selectedCallers.includes(id))selectedCallers=selectedCallers.filter(x=>x!==id);else selectedCallers.push(id);renderCallerGrid();});});
   // Show/hide edit and set buttons
-  const eb=$('btnEditCT'),sb=$('btnSetCT');
+  const eb=$('btnEditCT'),showSet=(!hasCT||callerEditMode);
   if(eb)eb.style.display=hasCT&&!callerEditMode?'':'none';
-  if(sb)sb.style.display=(!hasCT||callerEditMode)?'':'none';
+  // Append Set button inline in the grid
+  if(showSet&&cids.length)c.innerHTML+='<button class="btn btn-primary" id="btnSetCTInline" style="font-size:8px;padding:3px 10px;letter-spacing:1px">Set</button>';
+  const sbi=document.getElementById('btnSetCTInline');
+  if(sbi)sbi.addEventListener('click',async()=>{if(!selectedCallers.length)return mtAlert('Tick at least one name.');if(S.activeGame){await saveCallTeam(S.activeGame,selectedCallers);}callerEditMode=false;selectedCallers=[];renderCallerGrid();});
 }
 function resetCallerGrid(){selectedCallers=[];callerEditMode=false;renderCallerGrid();}
 
