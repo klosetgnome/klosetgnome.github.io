@@ -155,6 +155,12 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 .retry-btn{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;background:none;border:1px solid var(--error);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--error);transition:all 0.2s;margin-left:6px}
 .retry-btn:hover{background:var(--error-glow)}
+.gear-dot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;border:1.5px solid var(--surface);pointer-events:none;transition:background 0.3s,opacity 0.3s}
+.gear-dot.ok{background:var(--success);opacity:0}.gear-dot.loading{background:var(--accent);opacity:1;animation:pulse 1.2s ease infinite}.gear-dot.error{background:var(--error);opacity:1}
+.server-status{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--text-secondary)}.server-status .dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.server-status .dot.ok{background:var(--success)}.server-status .dot.loading{background:var(--accent);animation:pulse 1.2s ease infinite}.server-status .dot.error{background:var(--error)}
+.settings-section-label{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px}
+.settings-wrap{position:relative}
 .play-btn{background:none;border:1px solid var(--border);border-radius:4px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--success);font-size:11px;transition:all 0.2s;padding:0;flex-shrink:0;font-family:var(--mono)}.play-btn:hover{border-color:var(--success);background:color-mix(in srgb,var(--success) 10%,transparent)}.play-btn.playing{color:var(--error);border-color:var(--error)}.play-btn.playing:hover{background:color-mix(in srgb,var(--error) 10%,transparent)}
 /* Modal overlay */
 .mt-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:9999;animation:mtmIn 0.15s ease}
@@ -173,8 +179,8 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 </head>
 <body>
 <header class="site-header"><h1><a href="index.html"><span>MATCH</span> TAPE</a></h1><div class="header-actions">
-<div class="settings-wrap"><button class="hdr-btn" id="settingsToggle" aria-label="Settings"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
-<div class="settings-panel" id="settingsPanel"><div class="settings-section-label">Transcription Model</div><select id="srtModelSelect" class="format-select"></select><div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:6px" id="srtModelStatus"></div></div></div>
+<div class="settings-wrap"><button class="hdr-btn" id="settingsToggle" aria-label="Settings"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span class="gear-dot loading" id="gearDot"></span></button>
+<div class="settings-panel" id="settingsPanel"><div class="settings-section-label">Server</div><div class="server-status" id="serverStatus"><span class="dot loading"></span><span>Checking…</span></div><div style="height:1px;background:var(--border);margin:14px 0"></div><div class="settings-section-label">Transcription Model</div><select id="srtModelSelect" class="format-select"></select><div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:6px" id="srtModelStatus"></div></div></div>
 <button class="hdr-btn theme-toggle" aria-label="Toggle dark mode"><svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg><svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button></div></header>
 <nav class="nav-tabs"><button class="nav-tab active" data-view="dashboard">Dashboard</button><button class="nav-tab" data-view="session">Game Session<span class="q-badge" id="qBadge" style="display:none"></span></button><button class="nav-tab" data-view="archive">Archive</button><button class="nav-tab admin-tab" data-view="mission-control">Mission Control</button></nav>
 <div class="container">
@@ -288,10 +294,17 @@ async function processQueue(){
       if(!upRes.ok)throw new Error('Upload failed');
       item.status='transcribing';updateQBadge();renderEL();
       let transcript=null;
-      try{const tfd=new FormData();tfd.append('file',item.audioBlob,'audio.wav');
-        const tr=await fetch(API+'/mac/api/transcribe',{method:'POST',body:tfd,signal:AbortSignal.timeout(120000)});
+      try{
+        // Get direct upload URL from auth-gate (same flow as Media Clip)
+        const tokenRes=await fetch('/api/transcribe-token',{signal:AbortSignal.timeout(10000)});
+        if(!tokenRes.ok)throw new Error('Token failed');
+        const tokenData=await tokenRes.json();
+        if(tokenData.status!=='ok'||!tokenData.upload_url)throw new Error('No upload URL');
+        // Upload directly to server (bypasses CF Worker)
+        const tfd=new FormData();tfd.append('file',item.audioBlob,'audio.wav');
+        const tr=await fetch(tokenData.upload_url,{method:'POST',body:tfd,signal:AbortSignal.timeout(120000)});
         if(tr.ok){const td=await tr.json();if(td.status==='ok'&&td.words&&td.words.length)transcript=td.words.map(w=>w.word).join(' ');}
-      }catch(e){console.log('[Queue] Server offline');}
+      }catch(e){console.log('[Queue] Transcription unavailable:',e.message);}
       if(transcript){
         await apiPut('/events/'+item.eventId,{transcript});
         item.status='generating';updateQBadge();renderEL();
@@ -456,13 +469,33 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
   el.querySelectorAll('[data-a="retry"]').forEach(b=>{b.addEventListener('click',()=>retryQueueItem(b.dataset.id));});
   el.querySelectorAll('[data-a="del"]').forEach(b=>{b.addEventListener('click',async()=>{if(!await mtConfirm('Delete this event? This cannot be undone.',true))return;try{await apiDel('/events/'+b.dataset.id);await loadGame(S.activeGame);renderEL();}catch(e){mtAlert(e.message);}});});
   el.querySelectorAll('[data-a="reproc"]').forEach(b=>{b.addEventListener('click',async()=>{
-    b.textContent='Sending...';b.disabled=true;
+    b.textContent='Checking...';b.disabled=true;
     try{
-      // Try sending for reprocessing
-      const resp=await fetch(API+'/mac/api/process-audio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({eventId:b.dataset.id}),signal:AbortSignal.timeout(120000)});
-      if(resp.ok){await apiPut('/events/'+b.dataset.id,{needs_processing:false});await loadGame(S.activeGame);renderEL();}
-      else{b.textContent='Server offline';b.disabled=false;setTimeout(()=>{b.textContent='Reprocess';},2000);}
-    }catch(e){b.textContent='Failed';b.disabled=false;setTimeout(()=>{b.textContent='Reprocess';},2000);}
+      // Get direct upload URL
+      const tokenRes=await fetch('/api/transcribe-token',{signal:AbortSignal.timeout(10000)});
+      if(!tokenRes.ok)throw new Error('offline');
+      const tokenData=await tokenRes.json();
+      if(tokenData.status!=='ok'||!tokenData.upload_url)throw new Error('offline');
+      // Fetch the audio from R2, re-upload to server for processing
+      b.textContent='Fetching audio...';
+      const audioRes=await fetch(API+'/events/'+b.dataset.id+'/audio');
+      if(!audioRes.ok)throw new Error('No audio in storage');
+      const audioBlob=await audioRes.blob();
+      b.textContent='Transcribing...';
+      const tfd=new FormData();tfd.append('file',audioBlob,'audio.wav');
+      const tr=await fetch(tokenData.upload_url,{method:'POST',body:tfd,signal:AbortSignal.timeout(120000)});
+      if(!tr.ok)throw new Error('Transcription failed');
+      const td=await tr.json();
+      if(td.status==='ok'&&td.words&&td.words.length){
+        const transcript=td.words.map(w=>w.word).join(' ');
+        await apiPut('/events/'+b.dataset.id,{transcript,needs_processing:false});
+        // Generate comment
+        const g=gg();const players=g?[...new Set((g.events||[]).filter(e=>e.player).map(e=>e.player))]:[];
+        const comment=await generateComment(transcript,players);
+        if(comment)await apiPut('/events/'+b.dataset.id,{comment});
+      }else{throw new Error('No speech detected');}
+      await loadGame(S.activeGame);renderEL();
+    }catch(e){b.textContent=e.message==='offline'?'Server offline':'Failed';b.disabled=false;setTimeout(()=>{b.textContent='Reprocess';},2000);}
   });});}
 
 function editEv(eid){const g=gg();if(!g)return;const ev=(g.events||[]).find(e=>e.id===eid);if(!ev)return;const el=$('evList').querySelector('[data-eid="'+eid+'"]');if(!el)return;
@@ -609,6 +642,21 @@ async function rMCP(){
     $('pX_'+p.id).addEventListener('click',()=>rMCP());
   });});}
 $('btnAddP').addEventListener('click',async()=>{const n=$('mcPN').value.trim(),team=$('mcPTeam').value;if(!n||!team)return;try{await apiPost('/players',{name:n,team:team});$('mcPN').value='';await rMCP();}catch(e){mtAlert(e.message);}});
+
+// Server health check
+async function checkServerHealth(){
+  const dot=$('gearDot'),el=$('serverStatus');
+  let serverOk=false,workerOk=false;
+  // Check processing server (Mac Mini via auth-gate)
+  try{const r=await fetch('/api/health',{signal:AbortSignal.timeout(5000)});const d=await r.json();serverOk=d.status==='ok';}catch{}
+  // Check Match Tape Worker
+  try{const r=await fetch(API+'/health',{signal:AbortSignal.timeout(5000)});const d=await r.json();workerOk=d.status==='ok';}catch{}
+  if(serverOk&&workerOk){dot.className='gear-dot ok';el.innerHTML='<span class="dot ok"></span><span>All systems online</span>';}
+  else if(workerOk&&!serverOk){dot.className='gear-dot error';el.innerHTML='<span class="dot error"></span><span>Processing server offline<br><span style="font-size:9px;color:var(--text-muted)">Database OK \xb7 Transcription unavailable</span></span>';}
+  else if(!workerOk&&serverOk){dot.className='gear-dot error';el.innerHTML='<span class="dot error"></span><span>Database offline<br><span style="font-size:9px;color:var(--text-muted)">Processing server OK</span></span>';}
+  else{dot.className='gear-dot error';el.innerHTML='<span class="dot error"></span><span>All systems offline</span>';}
+}
+checkServerHealth();setInterval(checkServerHealth,30000);
 
 // ═══ INIT ═══
 async function init(){try{S.callers=await api('/callers');}catch{S.callers=[];}try{S.eventTypes=await api('/event-types');}catch{S.eventTypes=[];}try{S.venues=await api('/venues');}catch{S.venues=[];}pC();pET();renderD();}
