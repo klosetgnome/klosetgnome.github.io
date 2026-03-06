@@ -205,7 +205,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     <div class="phase-bar"><button class="phase-btn active" data-phase="pre">Pre-game</button><button class="phase-btn" data-phase="live">Live</button><button class="phase-btn" data-phase="post">Post-game</button></div>
     <div class="card"><div class="card-header"><span class="card-label">Log Event</span><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>MINUTE</span></div></div><div class="card-body">
       <div class="form-row"><div class="form-group"><span class="form-label">Event Type</span><select class="form-select" id="eventType"></select></div><div class="form-group"><span class="form-label">Team</span><select class="form-select" id="eventTeam"></select></div></div>
-      <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s)</span><input type="text" class="form-input" id="callerInput" placeholder="Type caller name..." list="callerSuggest" style="margin-bottom:6px"><datalist id="callerSuggest"></datalist><div style="display:flex;flex-wrap:wrap;gap:6px;min-height:24px;padding:4px 8px" id="callerChips"></div></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s)</span><input type="text" class="form-input" id="callerInput" placeholder="Type caller name..." list="callerSuggest"><datalist id="callerSuggest"></datalist><div style="display:flex;flex-wrap:wrap;gap:4px;max-height:36px;overflow-y:auto;padding:4px 0" id="callerChips"></div></div></div>
       <input type="hidden" id="eventComment" value="">
       <div class="form-row" style="margin-top:16px"><div class="form-group" style="flex:2"><div class="audio-drop audio-drop-lg" id="eventAudioDrop"><div class="audio-drop-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div><div class="audio-drop-text">Drop grab here or click to browse</div><div class="audio-drop-hint">Event logs automatically when audio is dropped</div><input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div></div>
       <button class="btn btn-success" id="btnLogEvent" style="display:none">Log Event</button>
@@ -462,9 +462,9 @@ document.querySelectorAll('.phase-btn').forEach(b=>{b.addEventListener('click',(
 async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();selectedCT=[];renderCtChips();populateFixturePicker();
   try{S.games=await api('/games');}catch{S.games=[];}
   const gr=$('recentGamesGrid');if(!gr)return;if(!S.games.length){gr.innerHTML='<div class="empty-state">No games yet.</div>';return;}
-  const showAll=gr.dataset.showAll==='1';const display=showAll?S.games:S.games.slice(0,10);
+  const showAll=gr.dataset.showAll==='1';const display=showAll?S.games:S.games.slice(0,3);
   gr.innerHTML=display.map(g=>'<div class="game-tile" data-g="'+g.id+'"><div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+'</div><div style="display:flex;align-items:center;justify-content:space-between"><span class="game-tile-meta">'+(g.eventCount||0)+' events \xb7 '+(g.starredCount||0)+' \u2605</span><button class="edit-btn" data-a="delgame" data-id="'+g.id+'" style="color:var(--error);font-size:9px" onclick="event.stopPropagation()">Delete</button></div></div>').join('');
-  if(!showAll&&S.games.length>10)gr.innerHTML+='<div class="game-tile" style="text-align:center;cursor:pointer;color:var(--accent)" id="btnShowAllGames"><div class="game-tile-teams">Show all '+S.games.length+' games</div></div>';
+  if(!showAll&&S.games.length>3)gr.innerHTML+='<div class="game-tile" style="text-align:center;cursor:pointer;color:var(--accent)" id="btnShowAllGames"><div class="game-tile-teams">Show all '+S.games.length+' games</div></div>';
   gr.querySelectorAll('.game-tile[data-g]').forEach(t=>{t.addEventListener('click',async()=>{S.activeGame=t.dataset.g;await loadGame(S.activeGame);
     const g=gg();if(g){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}}
     S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();});});
@@ -671,11 +671,13 @@ async function doSearch(){const p=new URLSearchParams(),q=$('archSearch').value.
   try{const res=await api('/archive?'+p.toString());const c=$('archResults');if(!res.length){c.innerHTML='<div class="empty-state">No matching events.</div>';return;}
     c.innerHTML=res.map(r=>{r.callers=r.callers||[];r.hasAudio=!!r.has_audio;r.starred=!!r.starred;const cat=ec(r.type);
       return'<div class="archive-item'+(r.starred?' starred':'')+'">'+ 
-      '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:62px;max-width:62px"><span class="event-type-badge '+cat+'" style="white-space:nowrap;cursor:default" title="'+en(r.type)+'">'+enShort(r.type)+'</span><div style="display:flex;gap:4px;align-items:center"><span class="event-phase-tag '+(r.phase==='pre'?'pre':r.phase==='post'?'post':'live-tag')+'" style="cursor:default" title="'+(r.phase==='pre'?'Pre-game':r.phase==='post'?'Post-game':'Live')+'">'+phShort(r.phase)+'</span><button class="copy-btn" data-a="adel" data-id="'+r.id+'" style="color:var(--error);font-size:8px;padding:2px 6px">Del</button></div></div>'+
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:50px;max-width:50px"><span class="event-type-badge '+cat+'" style="white-space:nowrap;cursor:default" title="'+en(r.type)+'">'+enShort(r.type)+'</span><span class="event-phase-tag '+(r.phase==='pre'?'pre':r.phase==='post'?'post':'live-tag')+'" style="cursor:default" title="'+(r.phase==='pre'?'Pre-game':r.phase==='post'?'Post-game':'Live')+'">'+phShort(r.phase)+'</span></div>'+
       '<div style="flex:1"><div class="event-desc">'+(r.player||'Grab')+(r.team?' \u2014 '+tn(r.team):'')+'</div>'+
       (r.transcript?'<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:2px;font-style:italic">'+((r.transcript.length>60)?r.transcript.substring(0,60)+'...':r.transcript)+'</div>':'')+
       '<div class="archive-game-info">'+tn(r.home_team)+' v '+tn(r.away_team)+' \xb7 '+rd(r.round)+'</div></div>'+
-      (r.starred?'<span style="color:var(--warning)">\u2605</span>':'')+(r.hasAudio?'<button class="play-btn" data-a="aplay" data-id="'+r.id+'" title="Play audio">\u25B6</button>':'')+
+      (r.starred?'<span style="color:var(--warning)">\u2605</span>':'')+
+      '<button class="copy-btn" data-a="adel" data-id="'+r.id+'" style="color:var(--error)">Del</button>'+
+      (r.hasAudio?'<button class="play-btn" data-a="aplay" data-id="'+r.id+'" title="Play audio">\u25B6</button>':'')+
       (r.hasAudio?'<button class="play-btn" data-a="adl" data-id="'+r.id+'" title="Download audio" style="color:var(--accent)">\u21E3</button>':'')+'</div>';}).join('');
     c.querySelectorAll('[data-a="adl"]').forEach(b=>{b.addEventListener('click',async()=>{const old=b.textContent;b.textContent='\u2026';try{const resp=await fetch(API+'/events/'+b.dataset.id+'/audio');if(!resp.ok)throw new Error();const blob=await resp.blob();const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='event_'+b.dataset.id+'.mp3';a.click();setTimeout(()=>URL.revokeObjectURL(u),200);b.textContent=old;}catch{b.textContent=old;}});});
     c.querySelectorAll('[data-a="adel"]').forEach(b=>{b.addEventListener('click',async()=>{if(!await mtConfirm('Delete this event permanently?',true))return;try{await apiDel('/events/'+b.dataset.id);doSearch();}catch(e){mtAlert(e.message);}});});
@@ -723,13 +725,13 @@ async function rMCV(){
 $('btnAddV').addEventListener('click',async()=>{const n=$('mcVN').value.trim();if(!n)return;try{await apiPost('/venues',{name:n});$('mcVN').value='';await rMCV();}catch(e){mtAlert(e.message);}});
 
 // ── Players MC ──
-(function(){const sel=$('mcPTeam');if(!sel)return;sel.innerHTML=NRL_TEAMS.map(t=>'<option value="'+t.id+'">'+t.name+'</option>').join('');sel.addEventListener('change',rMCP);})();
+(function(){const sel=$('mcPTeam');if(!sel)return;sel.innerHTML='<option value="">All players</option>'+NRL_TEAMS.map(t=>'<option value="'+t.id+'">'+t.name+'</option>').join('');sel.addEventListener('change',rMCP);})();
 async function rMCP(){
-  const team=$('mcPTeam').value;if(!team)return;
-  let players=[];try{players=await api('/players?team='+team);}catch{}
+  const team=$('mcPTeam').value;
+  let players=[];try{players=team?await api('/players?team='+team):await api('/players');}catch{}
   const l=$('mcPL');if(!l)return;
-  if(!players.length){l.innerHTML='<div class="empty-state" style="padding:16px">No players for '+tn(team)+' yet. They\u2019re auto-added when you log events.</div>';return;}
-  l.innerHTML=players.map(p=>'<div class="mc-item" data-pid="'+p.id+'"><span class="mc-item-name">'+p.name+'</span><div class="mc-item-actions"><button class="mc-item-btn" data-a="ep" data-id="'+p.id+'">Edit</button><button class="mc-item-btn delete" data-a="dp" data-id="'+p.id+'">Remove</button></div></div>').join('');
+  if(!players.length){l.innerHTML='<div class="empty-state" style="padding:16px">No players'+(team?' for '+tn(team):'')+' yet.</div>';return;}
+  l.innerHTML=players.map(p=>'<div class="mc-item" data-pid="'+p.id+'"><span class="mc-item-name">'+p.name+'</span>'+(team?'':'<span class="mc-item-meta">'+tn(p.team)+'</span>')+'<div class="mc-item-actions"><button class="mc-item-btn" data-a="ep" data-id="'+p.id+'">Edit</button><button class="mc-item-btn delete" data-a="dp" data-id="'+p.id+'">Remove</button></div></div>').join('');
   l.querySelectorAll('[data-a="dp"]').forEach(b=>{b.addEventListener('click',async()=>{if(!await mtConfirm('Remove this player?',true))return;try{await apiDel('/players/'+b.dataset.id);await rMCP();}catch(e){mtAlert(e.message);}});});
   l.querySelectorAll('[data-a="ep"]').forEach(b=>{b.addEventListener('click',()=>{
     const p=players.find(p=>p.id===b.dataset.id);if(!p)return;const el=$('mcPL').querySelector('[data-pid="'+p.id+'"]');if(!el)return;
