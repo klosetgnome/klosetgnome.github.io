@@ -546,10 +546,11 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
   });});}
 
 function editEv(eid){const g=gg();if(!g)return;const ev=(g.events||[]).find(e=>e.id===eid);if(!ev)return;const el=$('evList').querySelector('[data-eid="'+eid+'"]');if(!el)return;
+  function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;');}
   const allN=[...S.callers.map(c=>c.nick?c.name+' ('+c.nick+')':c.name),...new Set((g.events||[]).filter(e=>e.player).map(e=>e.player))];const dlId='dl_'+eid;
   el.innerHTML='<div class="mc-edit-row">'+(ev.phase==='live'?'<input type="number" class="form-input" value="'+(ev.minute!=null?ev.minute:'')+'" min="0" max="120" style="max-width:70px" id="eM_'+eid+'">':'')+
-  '<input type="text" class="form-input" value="'+(ev.player||'')+'" id="eP_'+eid+'" list="'+dlId+'"><datalist id="'+dlId+'">'+allN.map(n=>'<option value="'+n+'">').join('')+'</datalist>'+
-  '<input type="text" class="form-input" value="'+(ev.comment||'')+'" placeholder="Comment" id="eC_'+eid+'"><button class="regen-btn" id="eR_'+eid+'">\u21bb</button>'+
+  '<input type="text" class="form-input" value="'+esc(ev.player)+'" id="eP_'+eid+'" list="'+dlId+'"><datalist id="'+dlId+'">'+allN.map(n=>'<option value="'+esc(n)+'">').join('')+'</datalist>'+
+  '<input type="text" class="form-input" value="'+esc(ev.comment)+'" placeholder="Comment" id="eC_'+eid+'"><button class="regen-btn" id="eR_'+eid+'">\u21bb</button>'+
   '<button class="btn btn-primary btn-sm" id="eS_'+eid+'">Save</button><button class="btn btn-secondary btn-sm" id="eX_'+eid+'">Cancel</button></div>';
   $('eS_'+eid).addEventListener('click',async()=>{const u={};if(ev.phase==='live'){const m=parseInt($('eM_'+eid).value);if(!isNaN(m))u.minute=m;}u.player=$('eP_'+eid).value.trim()||ev.player;u.comment=$('eC_'+eid).value.trim();
     try{await apiPut('/events/'+eid,u);await loadGame(S.activeGame);renderEL();}catch(e){mtAlert(e.message);}});
