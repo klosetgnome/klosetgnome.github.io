@@ -635,7 +635,7 @@ async function doSearch(){const p=new URLSearchParams(),q=$('archSearch').value.
   if(q)p.set('q',q);if(gf)p.set('game',gf);if(tf)p.set('team',tf);if(tyf)p.set('type',tyf);if(cf)p.set('caller',cf);if(starO)p.set('starred','1');
   try{const res=await api('/archive?'+p.toString());const c=$('archResults');if(!res.length){c.innerHTML='<div class="empty-state">No matching events.</div>';return;}
     c.innerHTML=res.map(r=>{r.callers=r.callers||[];r.hasAudio=!!r.has_audio;r.starred=!!r.starred;const cat=ec(r.type);
-      return'<div class="archive-item'+(r.starred?' starred':'')+'">'+(r.minute!=null?'<span class="event-minute">'+r.minute+"'</span>":'')+
+      return'<div class="archive-item'+(r.starred?' starred':'')+'">'+ 
       '<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><span class="event-type-badge '+cat+'">'+en(r.type)+'</span><button class="copy-btn" data-a="adel" data-id="'+r.id+'" style="color:var(--error);font-size:8px;padding:2px 6px">Del</button></div>'+
       '<div style="flex:1"><div class="event-desc">'+(r.player||'Grab')+(r.team?' \u2014 '+tn(r.team):'')+'</div>'+
       (r.transcript?'<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:2px;font-style:italic">'+((r.transcript.length>60)?r.transcript.substring(0,60)+'...':r.transcript)+'</div>':'')+
