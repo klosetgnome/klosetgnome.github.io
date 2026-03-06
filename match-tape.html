@@ -461,10 +461,12 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
   el.querySelectorAll('[data-a="play"]').forEach(b=>{b.addEventListener('click',()=>playAudio(b.dataset.id,b));});
   el.querySelectorAll('[data-a="ed"]').forEach(b=>{b.addEventListener('click',()=>editEv(b.dataset.id));});
   el.querySelectorAll('[data-a="st"]').forEach(b=>{b.addEventListener('click',async()=>{
-    // Optimistic toggle - instant UI update
-    const evId=b.dataset.id;const g=gg();const ev=g&&(g.events||[]).find(e=>e.id===evId);
-    if(ev){ev.starred=!ev.starred;renderEL();}
-    try{await apiPost('/events/'+evId+'/star',{});await loadGame(S.activeGame);renderEL();}catch(e){if(ev)ev.starred=!ev.starred;renderEL();}});});
+    const evId=b.dataset.id;const g=gg();const ev=g&&(g.events||[]).find(e=>e.id===evId);if(!ev)return;
+    // Toggle in-place — no re-render
+    ev.starred=!ev.starred;
+    b.textContent=ev.starred?'\u2605':'\u2606';b.classList.toggle('starred',ev.starred);
+    const card=b.closest('.event-item');if(card)card.classList.toggle('starred',ev.starred);
+    try{await apiPost('/events/'+evId+'/star',{});await loadGame(S.activeGame);}catch(e){ev.starred=!ev.starred;b.textContent=ev.starred?'\u2605':'\u2606';b.classList.toggle('starred',ev.starred);if(card)card.classList.toggle('starred',ev.starred);}});});
   el.querySelectorAll('[data-a="rg"]').forEach(b=>{b.addEventListener('click',async()=>{const ev=(gg().events||[]).find(e=>e.id===b.dataset.id);if(!ev||!ev.transcript){mtAlert('No transcript yet.');return;}b.classList.add('spinning');await regenCmt(b.dataset.id);b.classList.remove('spinning');});});
   el.querySelectorAll('[data-a="retry"]').forEach(b=>{b.addEventListener('click',()=>retryQueueItem(b.dataset.id));});
   el.querySelectorAll('[data-a="del"]').forEach(b=>{b.addEventListener('click',async()=>{if(!await mtConfirm('Delete this event? This cannot be undone.',true))return;try{await apiDel('/events/'+b.dataset.id);await loadGame(S.activeGame);renderEL();}catch(e){mtAlert(e.message);}});});
