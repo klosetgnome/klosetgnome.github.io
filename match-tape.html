@@ -244,7 +244,20 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     <div class="mc-panel" id="mc-etypes"><div class="card"><div class="card-body"><div class="mc-list" id="mcETL"></div><div class="mc-add-row"><input type="text" class="form-input" id="mcETN" placeholder="Event type name" style="flex:2"><select class="form-select" id="mcETC" style="flex:1"><option value="try">Try</option><option value="scoring">Scoring</option><option value="discipline">Discipline</option><option value="moment">Key Moment</option><option value="grab">Grab</option></select><button class="btn btn-primary btn-sm" id="btnAddET">Add</button></div></div></div></div>
     <div class="mc-panel" id="mc-teams"><div class="card"><div class="card-body"><div class="mc-list" id="mcTL"></div></div></div></div>
     <div class="mc-panel" id="mc-venues"><div class="card"><div class="card-body"><div class="mc-list" id="mcVL"></div><div class="mc-add-row"><input type="text" class="form-input" id="mcVN" placeholder="Venue name" style="flex:2"><button class="btn btn-primary btn-sm" id="btnAddV">Add</button></div></div></div></div>
-    <div class="mc-panel" id="mc-players"><div class="card"><div class="card-header" style="border-bottom:none;padding-bottom:0"><select class="form-select" id="mcPTeam" style="width:auto;padding:6px 30px 6px 12px;font-size:10px"></select></div><div class="card-body"><div class="mc-list" id="mcPL"></div><div class="mc-add-row"><input type="text" class="form-input" id="mcPN" placeholder="Player name" style="flex:2"><button class="btn btn-primary btn-sm" id="btnAddP">Add</button></div><div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><div class="audio-drop" id="playerDropZone" style="width:100%;padding:14px;cursor:pointer;font-size:9px">Drop player JSON to import<input type="file" id="playerFileInput" accept=".json" style="display:none"></div><div id="playerImportStatus" style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:6px"></div></div></div></div></div>
+    <div class="mc-panel" id="mc-players"><div class="card" style="position:relative;min-height:200px"><div class="card-body" id="playerBody">
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <div style="display:flex;gap:8px;align-items:center;width:100%"><select class="form-select" id="mcPTeam" style="width:auto;padding:6px 30px 6px 12px;font-size:10px"></select></div>
+        <div class="audio-drop" id="playerDropZone" style="width:100%;padding:14px;cursor:pointer;font-size:9px">Drop player JSON to import or click to browse<input type="file" id="playerFileInput" accept=".json" style="display:none"></div>
+        <div class="mc-list" id="mcPL" style="width:100%"></div>
+        <div class="mc-add-row" style="width:100%"><input type="text" class="form-input" id="mcPN" placeholder="Player name" style="flex:2"><button class="btn btn-primary btn-sm" id="btnAddP">Add</button></div>
+      </div>
+    </div>
+    <div class="draw-overlay" id="playerOverlay">
+      <div class="draw-overlay-spinner"></div>
+      <div class="draw-overlay-text" id="playerOverlayText">Reading file…</div>
+      <div class="draw-overlay-track"><div class="draw-overlay-fill" id="playerOverlayFill"></div></div>
+    </div>
+    </div></div>
     <div class="mc-panel" id="mc-draw"><div class="card" style="position:relative;min-height:200px"><div class="card-body" id="drawBody">
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
         <div style="font-family:var(--mono);font-size:11px;color:var(--text-secondary);line-height:1.8">Import the 2026 NRL draw from <a href="https://fixturedownload.com/results/nrl-2026" target="_blank" style="color:var(--accent)">fixturedownload.com</a>. Download the JSON file, then drop it below.</div>
@@ -771,7 +784,7 @@ $('btnAddP').addEventListener('click',async()=>{const n=$('mcPN').value.trim(),t
 
 // Player import
 (function(){
-  const dz=$('playerDropZone'),fi=$('playerFileInput'),st=$('playerImportStatus');
+  const dz=$('playerDropZone'),fi=$('playerFileInput');
   dz.addEventListener('click',()=>fi.click());
   dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover');});
   dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
@@ -779,20 +792,27 @@ $('btnAddP').addEventListener('click',async()=>{const n=$('mcPN').value.trim(),t
   fi.addEventListener('change',()=>{if(fi.files[0])importPlayerFile(fi.files[0]);fi.value='';});
 })();
 async function importPlayerFile(file){
-  const st=$('playerImportStatus');st.textContent='Importing...';
+  const ov=$('playerOverlay'),txt=$('playerOverlayText'),fill=$('playerOverlayFill');
+  ov.classList.add('visible');fill.className='draw-overlay-fill indeterminate';txt.textContent='Reading file\u2026';
   try{
     const data=JSON.parse(await file.text());
     if(!Array.isArray(data)||!data.length)throw new Error('Invalid JSON');
+    fill.className='draw-overlay-fill';fill.style.width='10%';
+    txt.textContent='Importing '+data.length+' players\u2026';
     const batch=50;let imported=0,skipped=0;
     for(let i=0;i<data.length;i+=batch){
       const chunk=data.slice(i,i+batch);
       const res=await apiPost('/players/import',{players:chunk});
       imported+=res.imported;skipped+=res.skipped;
-      st.textContent='Importing... '+Math.round(((i+chunk.length)/data.length)*100)+'%';
+      const pct=Math.round(((i+chunk.length)/data.length)*90)+10;
+      fill.style.width=pct+'%';
+      txt.textContent='Importing\u2026 '+Math.round(((i+chunk.length)/data.length)*100)+'%';
     }
-    st.innerHTML='<span style="color:var(--success)">\u2713 '+imported+' imported</span>'+(skipped?' \xb7 '+skipped+' existing':'');
-    await rMCP();
-  }catch(e){st.innerHTML='<span style="color:var(--error)">\u2717 '+e.message+'</span>';}
+    fill.className='draw-overlay-fill done';fill.style.width='100%';
+    txt.textContent='\u2713 '+imported+' imported'+(skipped?' \xb7 '+skipped+' existing':'');
+    setTimeout(()=>{ov.classList.remove('visible');rMCP();},2000);
+  }catch(e){fill.className='draw-overlay-fill';fill.style.width='100%';fill.style.background='var(--error)';txt.textContent='\u2717 '+e.message;
+    setTimeout(()=>{ov.classList.remove('visible');fill.style.background='';},3000);}
 }
 
 // ── Draw import ──
