@@ -414,7 +414,11 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
     '<button class="star-btn'+(ev.starred?' starred':'')+'" data-a="st" data-id="'+ev.id+'">'+(ev.starred?'\u2605':'\u2606')+'</button><button class="edit-btn" data-a="ed" data-id="'+ev.id+'">Edit</button><button class="edit-btn" data-a="del" data-id="'+ev.id+'" style="color:var(--error)">Del</button></div></div>'+
     '<div class="event-filename"><span class="event-filename-text">'+fn+'</span>'+(ev.hasAudio?'<button class="play-btn" data-a="play" data-id="'+ev.id+'" title="Play audio">\u25B6</button>':'')+'<button class="copy-btn" data-a="cp" data-t="'+ef+'">Copy</button></div>'+
     (ev.comment?'<div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);padding:0 2px">\ud83d\udcac '+ev.comment+'</div>':'')+
-    (function(){const qs=getQueueStatus(ev.id);if(!qs)return ev.hasAudio?'<div style="font-family:var(--mono);font-size:10px;color:'+(ev.needsProcessing?'var(--warning)':'var(--success)').toString()+'">'+(ev.needsProcessing?'\u26a0 Needs processing':'')+(ev.transcript?' \xb7 Transcript':'')+'</div>':'';
+    (function(){const qs=getQueueStatus(ev.id);if(!qs){
+      if(!ev.hasAudio)return'';
+      if(ev.needsProcessing)return'<div style="font-family:var(--mono);font-size:10px;color:var(--warning);display:flex;align-items:center;gap:8px">\u26a0 Needs processing'+(ev.transcript?' \xb7 Transcript':'')+'<button class="retry-btn" data-a="reproc" data-id="'+ev.id+'">Reprocess</button></div>';
+      return ev.transcript?'<div style="font-family:var(--mono);font-size:10px;color:var(--success)">\u2713 Processed \xb7 Transcript</div>':'';
+    }
       if(qs.status==='queued')return'<div class="ev-proc queued"><span class="proc-dot"></span>\u23f3 Queued</div>';if(qs.status==='uploading')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Uploading\u2026</div>';
       if(qs.status==='transcribing')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Transcribing\u2026</div>';if(qs.status==='generating')return'<div class="ev-proc generating"><span class="proc-dot"></span>Generating comment\u2026</div>';
       if(qs.status==='done')return'<div class="ev-proc done"><span class="proc-dot"></span>\u2713 Processed</div>';if(qs.status==='failed')return'<div class="ev-proc failed"><span class="proc-dot"></span>\u26a0 '+qs.error+'<button class="retry-btn" data-a="retry" data-id="'+ev.id+'">Retry</button></div>';return''}())+'</div>';}).join('');
@@ -424,7 +428,16 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
   el.querySelectorAll('[data-a="st"]').forEach(b=>{b.addEventListener('click',async()=>{try{await apiPost('/events/'+b.dataset.id+'/star',{});await loadGame(S.activeGame);renderEL();}catch(e){alert(e.message);}});});
   el.querySelectorAll('[data-a="rg"]').forEach(b=>{b.addEventListener('click',async()=>{const ev=(gg().events||[]).find(e=>e.id===b.dataset.id);if(!ev||!ev.transcript){alert('No transcript yet.');return;}b.classList.add('spinning');await regenCmt(b.dataset.id);b.classList.remove('spinning');});});
   el.querySelectorAll('[data-a="retry"]').forEach(b=>{b.addEventListener('click',()=>retryQueueItem(b.dataset.id));});
-  el.querySelectorAll('[data-a="del"]').forEach(b=>{b.addEventListener('click',async()=>{if(!confirm('Delete this event? This cannot be undone.'))return;try{await apiDel('/events/'+b.dataset.id);await loadGame(S.activeGame);renderEL();}catch(e){alert(e.message);}});});}
+  el.querySelectorAll('[data-a="del"]').forEach(b=>{b.addEventListener('click',async()=>{if(!confirm('Delete this event? This cannot be undone.'))return;try{await apiDel('/events/'+b.dataset.id);await loadGame(S.activeGame);renderEL();}catch(e){alert(e.message);}});});
+  el.querySelectorAll('[data-a="reproc"]').forEach(b=>{b.addEventListener('click',async()=>{
+    b.textContent='Sending...';b.disabled=true;
+    try{
+      // Try sending to Mac Mini for processing
+      const resp=await fetch(API+'/mac/api/process-audio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({eventId:b.dataset.id}),signal:AbortSignal.timeout(120000)});
+      if(resp.ok){await apiPut('/events/'+b.dataset.id,{needs_processing:false});await loadGame(S.activeGame);renderEL();}
+      else{b.textContent='Mac Mini offline';b.disabled=false;setTimeout(()=>{b.textContent='Reprocess';},2000);}
+    }catch(e){b.textContent='Failed';b.disabled=false;setTimeout(()=>{b.textContent='Reprocess';},2000);}
+  });});}
 
 function editEv(eid){const g=gg();if(!g)return;const ev=(g.events||[]).find(e=>e.id===eid);if(!ev)return;const el=$('evList').querySelector('[data-eid="'+eid+'"]');if(!el)return;
   const allN=[...S.callers.map(c=>c.nick?c.name+' ('+c.nick+')':c.name),...new Set((g.events||[]).filter(e=>e.player).map(e=>e.player))];const dlId='dl_'+eid;
