@@ -225,7 +225,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     <div class="phase-bar"><button class="phase-btn active" data-phase="pre">Pre-game</button><button class="phase-btn" data-phase="live">Live</button><button class="phase-btn" data-phase="post">Post-game</button></div>
     <div class="card"><div class="card-header"><span class="card-label">Log Event</span><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>MINUTE</span></div></div><div class="card-body">
       <div class="form-row"><div class="form-group"><span class="form-label">Event Type</span><select class="form-select" id="eventType"></select></div><div class="form-group"><span class="form-label">Team</span><select class="form-select" id="eventTeam"></select></div></div>
-      <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s)</span><div class="caller-grid" id="callerGrid"></div></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s) <button id="btnEditCT" style="background:none;border:none;font-family:var(--mono);font-size:8px;color:var(--text-muted);cursor:pointer;letter-spacing:0.5px;padding:0 0 0 6px;opacity:0.5" title="Change call team">edit</button></span><div class="caller-grid" id="callerGrid"></div></div></div>
       <input type="hidden" id="eventComment" value="">
       <div class="form-row" style="margin-top:16px"><div class="form-group" style="flex:2"><div class="audio-drop audio-drop-lg" id="eventAudioDrop"><div class="audio-drop-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div><div class="audio-drop-text">Drop grab here or click to browse</div><div class="audio-drop-hint">Event logs automatically when audio is dropped</div><input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div></div>
       <button class="btn btn-success" id="btnLogEvent" style="display:none">Log Event</button>
@@ -277,6 +277,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     </div></div>
   </div>
 </div>
+<div class="modal-bg" id="ctModal" style="display:none"><div class="modal-card" style="max-width:480px"><div class="modal-title">Set Call Team</div><div class="modal-body"><div class="caller-grid" id="ctModalGrid"></div></div><div class="modal-actions"><button class="btn btn-primary btn-sm" id="ctModalSave">Confirm</button><button class="btn btn-secondary btn-sm" id="ctModalCancel">Cancel</button></div></div></div>
 <footer><a href="index.html"><span style="color:var(--accent)">dev.</span>nialfernandes.com</a><span style="color:var(--text-muted);margin:0 8px">|</span><a href="privacy.html">Privacy Policy</a></footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
@@ -458,6 +459,7 @@ function applyPh(){const ph=S.activePhase,live=ph==='live';$('callerGroup').clas
   if(!live)selectedCallers=[];
   else{selectedCallers=[];}
   renderCallerGrid();updateSug();if(live)startClk();else stopClk();}
+$('btnEditCT').addEventListener('click',async()=>{const picked=await showCallTeamModal();if(picked!==null&&S.activeGame){await saveCallTeam(S.activeGame,picked);renderCallerGrid();}});
 function updateSug(){const dl=$('playerSuggestions'),g=gg(),live=S.activePhase==='live';let names=[];
   if(live){
     // Suggest players from DB for current teams + previously mentioned
@@ -470,13 +472,35 @@ function updateSug(){const dl=$('playerSuggestions'),g=gg(),live=S.activePhase==
 let selectedCallers=[];
 function renderCallerGrid(){
   const c=$('callerGrid');if(!c)return;
-  const g=gg();const cids=g&&g.callTeam&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);
+  const g=gg();const cids=g&&g.callTeam&&g.callTeam.length?g.callTeam:[];
+  if(!cids.length){c.innerHTML='<span style="font-family:var(--mono);font-size:9px;color:var(--text-muted)">No call team set</span>';return;}
   c.innerHTML=cids.map(id=>{const cal=S.callers.find(c=>c.id===id);if(!cal)return'';const on=selectedCallers.includes(id);
     return'<label class="caller-pill'+(on?' on':'')+'" data-cid="'+id+'"><span class="cp-mark">'+(on?'\u2713':'')+'</span><span class="cp-name">'+(cal.nick||cal.name)+'</span></label>';}).join('');
   c.querySelectorAll('.caller-pill').forEach(p=>{p.addEventListener('click',()=>{
     const id=p.dataset.cid;if(selectedCallers.includes(id))selectedCallers=selectedCallers.filter(x=>x!==id);else selectedCallers.push(id);renderCallerGrid();});});
 }
 function resetCallerGrid(){selectedCallers=[];renderCallerGrid();}
+
+// Call team picker modal
+function showCallTeamModal(){return new Promise(res=>{
+  const modal=$('ctModal'),grid=$('ctModalGrid');
+  let picked=[];const g=gg();if(g&&g.callTeam)picked=[...g.callTeam];
+  function render(){
+    grid.innerHTML=S.callers.map(c=>{const on=picked.includes(c.id);
+      return'<label class="caller-pill'+(on?' on':'')+'" data-cid="'+c.id+'"><span class="cp-mark">'+(on?'\u2713':'')+'</span><span class="cp-name">'+(c.nick||c.name)+'</span></label>';}).join('');
+    grid.querySelectorAll('.caller-pill').forEach(p=>{p.addEventListener('click',()=>{
+      const id=p.dataset.cid;if(picked.includes(id))picked=picked.filter(x=>x!==id);else picked.push(id);render();});});
+  }
+  render();modal.style.display='flex';
+  $('ctModalSave').onclick=()=>{modal.style.display='none';res(picked);};
+  $('ctModalCancel').onclick=()=>{modal.style.display='none';res(null);};
+});}
+
+async function saveCallTeam(gameId,callerIds){
+  // Clear existing and set new
+  try{await apiPost('/games/'+gameId+'/call-team',{callerIds});}catch{}
+  await loadGame(gameId);
+}
 
 // Call team tag input (dashboard)
 let selectedCT=[];
@@ -504,6 +528,8 @@ async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKicko
     return'<div class="game-tile" data-g="'+g.id+'">'+(active?'<span class="tile-active-dot"></span>':'')+'<div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+(ko?' \xb7 '+ko:'')+'</div></div>';}).join('');
   gr.querySelectorAll('.game-tile[data-g]').forEach(t=>{t.addEventListener('click',async()=>{S.activeGame=t.dataset.g;await loadGame(S.activeGame);
     const g=gg();if(g){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}}
+    // Prompt for call team if not set
+    if(!gg()||!gg().callTeam||!gg().callTeam.length){const picked=await showCallTeamModal();if(picked&&picked.length){await saveCallTeam(S.activeGame,picked);}else if(picked===null){S.activeGame=null;S.currentGame=null;return;}}
     S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();});});}
 // Fixture picker toggle
 $('fixturePicker').addEventListener('change',()=>{const v=$('fixturePicker').value;$('manualGameFields').style.display=v?'none':'';});
@@ -511,14 +537,14 @@ $('fixturePicker').addEventListener('change',()=>{const v=$('fixturePicker').val
 $('btnStartGame').addEventListener('click',async()=>{
   const picked=$('fixturePicker').value;
   if(picked){
-    // Start from imported fixture — game already exists in D1
     S.activeGame=picked;await loadGame(picked);
-    // Assign call team to the game
-    if(selectedCT.length){try{for(const cid of selectedCT)await apiPost('/games/'+picked+'/callers',{callerId:cid}).catch(()=>{});}catch{}}
+    // Assign call team from dashboard chips if any
+    if(selectedCT.length){await saveCallTeam(picked,selectedCT);}
     try{const g=gg();if(g){const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}}catch{S._gamePlayers=[];}
+    // Prompt for call team if still none
+    if(!gg()||!gg().callTeam||!gg().callTeam.length){const ct=await showCallTeamModal();if(ct&&ct.length){await saveCallTeam(S.activeGame,ct);}else if(ct===null){S.activeGame=null;S.currentGame=null;return;}}
     S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();
   }else{
-    // Manual entry
     const h=$('newGameHome').value,a=$('newGameAway').value;if(!h||!a)return mtAlert('Select both teams.');if(h===a)return mtAlert('Different teams.');
     const rn=parseInt(String($('newGameRound').value).replace(/\D/g,''),10);
     const venue=titleCase($('newGameVenue').value.trim());
@@ -527,6 +553,8 @@ $('btnStartGame').addEventListener('click',async()=>{
     try{const res=await apiPost('/games',{homeTeam:h,awayTeam:a,round:isNaN(rn)?null:rn,venue:venue||null,kickoff:kickoff,callTeam:[...selectedCT]});
     S.activeGame=res.id;await loadGame(res.id);
     try{const hp=await loadPlayers(h);const ap=await loadPlayers(a);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}
+    // Prompt for call team if none from dashboard
+    if(!selectedCT.length){const ct=await showCallTeamModal();if(ct&&ct.length){await saveCallTeam(S.activeGame,ct);}}
     S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();}catch(e){mtAlert('Failed: '+e.message);}
   }});
 async function loadGame(id){try{const g=await api('/games/'+id);S.currentGame=normGame(g);}catch(e){S.currentGame=null;}}
