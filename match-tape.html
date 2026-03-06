@@ -437,7 +437,7 @@ function renderCtChips(){const c=$('ctChips');if(!c)return;
 })();
 
 // Phase buttons
-document.querySelectorAll('.phase-btn').forEach(b=>{b.addEventListener('click',()=>{S.activePhase=b.dataset.phase;document.querySelectorAll('.phase-btn').forEach(p=>{p.classList.remove('active','live');});b.classList.add('active');if(b.dataset.phase==='live')b.classList.add('live');applyPh();renderEL();});});
+document.querySelectorAll('.phase-btn').forEach(b=>{b.addEventListener('click',()=>{S.activePhase=b.dataset.phase;document.querySelectorAll('.phase-btn').forEach(p=>{p.classList.remove('active','live');});b.classList.add('active');if(b.dataset.phase==='live')b.classList.add('live');if(S.activeGame)location.hash='session:'+S.activeGame+':'+S.activePhase;applyPh();renderEL();});});
 
 // ═══ DASHBOARD ═══
 async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();selectedCT=[];renderCtChips();
@@ -446,7 +446,7 @@ async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKicko
   gr.innerHTML=S.games.map(g=>'<div class="game-tile" data-g="'+g.id+'"><div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+'</div><div style="display:flex;align-items:center;justify-content:space-between"><span class="game-tile-meta">'+(g.eventCount||0)+' events \xb7 '+(g.starredCount||0)+' \u2605</span><button class="edit-btn" data-a="delgame" data-id="'+g.id+'" style="color:var(--error);font-size:9px" onclick="event.stopPropagation()">Delete</button></div></div>').join('');
   gr.querySelectorAll('.game-tile').forEach(t=>{t.addEventListener('click',async()=>{S.activeGame=t.dataset.g;await loadGame(S.activeGame);
     const g=gg();if(g){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}}
-    S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame;renderS();});});
+    S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();});});
   gr.querySelectorAll('[data-a="delgame"]').forEach(b=>{b.addEventListener('click',async(e)=>{e.stopPropagation();const gm=S.games.find(g=>g.id===b.dataset.id);if(!gm)return;if(!await mtConfirm('Delete '+tn(gm.home_team)+' v '+tn(gm.away_team)+'? All events and audio will be permanently removed.',true))return;try{await apiDel('/games/'+b.dataset.id);renderD();}catch(e){mtAlert(e.message);}});});}
 $('btnStartGame').addEventListener('click',async()=>{const h=$('newGameHome').value,a=$('newGameAway').value;if(!h||!a)return mtAlert('Select both teams.');if(h===a)return mtAlert('Different teams.');
   const rn=parseInt(String($('newGameRound').value).replace(/\D/g,''),10);
@@ -458,7 +458,7 @@ $('btnStartGame').addEventListener('click',async()=>{const h=$('newGameHome').va
   S.activeGame=res.id;await loadGame(res.id);
   // Pre-load players for both teams
   try{const hp=await loadPlayers(h);const ap=await loadPlayers(a);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}
-  S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame;renderS();}catch(e){mtAlert('Failed: '+e.message);}});
+  S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();}catch(e){mtAlert('Failed: '+e.message);}});
 async function loadGame(id){try{const g=await api('/games/'+id);S.currentGame=normGame(g);}catch(e){S.currentGame=null;}}
 
 // ═══ SESSION ═══
@@ -482,11 +482,11 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
     (function(){const qs=getQueueStatus(ev.id);if(!qs){
       if(!ev.hasAudio)return'';
       let s='<div style="font-family:var(--mono);font-size:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">';
-      if(ev.transcript)s+='<span style="color:var(--success)">\u2713 Transcribed</span>';
-      else s+='<button class="retry-btn" data-a="reproc" data-id="'+ev.id+'" style="border-color:var(--error);color:var(--error)">Retranscribe</button>';
+      if(ev.transcript)s+='<span style="color:var(--success)">\u2713 STT</span>';
+      else s+='<button class="retry-btn" data-a="reproc" data-id="'+ev.id+'" style="border-color:var(--error);color:var(--error)">STT</button>';
       s+='\xb7 ';
-      if(!ev.needsProcessing)s+='<span style="color:var(--success)">Normalised</span>';
-      else s+='<button class="retry-btn" data-a="reproc" data-id="'+ev.id+'" style="border-color:var(--error);color:var(--error)">Renormalise</button>';
+      if(!ev.needsProcessing)s+='<span style="color:var(--success)">NRM</span>';
+      else s+='<button class="retry-btn" data-a="reproc" data-id="'+ev.id+'" style="border-color:var(--error);color:var(--error)">NRM</button>';
       s+='</div>';return s;
     }
       if(qs.status==='queued')return'<div class="ev-proc queued"><span class="proc-dot"></span>\u23f3 Queued</div>';if(qs.status==='uploading')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Uploading\u2026</div>';
@@ -635,8 +635,8 @@ async function doSearch(){const p=new URLSearchParams(),q=$('archSearch').value.
       (r.transcript?'<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:2px;font-style:italic">'+((r.transcript.length>60)?r.transcript.substring(0,60)+'...':r.transcript)+'</div>':'')+
       '<div class="archive-game-info">'+tn(r.home_team)+' v '+tn(r.away_team)+' \xb7 '+rd(r.round)+'</div></div>'+
       (r.starred?'<span style="color:var(--warning)">\u2605</span>':'')+(r.hasAudio?'<button class="play-btn" data-a="aplay" data-id="'+r.id+'" title="Play audio">\u25B6</button>':'')+
-      (r.hasAudio?'<button class="copy-btn" data-a="adl" data-id="'+r.id+'">Download</button>':'')+'</div>';}).join('');
-    c.querySelectorAll('[data-a="adl"]').forEach(b=>{b.addEventListener('click',async()=>{b.textContent='...';try{const resp=await fetch(API+'/events/'+b.dataset.id+'/audio');if(!resp.ok)throw new Error();const blob=await resp.blob();const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='event_'+b.dataset.id+'.mp3';a.click();setTimeout(()=>URL.revokeObjectURL(u),200);b.textContent='Download';}catch{b.textContent='Download';}});});
+      (r.hasAudio?'<button class="play-btn" data-a="adl" data-id="'+r.id+'" title="Download audio" style="color:var(--accent);border-color:var(--border)">\u2193</button>':'')+'</div>';}).join('');
+    c.querySelectorAll('[data-a="adl"]').forEach(b=>{b.addEventListener('click',async()=>{const old=b.textContent;b.textContent='\u2026';try{const resp=await fetch(API+'/events/'+b.dataset.id+'/audio');if(!resp.ok)throw new Error();const blob=await resp.blob();const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='event_'+b.dataset.id+'.mp3';a.click();setTimeout(()=>URL.revokeObjectURL(u),200);b.textContent=old;}catch{b.textContent=old;}});});
     c.querySelectorAll('[data-a="adel"]').forEach(b=>{b.addEventListener('click',async()=>{if(!await mtConfirm('Delete this event permanently?',true))return;try{await apiDel('/events/'+b.dataset.id);doSearch();}catch(e){mtAlert(e.message);}});});
     c.querySelectorAll('[data-a="aplay"]').forEach(b=>{b.addEventListener('click',()=>playAudio(b.dataset.id,b));});
   }catch(e){$('archResults').innerHTML='<div class="empty-state">Error: '+e.message+'</div>';}}
@@ -715,9 +715,9 @@ checkServerHealth();setInterval(checkServerHealth,30000);
 // ═══ INIT ═══
 async function init(){try{S.callers=await api('/callers');}catch{S.callers=[];}try{S.eventTypes=await api('/event-types');}catch{S.eventTypes=[];}try{S.venues=await api('/venues');}catch{S.venues=[];}pC();pET();
   const hash=(location.hash||'').replace('#','');const validTabs=['dashboard','session','archive','mission-control'];
-  const parts=hash.split(':');const tab=parts[0];const gameId=parts[1]||null;
+  const parts=hash.split(':');const tab=parts[0];const gameId=parts[1]||null;const phase=parts[2]||null;
   if(tab&&validTabs.includes(tab)){
-    if(tab==='session'&&gameId){S.activeGame=gameId;await loadGame(gameId);try{const g=gg();if(g){const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}}catch{}}
+    if(tab==='session'&&gameId){S.activeGame=gameId;if(phase&&['pre','live','post'].includes(phase))S.activePhase=phase;await loadGame(gameId);try{const g=gg();if(g){const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}}catch{}}
     sw(tab);if(tab==='dashboard')renderD();if(tab==='session')renderS();if(tab==='archive')renderAF();if(tab==='mission-control')renderMC();}
   else renderD();}
 init();
