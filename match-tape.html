@@ -485,10 +485,8 @@ function renderCallerGrid(){
   // Show/hide edit and set buttons
   const eb=$('btnEditCT'),showSet=(!hasCT||callerEditMode);
   if(eb)eb.style.display=hasCT&&!callerEditMode?'':'none';
-  // Append Set button inline in the grid
-  if(showSet&&cids.length)c.innerHTML+='<button class="btn btn-primary" id="btnSetCTInline" style="font-size:8px;padding:3px 10px;letter-spacing:1px">Set</button>';
-  const sbi=document.getElementById('btnSetCTInline');
-  if(sbi)sbi.addEventListener('click',async()=>{if(!selectedCallers.length)return mtAlert('Tick at least one name.');if(S.activeGame){await saveCallTeam(S.activeGame,selectedCallers);}callerEditMode=false;selectedCallers=[];renderCallerGrid();});
+  // Append Set button inline as DOM element (not innerHTML to preserve handlers)
+  if(showSet&&cids.length){const sb=document.createElement('button');sb.className='btn btn-primary';sb.style.cssText='font-size:8px;padding:3px 10px;letter-spacing:1px';sb.textContent='Set';sb.addEventListener('click',async()=>{if(!selectedCallers.length)return mtAlert('Tick at least one name.');if(S.activeGame){await saveCallTeam(S.activeGame,selectedCallers);}callerEditMode=false;selectedCallers=[];renderCallerGrid();});c.appendChild(sb);}
 }
 function resetCallerGrid(){selectedCallers=[];callerEditMode=false;renderCallerGrid();}
 
