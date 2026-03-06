@@ -165,8 +165,8 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     <div class="info-hero"><div class="info-hero-graphic"><svg viewBox="0 0 80 80" fill="none"><rect x="6" y="14" width="48" height="32" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="30" cy="30" r="8" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M27 27l8 6-8 6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/><path d="M60 20v18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="60" cy="22" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M12 56h8M24 52h8M36 56h8M48 52h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="64" x2="58" y2="64" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><div><div class="info-hero-title">Match Tape</div><div class="info-hero-desc">NRL highlights production tool. Log <span class="hl">tries</span>, <span class="hl">scoring events</span>, and <span class="hl">key moments</span> during live games. Drop commentary audio to auto-generate tagged filenames with <span class="hl">producer comments</span>.</div></div></div>
     <div class="card"><div class="card-header"><span class="card-label">Start a Game Session</span></div><div class="card-body">
       <div class="form-row"><div class="form-group"><span class="form-label">Home Team</span><select class="form-select" id="newGameHome"></select></div><div class="form-group"><span class="form-label">Away Team</span><select class="form-select" id="newGameAway"></select></div></div>
-      <div class="form-row" style="margin-top:12px"><div class="form-group" style="max-width:120px"><span class="form-label">Round</span><input type="number" class="form-input" id="newGameRound" placeholder="5" min="1" max="30"></div><div class="form-group"><span class="form-label">Venue</span><input type="text" class="form-input" id="newGameVenue" placeholder="e.g. Accor Stadium" list="stadiumList"></div><div class="form-group"><span class="form-label">Kickoff</span><input type="datetime-local" class="form-input" id="newGameKickoff"></div></div>
-      <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><span class="form-label">Call Team</span><select class="form-select" id="newGameCallTeam" multiple style="min-height:60px"></select></div><div class="form-group" style="align-self:flex-end"><button class="btn btn-primary" id="btnStartGame">Start Game Session</button></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group" style="max-width:120px"><span class="form-label">Round</span><input type="number" class="form-input" id="newGameRound" placeholder="5" min="1" max="30"></div><div class="form-group"><span class="form-label">Venue</span><input type="text" class="form-input" id="newGameVenue" placeholder="e.g. Accor Stadium" list="stadiumList"></div><div class="form-group"><span class="form-label">Kickoff (24h)</span><input type="text" class="form-input" id="newGameKickoff" placeholder="2026-03-07 19:30"></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><span class="form-label">Call Team</span><div class="caller-dropdown" id="ctDropdown"><div class="caller-multi" id="ctChips"><span style="color:var(--text-muted);font-family:var(--mono);font-size:11px">Select call team</span></div><div class="caller-list" id="ctList"></div></div></div><div class="form-group" style="align-self:flex-end"><button class="btn btn-primary" id="btnStartGame">Start Game Session</button></div></div>
     </div></div>
     <div class="card"><div class="card-header"><span class="card-label">Recent Games</span></div><div class="card-body"><div class="game-grid" id="recentGamesGrid"></div></div></div>
   </div>
@@ -241,7 +241,8 @@ function gfn(ev,g,branded){
   return branded?fn+' - devNFcom':fn;
 }
 function calcM(ko){if(!ko)return 0;const el=Math.floor((Date.now()-new Date(ko).getTime())/60000);return el<0?0:el>120?80:el;}
-function defKO(){const n=new Date();n.setMinutes(0,0,0);n.setHours(n.getHours()+1);return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0')+'T'+String(n.getHours()).padStart(2,'0')+':00';}
+function defKO(){const n=new Date();n.setMinutes(0,0,0);n.setHours(n.getHours()+1);return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0')+' '+String(n.getHours()).padStart(2,'0')+':00';}
+function parseKO(s){if(!s)return null;const m=s.match(/(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{2})/);if(m)return new Date(m[1],m[2]-1,m[3],m[4],m[5]).toISOString();const d=new Date(s);return isNaN(d)?null:d.toISOString();}
 function gLabel(g){const d=g.kickoff?new Date(g.kickoff).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'';return rd(g.round)+' \xb7 '+tn(g.home_team||g.homeTeam)+' v '+tn(g.away_team||g.awayTeam)+(d?' \xb7 '+d:'');}
 function debounce(fn,ms){let t;return function(){clearTimeout(t);t=setTimeout(fn,ms);};}
 function normGame(g){g.homeTeam=g.home_team||g.homeTeam;g.awayTeam=g.away_team||g.awayTeam;g.callTeam=g.callTeam||[];g.events=g.events||[];(g.events).forEach(e=>{e.callers=e.callers||[];e.hasAudio=!!e.has_audio;e.starred=!!e.starred;e.needsProcessing=!!e.needs_processing;});return g;}
@@ -302,7 +303,7 @@ function sw(n){document.querySelectorAll('.nav-tab').forEach(t=>t.classList.togg
 
 // Selects
 function pT(){const o=NRL_TEAMS.map(t=>'<option value="'+t.id+'">'+t.name+'</option>').join('');$('newGameHome').innerHTML='<option value="">Select home team</option>'+o;$('newGameAway').innerHTML='<option value="">Select away team</option>'+o;}
-function pC(){const o=S.callers.map(c=>'<option value="'+c.id+'">'+(c.nick?c.name+' ('+c.nick+')':c.name)+' \u2014 '+c.role+'</option>').join('');$('newGameCallTeam').innerHTML=o;$('archCaller').innerHTML='<option value="">All callers</option>'+o;}
+function pC(){const o=S.callers.map(c=>'<option value="'+c.id+'">'+(c.nick?c.name+' ('+c.nick+')':c.name)+' \u2014 '+c.role+'</option>').join('');$('archCaller').innerHTML='<option value="">All callers</option>'+o;renderCtPicker();}
 function pET(){const o=S.eventTypes.map(e=>'<option value="'+e.id+'">'+e.name+'</option>').join('');$('eventType').innerHTML=o;$('archType').innerHTML='<option value="">All types</option>'+o;}
 
 // Live clock
@@ -330,35 +331,49 @@ function renderCallerMulti(){const wrap=$('callerMulti'),list=$('callerList');co
 $('callerMulti').addEventListener('click',e=>{e.stopPropagation();$('callerList').classList.toggle('open');});
 document.addEventListener('click',e=>{if(!$('callerDropdown').contains(e.target))$('callerList').classList.remove('open');});
 
+// Call team chip picker (dashboard)
+let selectedCT=[];
+function renderCtPicker(){
+  const wrap=$('ctChips'),list=$('ctList');if(!wrap||!list)return;
+  if(!selectedCT.length)wrap.innerHTML='<span style="color:var(--text-muted);font-family:var(--mono);font-size:11px">Select call team</span>';
+  else wrap.innerHTML=selectedCT.map(id=>'<span class="caller-chip">'+cFull(id)+'<span class="chip-x" data-cid="'+id+'">\xd7</span></span>').join('');
+  wrap.querySelectorAll('.chip-x').forEach(x=>{x.addEventListener('click',e=>{e.stopPropagation();selectedCT=selectedCT.filter(id=>id!==x.dataset.cid);renderCtPicker();});});
+  list.innerHTML=S.callers.map(c=>{const sel=selectedCT.includes(c.id);return'<div class="caller-opt'+(sel?' selected':'')+'" data-cid="'+c.id+'"><span class="opt-check">'+(sel?'\u2713':'')+'</span>'+cFull(c.id)+' <span style="color:var(--text-muted);font-size:9px">\u2014 '+c.role+'</span></div>';}).join('');
+  list.querySelectorAll('.caller-opt').forEach(o=>{o.addEventListener('click',()=>{const id=o.dataset.cid;if(selectedCT.includes(id))selectedCT=selectedCT.filter(x=>x!==id);else selectedCT.push(id);renderCtPicker();});});
+}
+$('ctChips').addEventListener('click',e=>{e.stopPropagation();$('ctList').classList.toggle('open');});
+document.addEventListener('click',e=>{if(!$('ctDropdown').contains(e.target))$('ctList').classList.remove('open');});
+
 // Phase buttons
 document.querySelectorAll('.phase-btn').forEach(b=>{b.addEventListener('click',()=>{S.activePhase=b.dataset.phase;document.querySelectorAll('.phase-btn').forEach(p=>{p.classList.remove('active','live');});b.classList.add('active');if(b.dataset.phase==='live')b.classList.add('live');applyPh();renderEL();});});
 
 // ═══ DASHBOARD ═══
-async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();
+async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();selectedCT=[];renderCtPicker();
   try{S.games=await api('/games');}catch{S.games=[];}
-  const gr=$('recentGamesGrid');if(!S.games.length){gr.innerHTML='<div class="empty-state">No games yet.</div>';return;}
+  const gr=$('recentGamesGrid');if(!gr)return;if(!S.games.length){gr.innerHTML='<div class="empty-state">No games yet.</div>';return;}
   gr.innerHTML=S.games.map(g=>'<div class="game-tile" data-g="'+g.id+'"><div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+'</div><div style="display:flex;align-items:center;justify-content:space-between"><span class="game-tile-meta">'+(g.eventCount||0)+' events \xb7 '+(g.starredCount||0)+' \u2605</span><button class="edit-btn" data-a="delgame" data-id="'+g.id+'" style="color:var(--error);font-size:9px" onclick="event.stopPropagation()">Delete</button></div></div>').join('');
   gr.querySelectorAll('.game-tile').forEach(t=>{t.addEventListener('click',async()=>{S.activeGame=t.dataset.g;await loadGame(S.activeGame);S.activePhase='pre';sw('session');renderS();});});
   gr.querySelectorAll('[data-a="delgame"]').forEach(b=>{b.addEventListener('click',async(e)=>{e.stopPropagation();const gm=S.games.find(g=>g.id===b.dataset.id);if(!gm)return;if(!confirm('Delete '+tn(gm.home_team)+' v '+tn(gm.away_team)+'? All events and audio will be permanently removed.'))return;try{await apiDel('/games/'+b.dataset.id);renderD();}catch(e){alert(e.message);}});});}
 $('btnStartGame').addEventListener('click',async()=>{const h=$('newGameHome').value,a=$('newGameAway').value;if(!h||!a)return alert('Select both teams.');if(h===a)return alert('Different teams.');
   const rn=parseInt(String($('newGameRound').value).replace(/\D/g,''),10);
-  try{const res=await apiPost('/games',{homeTeam:h,awayTeam:a,round:isNaN(rn)?null:rn,venue:$('newGameVenue').value.trim(),kickoff:$('newGameKickoff').value,callTeam:Array.from($('newGameCallTeam').selectedOptions).map(o=>o.value)});
+  const kickoff=parseKO($('newGameKickoff').value);
+  try{const res=await apiPost('/games',{homeTeam:h,awayTeam:a,round:isNaN(rn)?null:rn,venue:$('newGameVenue').value.trim(),kickoff:kickoff,callTeam:[...selectedCT]});
   S.activeGame=res.id;await loadGame(res.id);S.activePhase='pre';sw('session');renderS();}catch(e){alert('Failed: '+e.message);}});
 async function loadGame(id){try{const g=await api('/games/'+id);S.currentGame=normGame(g);}catch(e){S.currentGame=null;}}
 
 // ═══ SESSION ═══
-function renderS(){const g=gg();if(!g){$('gameBannerTeams').textContent='No active game';return;}
+function renderS(){const g=gg();if(!g){const bt=$('gameBannerTeams');if(bt)bt.textContent='No active game';return;}
   $('gameBannerTeams').innerHTML=tn(g.homeTeam)+' <span class="vs">v</span> '+tn(g.awayTeam);$('gameBannerMeta').innerHTML=rd(g.round)+(g.venue?'<br>'+g.venue:'');
   $('eventTeam').innerHTML='<option value="'+g.homeTeam+'">'+tn(g.homeTeam)+'</option><option value="'+g.awayTeam+'">'+tn(g.awayTeam)+'</option><option value="">N/A (grab)</option>';
   const cids=g.callTeam&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);
   $('eventCaller').innerHTML='<option value="">Select caller</option>'+cids.map(id=>{const c=S.callers.find(c=>c.id===id);return c?'<option value="'+c.id+'">'+(c.nick?c.name+' ('+c.nick+')':c.name)+'</option>':'';}).join('');
   pET();selectedCallers=[];document.querySelectorAll('.phase-btn').forEach(b=>{b.classList.remove('active','live');if(b.dataset.phase===S.activePhase){b.classList.add('active');if(S.activePhase==='live')b.classList.add('live');}});applyPh();renderEL();updateFP();}
 
-function renderEL(){const g=gg();if(!g){$('evList').innerHTML='<div class="empty-state">Select a game.</div>';$('evCount').textContent='0';return;}
+function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!ec2)return;if(!g){el.innerHTML='<div class="empty-state">Select a game.</div>';ec2.textContent='0';return;}
   const pe=(g.events||[]).filter(e=>e.phase===S.activePhase);
-  $('evCount').textContent=pe.length+' '+S.activePhase+(pe.length!==1?' events':' event')+(g.events.length!==pe.length?' ('+g.events.length+' total)':'');
-  if(!pe.length){$('evList').innerHTML='<div class="empty-state">No events in this phase.</div>';return;}
-  $('evList').innerHTML=pe.slice().reverse().map(ev=>{const cat=ec(ev.type),fn=gfn(ev,g,false),ef=fn.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+  ec2.textContent=pe.length+' '+S.activePhase+(pe.length!==1?' events':' event')+(g.events.length!==pe.length?' ('+g.events.length+' total)':'');
+  if(!pe.length){el.innerHTML='<div class="empty-state">No events in this phase.</div>';return;}
+  el.innerHTML=pe.slice().reverse().map(ev=>{const cat=ec(ev.type),fn=gfn(ev,g,false),ef=fn.replace(/'/g,"\\'").replace(/"/g,'&quot;');
     const pt=ev.phase==='pre'?'pre':ev.phase==='post'?'post':'live-tag';const pl=ev.phase==='pre'?'PRE':ev.phase==='post'?'POST':'LIVE';
     return'<div class="event-item'+(ev.starred?' starred':'')+'" data-eid="'+ev.id+'"><div class="event-item-header"><span class="event-phase-tag '+pt+'">'+pl+'</span>'+(ev.minute!=null?'<span class="event-minute">'+ev.minute+"'</span>":'')+
     '<span class="event-type-badge '+cat+'">'+en(ev.type)+'</span><span class="event-desc">'+(ev.player||'')+(ev.team?' \u2014 '+tn(ev.team):'')+'</span>'+
@@ -370,12 +385,12 @@ function renderEL(){const g=gg();if(!g){$('evList').innerHTML='<div class="empty
       if(qs.status==='queued')return'<div class="ev-proc queued"><span class="proc-dot"></span>\u23f3 Queued</div>';if(qs.status==='uploading')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Uploading\u2026</div>';
       if(qs.status==='transcribing')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Transcribing\u2026</div>';if(qs.status==='generating')return'<div class="ev-proc generating"><span class="proc-dot"></span>Generating comment\u2026</div>';
       if(qs.status==='done')return'<div class="ev-proc done"><span class="proc-dot"></span>\u2713 Processed</div>';if(qs.status==='failed')return'<div class="ev-proc failed"><span class="proc-dot"></span>\u26a0 '+qs.error+'<button class="retry-btn" data-a="retry" data-id="'+ev.id+'">Retry</button></div>';return''}())+'</div>';}).join('');
-  $('evList').querySelectorAll('[data-a="cp"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.t).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
-  $('evList').querySelectorAll('[data-a="ed"]').forEach(b=>{b.addEventListener('click',()=>editEv(b.dataset.id));});
-  $('evList').querySelectorAll('[data-a="st"]').forEach(b=>{b.addEventListener('click',async()=>{try{await apiPost('/events/'+b.dataset.id+'/star',{});await loadGame(S.activeGame);renderEL();}catch(e){alert(e.message);}});});
-  $('evList').querySelectorAll('[data-a="rg"]').forEach(b=>{b.addEventListener('click',async()=>{const ev=(gg().events||[]).find(e=>e.id===b.dataset.id);if(!ev||!ev.transcript){alert('No transcript yet.');return;}b.classList.add('spinning');await regenCmt(b.dataset.id);b.classList.remove('spinning');});});
-  $('evList').querySelectorAll('[data-a="retry"]').forEach(b=>{b.addEventListener('click',()=>retryQueueItem(b.dataset.id));});
-  $('evList').querySelectorAll('[data-a="del"]').forEach(b=>{b.addEventListener('click',async()=>{if(!confirm('Delete this event? This cannot be undone.'))return;try{await apiDel('/events/'+b.dataset.id);await loadGame(S.activeGame);renderEL();}catch(e){alert(e.message);}});});}
+  el.querySelectorAll('[data-a="cp"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.t).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
+  el.querySelectorAll('[data-a="ed"]').forEach(b=>{b.addEventListener('click',()=>editEv(b.dataset.id));});
+  el.querySelectorAll('[data-a="st"]').forEach(b=>{b.addEventListener('click',async()=>{try{await apiPost('/events/'+b.dataset.id+'/star',{});await loadGame(S.activeGame);renderEL();}catch(e){alert(e.message);}});});
+  el.querySelectorAll('[data-a="rg"]').forEach(b=>{b.addEventListener('click',async()=>{const ev=(gg().events||[]).find(e=>e.id===b.dataset.id);if(!ev||!ev.transcript){alert('No transcript yet.');return;}b.classList.add('spinning');await regenCmt(b.dataset.id);b.classList.remove('spinning');});});
+  el.querySelectorAll('[data-a="retry"]').forEach(b=>{b.addEventListener('click',()=>retryQueueItem(b.dataset.id));});
+  el.querySelectorAll('[data-a="del"]').forEach(b=>{b.addEventListener('click',async()=>{if(!confirm('Delete this event? This cannot be undone.'))return;try{await apiDel('/events/'+b.dataset.id);await loadGame(S.activeGame);renderEL();}catch(e){alert(e.message);}});});}
 
 function editEv(eid){const g=gg();if(!g)return;const ev=(g.events||[]).find(e=>e.id===eid);if(!ev)return;const el=$('evList').querySelector('[data-eid="'+eid+'"]');if(!el)return;
   const allN=[...S.callers.map(c=>c.nick?c.name+' ('+c.nick+')':c.name),...new Set((g.events||[]).filter(e=>e.player).map(e=>e.player))];const dlId='dl_'+eid;
