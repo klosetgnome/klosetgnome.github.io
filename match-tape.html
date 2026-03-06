@@ -204,43 +204,37 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
+const API='/api/mt';
 const NRL_TEAMS=[{id:'broncos',name:'Broncos',full:'Brisbane Broncos'},{id:'bulldogs',name:'Bulldogs',full:'Canterbury-Bankstown Bulldogs'},{id:'cowboys',name:'Cowboys',full:'North Queensland Cowboys'},{id:'dolphins',name:'Dolphins',full:'Dolphins'},{id:'dragons',name:'Dragons',full:'St George Illawarra Dragons'},{id:'eels',name:'Eels',full:'Parramatta Eels'},{id:'knights',name:'Knights',full:'Newcastle Knights'},{id:'panthers',name:'Panthers',full:'Penrith Panthers'},{id:'rabbitohs',name:'Rabbitohs',full:'South Sydney Rabbitohs'},{id:'raiders',name:'Raiders',full:'Canberra Raiders'},{id:'roosters',name:'Roosters',full:'Sydney Roosters'},{id:'sea-eagles',name:'Sea Eagles',full:'Manly Warringah Sea Eagles'},{id:'sharks',name:'Sharks',full:'Cronulla-Sutherland Sharks'},{id:'storm',name:'Storm',full:'Melbourne Storm'},{id:'titans',name:'Titans',full:'Gold Coast Titans'},{id:'warriors',name:'Warriors',full:'New Zealand Warriors'},{id:'tigers',name:'Wests Tigers',full:'Wests Tigers'}];
-const DC=[{id:'c_lawrence',name:'Emma Lawrence',nick:'',role:'Play-by-play'},{id:'c_ginnane',name:'Dan Ginnane',nick:'',role:'Play-by-play'},{id:'c_maroon',name:'Anthony Maroon',nick:'',role:'Play-by-play'},{id:'c_dobbin',name:'Ben Dobbin',nick:'Dobbo',role:'Play-by-play'},{id:'c_lovejoy',name:'Elliott Lovejoy',nick:'',role:'Play-by-play'},{id:'c_squires',name:'Tony Squires',nick:'',role:'Host'},{id:'c_keary',name:'Luke Keary',nick:'',role:'Analyst'},{id:'c_girdler',name:'Ryan Girdler',nick:'',role:'Expert'},{id:'c_jgraham',name:'James Graham',nick:'',role:'Expert'},{id:'c_wgraham',name:'Wade Graham',nick:'',role:'Expert'},{id:'c_woods',name:'Aaron Woods',nick:'Woodsy',role:'Expert'},{id:'c_webcke',name:'Shane Webcke',nick:'',role:'Expert'},{id:'c_tallis',name:'Gorden Tallis',nick:'',role:'Expert'},{id:'c_reynolds',name:'Josh Reynolds',nick:'',role:'Expert'},{id:'c_teo',name:'Ben Teo',nick:'',role:'Expert'},{id:'c_hannant',name:'Ben Hannant',nick:'',role:'Expert'}];
 const LLM_URL='/openrouter',FM=[['google/gemini-2.0-flash-exp:free','Gemini 2.0 Flash'],['meta-llama/llama-3.3-70b-instruct:free','Llama 3.3 70B'],['deepseek/deepseek-chat:free','DeepSeek V3']];
 const CPROMPT='You are a radio highlights producer. You will receive a short transcription of NRL commentary. Generate a 2-6 word producer tag that captures the essence and energy of the call. If the caller is excited, let that show. Be vivid and concise. Use correct player name spellings from this list: ';
 
-// Settings
-(function(){const b=$('settingsToggle'),p=$('settingsPanel');b.addEventListener('click',e=>{e.stopPropagation();p.classList.toggle('visible');b.classList.toggle('active');});document.addEventListener('click',e=>{if(!p.contains(e.target)&&e.target!==b){p.classList.remove('visible');b.classList.remove('active');}});
-const s=$('srtModelSelect'),st=$('srtModelStatus');s.innerHTML=FM.map(m=>'<option value="'+m[0]+'">'+m[1]+'</option>').join('');st.textContent=FM.length+' models';
-fetch(LLM_URL+'/models').then(r=>r.json()).then(d=>{const f=(d.data||[]).filter(m=>m.id&&m.id.endsWith(':free'));if(!f.length)return;f.sort((a,b)=>(a.name||a.id).localeCompare(b.name||b.id));s.innerHTML=f.map(m=>{let l=m.name||m.id;if(!/free/i.test(l))l+=' (free)';return'<option value="'+m.id+'">'+l+'</option>';}).join('');st.textContent=f.length+' models';}).catch(()=>{});})();
+// In-memory state (loaded from API, no localStorage except theme)
+let S={callers:[],eventTypes:[],games:[],activeGame:null,activePhase:'pre',currentGame:null};
 
-let S={callers:[],eventTypes:[{id:'try',name:'Try',category:'try'},{id:'penalty-goal',name:'Penalty Goal',category:'scoring'},{id:'field-goal',name:'Field Goal',category:'scoring'},{id:'conversion',name:'Conversion',category:'scoring'},{id:'sin-bin',name:'Sin Bin',category:'discipline'},{id:'send-off',name:'Send Off',category:'discipline'},{id:'injury',name:'Injury',category:'moment'},{id:'key-moment',name:'Key Moment',category:'moment'},{id:'grab',name:'Grab',category:'grab'}],games:[],activeGame:null,callersSeeded:false,activePhase:'pre'};
-try{const x=localStorage.getItem('mt_v4');if(x)S={...S,...JSON.parse(x)};}catch{}
-if(!S.callersSeeded){S.callers=DC;S.callersSeeded=true;sv();}
-if(!S.eventTypes.find(e=>e.id==='grab'))S.eventTypes.push({id:'grab',name:'Grab',category:'grab'});
-function sv(){try{localStorage.setItem('mt_v4',JSON.stringify(S));}catch{}}
+// API helpers
+async function api(path,opts={}){const r=await fetch(API+path,{headers:{'Content-Type':'application/json'},...opts});if(!r.ok){const e=await r.json().catch(()=>({error:'Request failed'}));throw new Error(e.error||'API error '+r.status);}return r.json();}
+async function apiPost(path,body){return api(path,{method:'POST',body:JSON.stringify(body)});}
+async function apiPut(path,body){return api(path,{method:'PUT',body:JSON.stringify(body)});}
+async function apiDel(path){return api(path,{method:'DELETE'});}
 
 // Helpers
 function ord(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
 function tn(id){return(NRL_TEAMS.find(t=>t.id===id)||{}).name||id||'';}
 function cNick(id){const c=S.callers.find(c=>c.id===id);return c?(c.nick||c.name):id||'';}
 function cFull(id){const c=S.callers.find(c=>c.id===id);return c?(c.nick?c.name+' ('+c.nick+')':c.name):id||'';}
-// Multi-caller display: uses nicknames joined by &
 function callersDisp(ids){if(!ids||!ids.length)return'';return ids.map(cNick).filter(Boolean).join(' & ');}
-function callersFull(ids){if(!ids||!ids.length)return'';return ids.map(cFull).filter(Boolean).join(', ');}
 function en(id){return(S.eventTypes.find(e=>e.id===id)||{}).name||id;}
 function ec(id){return(S.eventTypes.find(e=>e.id===id)||{}).category||'moment';}
-function gg(){return S.games.find(g=>g.id===S.activeGame);}
+function gg(){return S.currentGame;}
 function rd(v){return(v||v===0)?'Round '+v:'';}
 function san(s){return s.replace(/[^a-zA-Z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');}
-function pn(g,ph,eid){const pe=g.events.filter(e=>e.phase===ph);const i=pe.findIndex(e=>e.id===eid);return i>=0?i+1:pe.length+1;}
-function tc(g,tid,p,ph){return g.events.filter(e=>e.type==='try'&&e.team===tid&&e.player&&e.player.toLowerCase()===p.toLowerCase()&&e.phase===ph).length;}
+function pn(g,ph,eid){const pe=(g.events||[]).filter(e=>e.phase===ph);const i=pe.findIndex(e=>e.id===eid);return i>=0?i+1:pe.length+1;}
+function tc(g,tid,p,ph){return(g.events||[]).filter(e=>e.type==='try'&&e.team===tid&&e.player&&e.player.toLowerCase()===p.toLowerCase()&&e.phase===ph).length;}
 function gfn(ev,g,branded){
   const num=pn(g,ev.phase,ev.id),p=ev.player||'',t=tn(ev.team),nm=en(ev.type);
-  const m=ev.minute!=null?ord(ev.minute):'';
-  const c=callersDisp(ev.callers||[]);const cm=ev.comment||'';
-  const pt=ev.phase==='pre'?'Pre-game':ev.phase==='post'?'Post-game':'';
-  let fn='';
+  const m=ev.minute!=null?ord(ev.minute):'';const c=callersDisp(ev.callers||[]);const cm=ev.comment||'';
+  const pt=ev.phase==='pre'?'Pre-game':ev.phase==='post'?'Post-game':'';let fn='';
   if(ev.type==='grab'){fn=num+'. '+(p?p+' - ':'')+(pt?pt+' grab':'Grab')+(cm?' - '+cm:'')+(c?' - '+c:'');}
   else if(ev.type==='try'){fn=num+'. '+p+' - Scores '+t+' '+ord(tc(g,ev.team,ev.player,ev.phase))+' Try'+(m?' in '+m+' minute':'')+' - '+c+(cm?' - '+cm:'');}
   else{fn=num+'. '+(p?p+' - ':'')+nm+(t?' '+t:'')+(m?' in '+m+' minute':'')+(c?' - '+c:'')+(cm?' - '+cm:'');}
@@ -248,217 +242,55 @@ function gfn(ev,g,branded){
 }
 function calcM(ko){if(!ko)return 0;const el=Math.floor((Date.now()-new Date(ko).getTime())/60000);return el<0?0:el>120?80:el;}
 function defKO(){const n=new Date();n.setMinutes(0,0,0);n.setHours(n.getHours()+1);return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0')+'T'+String(n.getHours()).padStart(2,'0')+':00';}
-function gLabel(g){const d=g.kickoff?new Date(g.kickoff).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'';return rd(g.round)+' \xb7 '+tn(g.homeTeam)+' v '+tn(g.awayTeam)+(d?' \xb7 '+d:'');}
+function gLabel(g){const d=g.kickoff?new Date(g.kickoff).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'';return rd(g.round)+' \xb7 '+tn(g.home_team||g.homeTeam)+' v '+tn(g.away_team||g.awayTeam)+(d?' \xb7 '+d:'');}
 function debounce(fn,ms){let t;return function(){clearTimeout(t);t=setTimeout(fn,ms);};}
+function normGame(g){g.homeTeam=g.home_team||g.homeTeam;g.awayTeam=g.away_team||g.awayTeam;g.callTeam=g.callTeam||[];g.events=g.events||[];(g.events).forEach(e=>{e.callers=e.callers||[];e.hasAudio=!!e.has_audio;e.starred=!!e.starred;e.needsProcessing=!!e.needs_processing;});return g;}
 
-// Caller multi-select component
-let selectedCallers=[];
-function renderCallerMulti(){
-  const wrap=$('callerMulti'),list=$('callerList');
-  const g=gg();const cids=g&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);
-  // Chips
-  if(!selectedCallers.length){wrap.innerHTML='<span style="color:var(--text-muted);font-family:var(--mono);font-size:11px">Select caller(s)</span>';}
-  else{wrap.innerHTML=selectedCallers.map(id=>'<span class="caller-chip">'+cNick(id)+'<span class="chip-x" data-cid="'+id+'">\xd7</span></span>').join('');}
-  wrap.querySelectorAll('.chip-x').forEach(x=>{x.addEventListener('click',e=>{e.stopPropagation();selectedCallers=selectedCallers.filter(id=>id!==x.dataset.cid);renderCallerMulti();updateFP();});});
-  // Dropdown list
-  list.innerHTML=cids.map(id=>{const c=S.callers.find(c=>c.id===id);if(!c)return'';const sel=selectedCallers.includes(id);
-    return'<div class="caller-opt'+(sel?' selected':'')+'" data-cid="'+id+'"><span class="opt-check">'+(sel?'\u2713':'')+'</span>'+cFull(id)+'</div>';}).join('');
-  list.querySelectorAll('.caller-opt').forEach(o=>{o.addEventListener('click',()=>{const id=o.dataset.cid;if(selectedCallers.includes(id))selectedCallers=selectedCallers.filter(x=>x!==id);else selectedCallers.push(id);renderCallerMulti();updateFP();});});
-}
-$('callerMulti').addEventListener('click',e=>{e.stopPropagation();$('callerList').classList.toggle('open');});
-document.addEventListener('click',e=>{if(!$('callerDropdown').contains(e.target))$('callerList').classList.remove('open');});
+// Settings panel
+(function(){const b=$('settingsToggle'),p=$('settingsPanel');b.addEventListener('click',e=>{e.stopPropagation();p.classList.toggle('visible');b.classList.toggle('active');});document.addEventListener('click',e=>{if(!p.contains(e.target)&&e.target!==b){p.classList.remove('visible');b.classList.remove('active');}});
+const s=$('srtModelSelect'),st=$('srtModelStatus');s.innerHTML=FM.map(m=>'<option value="'+m[0]+'">'+m[1]+'</option>').join('');st.textContent=FM.length+' models';
+fetch(LLM_URL+'/models').then(r=>r.json()).then(d=>{const f=(d.data||[]).filter(m=>m.id&&m.id.endsWith(':free'));if(!f.length)return;f.sort((a,b)=>(a.name||a.id).localeCompare(b.name||b.id));s.innerHTML=f.map(m=>{let l=m.name||m.id;if(!/free/i.test(l))l+=' (free)';return'<option value="'+m.id+'">'+l+'</option>';}).join('');st.textContent=f.length+' models';}).catch(()=>{});})();
 
-// Player names from game context (all phases)
-function getPlayerNames(g){const n=new Set();g.events.forEach(e=>{if(e.player)n.add(e.player);});return[...n];}
-
-// LLM regen
-// ╔══════════════════════════════════════╗
-// ║  AUDIO PROCESSING QUEUE             ║
-// ╚══════════════════════════════════════╝
-// Queue items: { eventId, gameId, audioBlob, status: 'queued'|'uploading'|'transcribing'|'generating'|'done'|'failed', error }
-let audioQueue=[];
-let queueRunning=false;
-
-function enqueueAudio(gameId,eventId,audioFile){
-  audioQueue.push({gameId,eventId,audioBlob:audioFile,status:'queued',error:null});
-  updateQBadge();renderEL();
-  if(!queueRunning)processQueue();
-}
-
+// Audio Queue
+let audioQueue=[],queueRunning=false;
+function enqueueAudio(gameId,eventId,audioFile){audioQueue.push({gameId,eventId,audioBlob:audioFile,status:'queued',error:null});updateQBadge();renderEL();if(!queueRunning)processQueue();}
 async function processQueue(){
   if(queueRunning)return;queueRunning=true;
   while(audioQueue.some(q=>q.status==='queued')){
     const item=audioQueue.find(q=>q.status==='queued');if(!item)break;
-    const g=S.games.find(g=>g.id===item.gameId);const ev=g&&g.events.find(e=>e.id===item.eventId);
-    if(!g||!ev){item.status='failed';item.error='Event not found';updateQBadge();renderEL();continue;}
     try{
-      // Step 1: Upload (Mac Mini if online, browser MP3 + R2 if offline)
       item.status='uploading';updateQBadge();renderEL();
-      const uploadResult=await uploadToR2(item.audioBlob,item.eventId);
-      ev.r2Uploaded=true;ev.needsProcessing=!uploadResult.processed;
-      if(uploadResult.r2Key)ev.r2Key=uploadResult.r2Key;
-      sv();
-      // Step 2: Whisper transcription (may return null if Mac Mini offline)
+      const fd=new FormData();fd.append('file',item.audioBlob,'audio_'+item.eventId+'.mp3');
+      const upRes=await fetch(API+'/events/'+item.eventId+'/audio',{method:'POST',body:fd});
+      if(!upRes.ok)throw new Error('Upload failed');
       item.status='transcribing';updateQBadge();renderEL();
-      const transcript=await transcribeAudio(item.audioBlob);
+      let transcript=null;
+      try{const tfd=new FormData();tfd.append('file',item.audioBlob,'audio.wav');
+        const tr=await fetch(API+'/mac/api/transcribe',{method:'POST',body:tfd,signal:AbortSignal.timeout(120000)});
+        if(tr.ok){const td=await tr.json();if(td.status==='ok'&&td.words&&td.words.length)transcript=td.words.map(w=>w.word).join(' ');}
+      }catch(e){console.log('[Queue] Mac Mini offline');}
       if(transcript){
-        ev.transcript=transcript;sv();renderEL();
-        // Step 3: LLM comment generation (only if we got a transcript)
+        await apiPut('/events/'+item.eventId,{transcript});
         item.status='generating';updateQBadge();renderEL();
-        const players=getPlayerNames(g);
+        const g=gg();const players=g?[...new Set((g.events||[]).filter(e=>e.player).map(e=>e.player))]:[];
         const comment=await generateComment(transcript,players);
-        if(comment){ev.comment=comment;sv();}
-        item.status='done';
-      }else{
-        // No transcript — audio is safe in R2 but needs processing later
-        ev.needsProcessing=true;sv();
-        item.status='done'; // Not a failure — audio is saved
-      }
-      // Release the blob from memory
-      item.audioBlob=null;
-      updateQBadge();renderEL();
-    }catch(e){
-      console.error('Queue processing failed for',item.eventId,e);
-      item.status='failed';item.error=e.message||'Processing failed';
-      updateQBadge();renderEL();
-    }
+        if(comment)await apiPut('/events/'+item.eventId,{comment});
+      }else{await apiPut('/events/'+item.eventId,{needs_processing:true});}
+      item.status='done';item.audioBlob=null;
+    }catch(e){item.status='failed';item.error=e.message;}
+    updateQBadge();if(S.activeGame)await loadGame(S.activeGame);renderEL();
   }
   queueRunning=false;updateQBadge();
 }
-
-function retryQueueItem(eventId){
-  const item=audioQueue.find(q=>q.eventId===eventId&&q.status==='failed');
-  if(item){item.status='queued';item.error=null;updateQBadge();renderEL();if(!queueRunning)processQueue();}
-}
-
-function getQueueStatus(eventId){
-  return audioQueue.find(q=>q.eventId===eventId)||null;
-}
-
-function updateQBadge(){
-  const pending=audioQueue.filter(q=>q.status==='queued'||q.status==='uploading'||q.status==='transcribing'||q.status==='generating').length;
-  const badge=$('qBadge');
-  if(pending>0){badge.textContent=pending;badge.style.display='';}
-  else{badge.style.display='none';}
-}
-
-// ── Pipeline steps ──
-// Primary path: Browser → Mac Mini (raw audio) → FFmpeg (fade+loudnorm+MP3) → R2 + Whisper → back
-// Fallback: Browser encodes MP3 client-side → uploads directly to R2 (flagged for reprocessing)
-const MAC_MINI_URL='/api'; // Same server as Media Clip
-
-// Browser-side MP3 encoding (fallback when Mac Mini is offline)
-// Uses AudioContext to decode, then encodes as low-bitrate MP3 via lamejs (loaded on demand)
-let lamejsLoaded=null;
-async function loadLamejs(){
-  if(lamejsLoaded)return lamejsLoaded;
-  // lamejs is ~180KB, loaded only when needed
-  lamejsLoaded=new Promise((res,rej)=>{
-    const s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js';
-    s.onload=()=>res(true);s.onerror=()=>rej(new Error('Failed to load MP3 encoder'));
-    document.head.appendChild(s);
-  });
-  return lamejsLoaded;
-}
-
-async function encodeToMp3(audioBlob){
-  await loadLamejs();
-  const ctx=new(window.AudioContext||window.webkitAudioContext)();
-  const buf=await ctx.decodeAudioData(await audioBlob.arrayBuffer());
-  ctx.close();
-  // Downsample to mono 16kHz (small file, good enough for speech)
-  const offCtx=new OfflineAudioContext(1,Math.ceil(buf.duration*48000),48000);
-  const src=offCtx.createBufferSource();src.buffer=buf;src.connect(offCtx.destination);src.start();
-  const rendered=await offCtx.startRendering();
-  const pcm=rendered.getChannelData(0);
-  // Encode with lamejs at 192kbps 48kHz CBR mono (~720KB/30s)
-  const mp3enc=new lamejs.Mp3Encoder(1,48000,192);
-  const samples=new Int16Array(pcm.length);
-  for(let i=0;i<pcm.length;i++){const s=Math.max(-1,Math.min(1,pcm[i]));samples[i]=s<0?s*0x8000:s*0x7FFF;}
-  const chunks=[];const blockSize=1152;
-  for(let i=0;i<samples.length;i+=blockSize){
-    const block=samples.subarray(i,Math.min(i+blockSize,samples.length));
-    const mp3buf=mp3enc.encodeBuffer(block);if(mp3buf.length>0)chunks.push(mp3buf);
-  }
-  const last=mp3enc.flush();if(last.length>0)chunks.push(last);
-  return new Blob(chunks,{type:'audio/mp3'});
-}
-
-// Try Mac Mini first; if offline, encode MP3 in browser and upload direct to R2
-async function uploadToR2(audioBlob,eventId){
-  let macOnline=false;
-  try{
-    // Ping Mac Mini health
-    const h=await fetch(MAC_MINI_URL+'/health',{signal:AbortSignal.timeout(3000)});
-    if(h.ok)macOnline=true;
-  }catch{}
-
-  if(macOnline){
-    // Primary path: send raw audio to Mac Mini for processing
-    // Mac Mini applies 3ms fade + loudnorm -16 LUFS + encodes MP3 + uploads to R2
-    console.log('[Queue] Mac Mini online — sending for processing:',eventId);
-    const fd=new FormData();fd.append('file',audioBlob,'audio_'+eventId);fd.append('eventId',eventId);
-    const r=await fetch(MAC_MINI_URL+'/process-audio',{method:'POST',body:fd,signal:AbortSignal.timeout(120000)});
-    if(!r.ok)throw new Error('Mac Mini processing failed: '+r.status);
-    const d=await r.json();
-    return{processed:true,r2Key:d.r2Key||null};
-  }else{
-    // Fallback: encode MP3 in browser, upload directly to R2
-    console.log('[Queue] Mac Mini offline — encoding MP3 in browser:',eventId);
-    const mp3=await encodeToMp3(audioBlob);
-    console.log('[Queue] MP3 encoded:',Math.round(mp3.size/1024)+'KB — uploading to R2');
-    // TODO: Replace with actual R2 upload via CF Worker signed URL
-    // const tokenRes=await fetch('/api/r2-upload-token');
-    // const {uploadUrl}=await tokenRes.json();
-    // await fetch(uploadUrl,{method:'PUT',body:mp3});
-    await new Promise(r=>setTimeout(r,300)); // Simulate upload
-    return{processed:false,r2Key:null}; // Flagged for Mac Mini reprocessing
-  }
-}
-
-async function transcribeAudio(audioBlob){
-  let macOnline=false;
-  try{const h=await fetch(MAC_MINI_URL+'/health',{signal:AbortSignal.timeout(3000)});if(h.ok)macOnline=true;}catch{}
-
-  if(macOnline){
-    // Send to Mac Mini's Whisper endpoint
-    console.log('[Queue] Transcribing via Mac Mini');
-    const fd=new FormData();fd.append('file',audioBlob,'audio.wav');
-    const r=await fetch(MAC_MINI_URL+'/transcribe',{method:'POST',body:fd,signal:AbortSignal.timeout(120000)});
-    if(!r.ok)throw new Error('Transcription failed: '+r.status);
-    const d=await r.json();
-    if(d.status==='ok'&&d.words&&d.words.length){
-      return d.words.map(w=>w.word).join(' ');
-    }
-    throw new Error(d.error||'No words returned');
-  }else{
-    // Mac Mini offline — return placeholder, flag for later
-    console.log('[Queue] Mac Mini offline — transcription deferred');
-    return null; // Will be retried when Mac Mini comes back
-  }
-}
-
-async function generateComment(transcript,playerNames){
-  const model=$('srtModelSelect').value;
-  if(!model||!transcript)return null;
-  const prompt=CPROMPT+playerNames.join(', ')+'. Return only the tag.';
-  const txt=transcript.split(/\s+/).slice(0,500).join(' ');
-  try{
-    const r=await fetch(LLM_URL+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model,max_tokens:100,messages:[{role:'system',content:prompt},{role:'user',content:txt}]}),
-      signal:AbortSignal.timeout(30000)});
-    if(!r.ok)throw new Error('LLM error '+r.status);
-    const d=await r.json();return d.choices?.[0]?.message?.content?.trim()||null;
-  }catch(e){console.log('[Queue] LLM failed:',e.message);return null;}
-}
-
-async function regenCmt(evId){const g=gg();if(!g)return;const ev=g.events.find(e=>e.id===evId);if(!ev||!ev.transcript)return alert('No transcript for this event.');
-  const model=$('srtModelSelect').value;if(!model)return alert('Select LLM in Settings.');
-  const pl=getPlayerNames(g);const prompt=CPROMPT+pl.join(', ')+'. Return only the tag.';
-  const txt=ev.transcript.split(/\s+/).slice(0,500).join(' ');
-  try{const r=await fetch(LLM_URL+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,max_tokens:100,messages:[{role:'system',content:prompt},{role:'user',content:txt}]}),signal:AbortSignal.timeout(30000)});
-  if(!r.ok)throw new Error('LLM error');const d=await r.json();const tag=d.choices?.[0]?.message?.content?.trim();if(tag){ev.comment=tag;sv();renderEL();}}catch(e){alert('Failed: '+e.message);}}
+function retryQueueItem(evId){const i=audioQueue.find(q=>q.eventId===evId&&q.status==='failed');if(i){i.status='queued';i.error=null;updateQBadge();renderEL();if(!queueRunning)processQueue();}}
+function getQueueStatus(evId){return audioQueue.find(q=>q.eventId===evId)||null;}
+function updateQBadge(){const n=audioQueue.filter(q=>['queued','uploading','transcribing','generating'].includes(q.status)).length;const b=$('qBadge');if(n>0){b.textContent=n;b.style.display='';}else b.style.display='none';}
+async function generateComment(transcript,players){const model=$('srtModelSelect').value;if(!model||!transcript)return null;
+  try{const r=await fetch(LLM_URL+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,max_tokens:100,messages:[{role:'system',content:CPROMPT+players.join(', ')+'. Return only the tag.'},{role:'user',content:transcript.split(/\s+/).slice(0,500).join(' ')}]})});
+  if(!r.ok)return null;const d=await r.json();return d.choices?.[0]?.message?.content?.trim()||null;}catch{return null;}}
+async function regenCmt(evId){const g=gg();if(!g)return;const ev=(g.events||[]).find(e=>e.id===evId);if(!ev||!ev.transcript)return alert('No transcript yet.');
+  const players=[...new Set((g.events||[]).filter(e=>e.player).map(e=>e.player))];
+  const comment=await generateComment(ev.transcript,players);if(comment){await apiPut('/events/'+evId,{comment});await loadGame(S.activeGame);renderEL();}}
 
 // Theme
 document.querySelector('.theme-toggle').addEventListener('click',()=>{const d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');localStorage.setItem('theme',d?'light':'dark');});
@@ -475,228 +307,172 @@ function pET(){const o=S.eventTypes.map(e=>'<option value="'+e.id+'">'+e.name+'<
 
 // Live clock
 let clockI=null;
-function startClk(){stopClk();const g=gg();if(!g||!g.kickoff||S.activePhase!=='live'){$('liveClock').classList.remove('visible');return;}
-$('liveClock').classList.add('visible');function t(){$('liveClockVal').textContent=calcM(g.kickoff);}t();clockI=setInterval(t,30000);}
+function startClk(){stopClk();const g=gg();if(!g||!g.kickoff||S.activePhase!=='live'){$('liveClock').classList.remove('visible');return;}$('liveClock').classList.add('visible');function t(){$('liveClockVal').textContent=calcM(g.kickoff);}t();clockI=setInterval(t,30000);}
 function stopClk(){if(clockI){clearInterval(clockI);clockI=null;}$('liveClock').classList.remove('visible');}
 
 // Phase UI
-function applyPh(){
-  const ph=S.activePhase,live=ph==='live';
-  $('callerGroup').classList.toggle('hidden-phase',!live);
-  $('playerLabel').textContent=live?'Player':'Player / Speaker';
-  if(live){const t=$('eventType').querySelector('option[value="try"]');if(t)$('eventType').value='try';}
-  else{const g=$('eventType').querySelector('option[value="grab"]');if(g)$('eventType').value='grab';const na=$('eventTeam').querySelector('option[value=""]');if(na)$('eventTeam').value='';}
-  if(!live)selectedCallers=[];
-  renderCallerMulti();updateSug();
-  if(live)startClk();else stopClk();
-}
-function updateSug(){
-  const dl=$('playerSuggestions'),g=gg(),live=S.activePhase==='live';let names=[];
-  if(live){
-    // Live: only player names (from previous events), NOT talent/caller names
-    if(g)g.events.forEach(e=>{if(e.player&&e.phase==='live')names.push(e.player);});
-    // TODO: add actual roster data from hybrid system
-  }else{
-    // Pre/post: suggest all talent + any players mentioned
-    names=S.callers.map(c=>c.nick?c.name+' ('+c.nick+')':c.name);
-    if(g)g.events.forEach(e=>{if(e.player&&!names.includes(e.player))names.push(e.player);});
-  }
-  dl.innerHTML=[...new Set(names)].map(n=>'<option value="'+n+'">').join('');
-}
+function applyPh(){const ph=S.activePhase,live=ph==='live';$('callerGroup').classList.toggle('hidden-phase',!live);$('playerLabel').textContent=live?'Player':'Player / Speaker';
+  if(live){const t=$('eventType').querySelector('option[value="try"]');if(t)$('eventType').value='try';}else{const g=$('eventType').querySelector('option[value="grab"]');if(g)$('eventType').value='grab';const na=$('eventTeam').querySelector('option[value=""]');if(na)$('eventTeam').value='';}
+  if(!live)selectedCallers=[];renderCallerMulti();updateSug();if(live)startClk();else stopClk();}
+function updateSug(){const dl=$('playerSuggestions'),g=gg(),live=S.activePhase==='live';let names=[];
+  if(live){if(g)(g.events||[]).forEach(e=>{if(e.player&&e.phase==='live')names.push(e.player);});}
+  else{names=S.callers.map(c=>c.nick?c.name+' ('+c.nick+')':c.name);if(g)(g.events||[]).forEach(e=>{if(e.player&&!names.includes(e.player))names.push(e.player);});}
+  dl.innerHTML=[...new Set(names)].map(n=>'<option value="'+n+'">').join('');}
+
+// Caller multi-select
+let selectedCallers=[];
+function renderCallerMulti(){const wrap=$('callerMulti'),list=$('callerList');const g=gg();const cids=g&&g.callTeam&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);
+  if(!selectedCallers.length)wrap.innerHTML='<span style="color:var(--text-muted);font-family:var(--mono);font-size:11px">Select caller(s)</span>';
+  else wrap.innerHTML=selectedCallers.map(id=>'<span class="caller-chip">'+cNick(id)+'<span class="chip-x" data-cid="'+id+'">\xd7</span></span>').join('');
+  wrap.querySelectorAll('.chip-x').forEach(x=>{x.addEventListener('click',e=>{e.stopPropagation();selectedCallers=selectedCallers.filter(id=>id!==x.dataset.cid);renderCallerMulti();updateFP();});});
+  list.innerHTML=cids.map(id=>{const c=S.callers.find(c=>c.id===id);if(!c)return'';const sel=selectedCallers.includes(id);return'<div class="caller-opt'+(sel?' selected':'')+'" data-cid="'+id+'"><span class="opt-check">'+(sel?'\u2713':'')+'</span>'+cFull(id)+'</div>';}).join('');
+  list.querySelectorAll('.caller-opt').forEach(o=>{o.addEventListener('click',()=>{const id=o.dataset.cid;if(selectedCallers.includes(id))selectedCallers=selectedCallers.filter(x=>x!==id);else selectedCallers.push(id);renderCallerMulti();updateFP();});});}
+$('callerMulti').addEventListener('click',e=>{e.stopPropagation();$('callerList').classList.toggle('open');});
+document.addEventListener('click',e=>{if(!$('callerDropdown').contains(e.target))$('callerList').classList.remove('open');});
 
 // Phase buttons
-document.querySelectorAll('.phase-btn').forEach(b=>{b.addEventListener('click',()=>{
-  S.activePhase=b.dataset.phase;sv();
-  document.querySelectorAll('.phase-btn').forEach(p=>{p.classList.remove('active','live');});
-  b.classList.add('active');if(b.dataset.phase==='live')b.classList.add('live');
-  applyPh();renderEL();});});
+document.querySelectorAll('.phase-btn').forEach(b=>{b.addEventListener('click',()=>{S.activePhase=b.dataset.phase;document.querySelectorAll('.phase-btn').forEach(p=>{p.classList.remove('active','live');});b.classList.add('active');if(b.dataset.phase==='live')b.classList.add('live');applyPh();renderEL();});});
 
-// DASHBOARD
-function renderD(){
-  pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();
-  const gr=$('recentGamesGrid');
-  if(!S.games.length){gr.innerHTML='<div class="empty-state">No games yet.</div>';return;}
-  gr.innerHTML=S.games.slice().reverse().map(g=>'<div class="game-tile" data-g="'+g.id+'"><div class="game-tile-teams">'+tn(g.homeTeam)+' <span class="game-tile-vs">v</span> '+tn(g.awayTeam)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+'</div><div class="game-tile-meta">'+g.events.length+' events \xb7 '+g.events.filter(e=>e.starred).length+' \u2605</div></div>').join('');
-  gr.querySelectorAll('.game-tile').forEach(t=>{t.addEventListener('click',()=>{S.activeGame=t.dataset.g;sv();sw('session');renderS();});});}
-$('btnStartGame').addEventListener('click',()=>{const h=$('newGameHome').value,a=$('newGameAway').value;if(!h||!a)return alert('Select both teams.');if(h===a)return alert('Different teams.');
+// ═══ DASHBOARD ═══
+async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();
+  try{S.games=await api('/games');}catch{S.games=[];}
+  const gr=$('recentGamesGrid');if(!S.games.length){gr.innerHTML='<div class="empty-state">No games yet.</div>';return;}
+  gr.innerHTML=S.games.map(g=>'<div class="game-tile" data-g="'+g.id+'"><div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+'</div><div class="game-tile-meta">'+(g.eventCount||0)+' events \xb7 '+(g.starredCount||0)+' \u2605</div></div>').join('');
+  gr.querySelectorAll('.game-tile').forEach(t=>{t.addEventListener('click',async()=>{S.activeGame=t.dataset.g;await loadGame(S.activeGame);S.activePhase='pre';sw('session');renderS();});});}
+$('btnStartGame').addEventListener('click',async()=>{const h=$('newGameHome').value,a=$('newGameAway').value;if(!h||!a)return alert('Select both teams.');if(h===a)return alert('Different teams.');
   const rn=parseInt(String($('newGameRound').value).replace(/\D/g,''),10);
-  S.games.push({id:'g_'+Date.now(),homeTeam:h,awayTeam:a,round:isNaN(rn)?'':rn,venue:$('newGameVenue').value.trim(),kickoff:$('newGameKickoff').value,callTeam:Array.from($('newGameCallTeam').selectedOptions).map(o=>o.value),events:[],createdAt:new Date().toISOString()});
-  S.activeGame=S.games[S.games.length-1].id;S.activePhase='pre';sv();sw('session');renderS();});
+  try{const res=await apiPost('/games',{homeTeam:h,awayTeam:a,round:isNaN(rn)?null:rn,venue:$('newGameVenue').value.trim(),kickoff:$('newGameKickoff').value,callTeam:Array.from($('newGameCallTeam').selectedOptions).map(o=>o.value)});
+  S.activeGame=res.id;await loadGame(res.id);S.activePhase='pre';sw('session');renderS();}catch(e){alert('Failed: '+e.message);}});
+async function loadGame(id){try{const g=await api('/games/'+id);S.currentGame=normGame(g);}catch(e){S.currentGame=null;}}
 
-// SESSION
-function renderS(){
-  const g=gg();if(!g){$('gameBannerTeams').textContent='No active game';return;}
-  $('gameBannerTeams').innerHTML=tn(g.homeTeam)+' <span class="vs">v</span> '+tn(g.awayTeam);
-  $('gameBannerMeta').innerHTML=rd(g.round)+(g.venue?'<br>'+g.venue:'');
+// ═══ SESSION ═══
+function renderS(){const g=gg();if(!g){$('gameBannerTeams').textContent='No active game';return;}
+  $('gameBannerTeams').innerHTML=tn(g.homeTeam)+' <span class="vs">v</span> '+tn(g.awayTeam);$('gameBannerMeta').innerHTML=rd(g.round)+(g.venue?'<br>'+g.venue:'');
   $('eventTeam').innerHTML='<option value="'+g.homeTeam+'">'+tn(g.homeTeam)+'</option><option value="'+g.awayTeam+'">'+tn(g.awayTeam)+'</option><option value="">N/A (grab)</option>';
-  pET();selectedCallers=[];
-  document.querySelectorAll('.phase-btn').forEach(b=>{b.classList.remove('active','live');if(b.dataset.phase===S.activePhase){b.classList.add('active');if(S.activePhase==='live')b.classList.add('live');}});
-  applyPh();renderEL();updateFP();}
+  const cids=g.callTeam&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);
+  $('eventCaller').innerHTML='<option value="">Select caller</option>'+cids.map(id=>{const c=S.callers.find(c=>c.id===id);return c?'<option value="'+c.id+'">'+(c.nick?c.name+' ('+c.nick+')':c.name)+'</option>':'';}).join('');
+  pET();selectedCallers=[];document.querySelectorAll('.phase-btn').forEach(b=>{b.classList.remove('active','live');if(b.dataset.phase===S.activePhase){b.classList.add('active');if(S.activePhase==='live')b.classList.add('live');}});applyPh();renderEL();updateFP();}
 
-$('eventPlayer').addEventListener('input',updateFP);
-
-function renderEL(){
-  const g=gg();if(!g){$('evList').innerHTML='<div class="empty-state">Select a game.</div>';$('evCount').textContent='0';return;}
-  const pe=g.events.filter(e=>e.phase===S.activePhase);
+function renderEL(){const g=gg();if(!g){$('evList').innerHTML='<div class="empty-state">Select a game.</div>';$('evCount').textContent='0';return;}
+  const pe=(g.events||[]).filter(e=>e.phase===S.activePhase);
   $('evCount').textContent=pe.length+' '+S.activePhase+(pe.length!==1?' events':' event')+(g.events.length!==pe.length?' ('+g.events.length+' total)':'');
   if(!pe.length){$('evList').innerHTML='<div class="empty-state">No events in this phase.</div>';return;}
-  $('evList').innerHTML=pe.slice().reverse().map(ev=>{
-    const cat=ec(ev.type),fn=gfn(ev,g,false),ef=fn.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    const pt=ev.phase==='pre'?'pre':ev.phase==='post'?'post':'live-tag';
-    const pl=ev.phase==='pre'?'PRE':ev.phase==='post'?'POST':'LIVE';const ht=!!ev.transcript;
-    return'<div class="event-item'+(ev.starred?' starred':'')+'" data-eid="'+ev.id+'"><div class="event-item-header">'+
-    '<span class="event-phase-tag '+pt+'">'+pl+'</span>'+
-    (ev.minute!=null?'<span class="event-minute">'+ev.minute+"'</span>":'')+
-    '<span class="event-type-badge '+cat+'">'+en(ev.type)+'</span>'+
-    '<span class="event-desc">'+(ev.player||'')+(ev.team?' \u2014 '+tn(ev.team):'')+'</span>'+
-    '<div class="event-actions">'+(ev.hasAudio?'<button class="regen-btn" data-a="rg" data-id="'+ev.id+'" title="Regenerate comment from transcript">\u21bb</button>':'')+
-    '<button class="star-btn'+(ev.starred?' starred':'')+'" data-a="st" data-id="'+ev.id+'">'+(ev.starred?'\u2605':'\u2606')+'</button>'+
-    '<button class="edit-btn" data-a="ed" data-id="'+ev.id+'">Edit</button></div></div>'+
+  $('evList').innerHTML=pe.slice().reverse().map(ev=>{const cat=ec(ev.type),fn=gfn(ev,g,false),ef=fn.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    const pt=ev.phase==='pre'?'pre':ev.phase==='post'?'post':'live-tag';const pl=ev.phase==='pre'?'PRE':ev.phase==='post'?'POST':'LIVE';
+    return'<div class="event-item'+(ev.starred?' starred':'')+'" data-eid="'+ev.id+'"><div class="event-item-header"><span class="event-phase-tag '+pt+'">'+pl+'</span>'+(ev.minute!=null?'<span class="event-minute">'+ev.minute+"'</span>":'')+
+    '<span class="event-type-badge '+cat+'">'+en(ev.type)+'</span><span class="event-desc">'+(ev.player||'')+(ev.team?' \u2014 '+tn(ev.team):'')+'</span>'+
+    '<div class="event-actions">'+(ev.hasAudio?'<button class="regen-btn" data-a="rg" data-id="'+ev.id+'">\u21bb</button>':'')+
+    '<button class="star-btn'+(ev.starred?' starred':'')+'" data-a="st" data-id="'+ev.id+'">'+(ev.starred?'\u2605':'\u2606')+'</button><button class="edit-btn" data-a="ed" data-id="'+ev.id+'">Edit</button></div></div>'+
     '<div class="event-filename"><span class="event-filename-text">'+fn+'</span><button class="copy-btn" data-a="cp" data-t="'+ef+'">Copy</button></div>'+
     (ev.comment?'<div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);padding:0 2px">\ud83d\udcac '+ev.comment+'</div>':'')+
     (function(){const qs=getQueueStatus(ev.id);if(!qs)return ev.hasAudio?'<div style="font-family:var(--mono);font-size:10px;color:'+(ev.needsProcessing?'var(--warning)':'var(--success)')+'">'+'\ud83c\udf99 '+(ev.needsProcessing?'Uploaded \xb7 Needs processing':'Audio')+(ev.transcript?' \xb7 Transcript':'')+'</div>':'';
-      if(qs.status==='queued')return'<div class="ev-proc queued"><span class="proc-dot"></span>\u23f3 Queued for processing'+(audioQueue.filter(q=>q.status==='queued').length>1?' ('+audioQueue.filter(q=>q.status!=='done'&&q.status!=='failed').indexOf(qs)+' of '+audioQueue.filter(q=>q.status!=='done'&&q.status!=='failed').length+')':'')+'</div>';
-      if(qs.status==='uploading')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Uploading to storage\u2026</div>';
-      if(qs.status==='transcribing')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Transcribing audio\u2026</div>';
-      if(qs.status==='generating')return'<div class="ev-proc generating"><span class="proc-dot"></span>Generating comment\u2026</div>';
-      if(qs.status==='done')return'<div class="ev-proc done"><span class="proc-dot"></span>\u2713 Processed</div>';
-      if(qs.status==='failed')return'<div class="ev-proc failed"><span class="proc-dot"></span>\u26a0 '+qs.error+'<button class="retry-btn" data-a="retry" data-id="'+ev.id+'">Retry</button></div>';
-      return'';
-    }())+'</div>';}).join('');
+      if(qs.status==='queued')return'<div class="ev-proc queued"><span class="proc-dot"></span>\u23f3 Queued</div>';if(qs.status==='uploading')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Uploading\u2026</div>';
+      if(qs.status==='transcribing')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Transcribing\u2026</div>';if(qs.status==='generating')return'<div class="ev-proc generating"><span class="proc-dot"></span>Generating comment\u2026</div>';
+      if(qs.status==='done')return'<div class="ev-proc done"><span class="proc-dot"></span>\u2713 Processed</div>';if(qs.status==='failed')return'<div class="ev-proc failed"><span class="proc-dot"></span>\u26a0 '+qs.error+'<button class="retry-btn" data-a="retry" data-id="'+ev.id+'">Retry</button></div>';return''}())+'</div>';}).join('');
   $('evList').querySelectorAll('[data-a="cp"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.t).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
   $('evList').querySelectorAll('[data-a="ed"]').forEach(b=>{b.addEventListener('click',()=>editEv(b.dataset.id));});
-  $('evList').querySelectorAll('[data-a="st"]').forEach(b=>{b.addEventListener('click',()=>{const ev=g.events.find(e=>e.id===b.dataset.id);if(ev){ev.starred=!ev.starred;sv();renderEL();}});});
-  $('evList').querySelectorAll('[data-a="rg"]').forEach(b=>{b.addEventListener('click',async()=>{const g=gg();const ev=g&&g.events.find(e=>e.id===b.dataset.id);if(!ev||!ev.transcript){alert('No transcript yet. Audio needs to be processed first.');return;}b.classList.add('spinning');await regenCmt(b.dataset.id);b.classList.remove('spinning');});});
+  $('evList').querySelectorAll('[data-a="st"]').forEach(b=>{b.addEventListener('click',async()=>{try{await apiPost('/events/'+b.dataset.id+'/star',{});await loadGame(S.activeGame);renderEL();}catch(e){alert(e.message);}});});
+  $('evList').querySelectorAll('[data-a="rg"]').forEach(b=>{b.addEventListener('click',async()=>{const ev=(gg().events||[]).find(e=>e.id===b.dataset.id);if(!ev||!ev.transcript){alert('No transcript yet.');return;}b.classList.add('spinning');await regenCmt(b.dataset.id);b.classList.remove('spinning');});});
   $('evList').querySelectorAll('[data-a="retry"]').forEach(b=>{b.addEventListener('click',()=>retryQueueItem(b.dataset.id));});}
 
-function editEv(eid){const g=gg();if(!g)return;const ev=g.events.find(e=>e.id===eid);if(!ev)return;
-  const el=$('evList').querySelector('[data-eid="'+eid+'"]');if(!el)return;
-  const allN=[...S.callers.map(c=>c.nick?c.name+' ('+c.nick+')':c.name),...getPlayerNames(g)];const uq=[...new Set(allN)];
-  const dlId='dl_'+eid;
+function editEv(eid){const g=gg();if(!g)return;const ev=(g.events||[]).find(e=>e.id===eid);if(!ev)return;const el=$('evList').querySelector('[data-eid="'+eid+'"]');if(!el)return;
+  const allN=[...S.callers.map(c=>c.nick?c.name+' ('+c.nick+')':c.name),...new Set((g.events||[]).filter(e=>e.player).map(e=>e.player))];const dlId='dl_'+eid;
   el.innerHTML='<div class="mc-edit-row">'+(ev.phase==='live'?'<input type="number" class="form-input" value="'+(ev.minute!=null?ev.minute:'')+'" min="0" max="120" style="max-width:70px" id="eM_'+eid+'">':'')+
-  '<input type="text" class="form-input" value="'+(ev.player||'')+'" id="eP_'+eid+'" list="'+dlId+'"><datalist id="'+dlId+'">'+uq.map(n=>'<option value="'+n+'">').join('')+'</datalist>'+
-  '<input type="text" class="form-input" value="'+(ev.comment||'')+'" placeholder="Comment" id="eC_'+eid+'"><button class="regen-btn" id="eR_'+eid+'" title="Regenerate comment from transcript">\u21bb</button>'+
+  '<input type="text" class="form-input" value="'+(ev.player||'')+'" id="eP_'+eid+'" list="'+dlId+'"><datalist id="'+dlId+'">'+allN.map(n=>'<option value="'+n+'">').join('')+'</datalist>'+
+  '<input type="text" class="form-input" value="'+(ev.comment||'')+'" placeholder="Comment" id="eC_'+eid+'"><button class="regen-btn" id="eR_'+eid+'">\u21bb</button>'+
   '<button class="btn btn-primary btn-sm" id="eS_'+eid+'">Save</button><button class="btn btn-secondary btn-sm" id="eX_'+eid+'">Cancel</button></div>';
-  $('eS_'+eid).addEventListener('click',()=>{if(ev.phase==='live'){const m=parseInt($('eM_'+eid).value);ev.minute=isNaN(m)?ev.minute:m;}ev.player=$('eP_'+eid).value.trim()||ev.player;ev.comment=$('eC_'+eid).value.trim();sv();renderEL();});
+  $('eS_'+eid).addEventListener('click',async()=>{const u={};if(ev.phase==='live'){const m=parseInt($('eM_'+eid).value);if(!isNaN(m))u.minute=m;}u.player=$('eP_'+eid).value.trim()||ev.player;u.comment=$('eC_'+eid).value.trim();
+    try{await apiPut('/events/'+eid,u);await loadGame(S.activeGame);renderEL();}catch(e){alert(e.message);}});
   $('eX_'+eid).addEventListener('click',()=>renderEL());
-  if($('eR_'+eid)){$('eR_'+eid).addEventListener('click',async()=>{if(!ev.transcript){alert('No transcript yet. Drop audio and process it first.');return;}$('eR_'+eid).classList.add('spinning');await regenCmt(eid);$('eR_'+eid).classList.remove('spinning');});}}
+  if($('eR_'+eid))$('eR_'+eid).addEventListener('click',async()=>{if(!ev.transcript){alert('No transcript yet.');return;}$('eR_'+eid).classList.add('spinning');await regenCmt(eid);$('eR_'+eid).classList.remove('spinning');});}
 
-function updateFP(){const g=gg();if(!g){$('fnCard').style.display='none';return;}
-  const p=$('eventPlayer').value.trim();if(!p){$('fnCard').style.display='none';return;}
-  const m=S.activePhase==='live'?calcM(g.kickoff):null;
-  const mock={id:'_',type:$('eventType').value,minute:m,team:$('eventTeam').value||null,player:p,callers:selectedCallers,comment:$('eventComment').value.trim(),phase:S.activePhase};
+function updateFP(){const g=gg();if(!g){$('fnCard').style.display='none';return;}const p=$('eventPlayer').value.trim();if(!p){$('fnCard').style.display='none';return;}
+  const m=S.activePhase==='live'?calcM(g.kickoff):null;const mock={id:'_',type:$('eventType').value,minute:m,team:$('eventTeam').value||null,player:p,callers:selectedCallers,comment:$('eventComment').value.trim(),phase:S.activePhase};
   $('fnPreview').textContent=gfn(mock,g,false);$('fnCard').style.display='';
   $('btnCopyFn').onclick=()=>{navigator.clipboard.writeText($('fnPreview').textContent).then(()=>{$('btnCopyFn').textContent='Copied';$('btnCopyFn').classList.add('copied');setTimeout(()=>{$('btnCopyFn').textContent='Copy';$('btnCopyFn').classList.remove('copied');},2000);});};}
 ['eventType','eventTeam','eventPlayer','eventComment'].forEach(id=>{$(id).addEventListener('input',updateFP);$(id).addEventListener('change',updateFP);});
 
-// Audio
+// Audio drop
 const aD=$('eventAudioDrop'),aI=$('eventAudioFile');let pA=null;
-aD.addEventListener('click',()=>aI.click());
-aD.addEventListener('dragover',e=>{e.preventDefault();aD.classList.add('dragover');});
-aD.addEventListener('dragleave',()=>aD.classList.remove('dragover'));
-aD.addEventListener('drop',e=>{e.preventDefault();aD.classList.remove('dragover');if(e.dataTransfer.files[0])atA(e.dataTransfer.files[0]);});
-aI.addEventListener('change',()=>{if(aI.files[0])atA(aI.files[0]);aI.value='';});
+aD.addEventListener('click',()=>aI.click());aD.addEventListener('dragover',e=>{e.preventDefault();aD.classList.add('dragover');});aD.addEventListener('dragleave',()=>aD.classList.remove('dragover'));
+aD.addEventListener('drop',e=>{e.preventDefault();aD.classList.remove('dragover');if(e.dataTransfer.files[0])atA(e.dataTransfer.files[0]);});aI.addEventListener('change',()=>{if(aI.files[0])atA(aI.files[0]);aI.value='';});
 function atA(f){pA=f;aD.textContent='\ud83c\udf99 '+f.name;aD.classList.add('has-audio');}
 
 // Log event
-$('btnLogEvent').addEventListener('click',()=>{const g=gg();if(!g)return alert('No active game.');
-  const type=$('eventType').value,player=$('eventPlayer').value.trim(),live=S.activePhase==='live';
-  const isGrab=type==='grab';const minute=live?calcM(g.kickoff):null;
-  if(!isGrab&&!player&&live)return alert('Enter a player name.');
-  const ev={id:'e_'+Date.now(),type,minute,team:$('eventTeam').value||null,player:player||null,
-    callers:live?[...selectedCallers]:[],comment:$('eventComment').value.trim(),
-    phase:S.activePhase,starred:false,hasAudio:!!pA,audioFileName:pA?pA.name:null,
-    transcript:null,needsProcessing:!!pA,createdAt:new Date().toISOString()};
-  const audioFile=pA; // capture before reset
-  g.events.push(ev);sv();$('eventPlayer').value='';$('eventComment').value='';
-  pA=null;aD.textContent='Drop commentary audio here or click to browse';aD.classList.remove('has-audio');
-  $('fnCard').style.display='none';
-  // Enqueue audio for background processing
-  if(audioFile)enqueueAudio(g.id,ev.id,audioFile);
-  renderEL();updateSug();});
-
-$('btnEndSession').addEventListener('click',()=>{stopClk();S.activeGame=null;sv();sw('dashboard');renderD();});
+$('btnLogEvent').addEventListener('click',async()=>{const g=gg();if(!g)return alert('No active game.');const type=$('eventType').value,player=$('eventPlayer').value.trim(),live=S.activePhase==='live';
+  const isGrab=type==='grab';const minute=live?calcM(g.kickoff):null;if(!isGrab&&!player&&live)return alert('Enter a player name.');const audioFile=pA;
+  try{const res=await apiPost('/games/'+S.activeGame+'/events',{type,phase:S.activePhase,minute,team:$('eventTeam').value||null,player:player||null,callers:live?[...selectedCallers]:[],comment:$('eventComment').value.trim(),hasAudio:!!audioFile,audioFileName:audioFile?audioFile.name:null});
+  $('eventPlayer').value='';$('eventComment').value='';pA=null;aD.textContent='Drop commentary audio here or click to browse';aD.classList.remove('has-audio');$('fnCard').style.display='none';
+  if(audioFile)enqueueAudio(S.activeGame,res.id,audioFile);await loadGame(S.activeGame);renderEL();updateSug();}catch(e){alert('Failed: '+e.message);}});
+$('btnEndSession').addEventListener('click',()=>{stopClk();S.activeGame=null;S.currentGame=null;sw('dashboard');renderD();});
 
 // Export summary
-$('btnExportSummary').addEventListener('click',()=>{const g=gg();if(!g||!g.events.length)return alert('No events.');
+$('btnExportSummary').addEventListener('click',()=>{const g=gg();if(!g||!(g.events||[]).length)return alert('No events.');
   let s='MATCH TAPE \u2014 MATCH SUMMARY\n'+'='.repeat(50)+'\n\n'+tn(g.homeTeam)+' v '+tn(g.awayTeam)+'\n'+rd(g.round)+(g.venue?' \u2014 '+g.venue:'')+'\n';
   if(g.kickoff)s+='Kickoff: '+new Date(g.kickoff).toLocaleString('en-AU',{hour12:false})+'\n';
-  s+='\nCall Team: '+(g.callTeam.map(cFull).join(', ')||'N/A')+'\n';
-  ['pre','live','post'].forEach(ph=>{const pe=g.events.filter(e=>e.phase===ph);if(!pe.length)return;
+  ['pre','live','post'].forEach(ph=>{const pe=(g.events||[]).filter(e=>e.phase===ph);if(!pe.length)return;
     s+='\n'+'\u2500'.repeat(50)+'\n'+(ph==='pre'?'PRE-GAME':ph==='live'?'LIVE':'POST-GAME')+' ('+pe.length+')\n'+'\u2500'.repeat(50)+'\n\n';
-    pe.forEach(ev=>{s+=(ev.starred?'\u2605 ':'')+gfn(ev,g,false)+'\n';if(ev.comment)s+='   \ud83d\udcac '+ev.comment+'\n';if(ev.hasAudio)s+='   \ud83c\udf99 '+ev.audioFileName+'\n';s+='\n';});});
+    pe.forEach(ev=>{s+=(ev.starred?'\u2605 ':'')+gfn(ev,g,false)+'\n';if(ev.comment)s+='   \ud83d\udcac '+ev.comment+'\n';s+='\n';});});
   s+='\u2500'.repeat(50)+'\nMatch Tape \u2014 '+new Date().toLocaleString('en-AU',{hour12:false})+'\n';
-  const b=new Blob([s],{type:'text/plain'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;
-  a.download='MatchTape_'+san(tn(g.homeTeam))+'_v_'+san(tn(g.awayTeam))+(g.round?'_Round_'+g.round:'')+'_devNFcom.txt';a.click();setTimeout(()=>URL.revokeObjectURL(u),100);});
+  const b=new Blob([s],{type:'text/plain'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='MatchTape_'+san(tn(g.homeTeam))+'_v_'+san(tn(g.awayTeam))+(g.round?'_Round_'+g.round:'')+'_devNFcom.txt';a.click();setTimeout(()=>URL.revokeObjectURL(u),100);});
 
 // VoxPro zip
-function gF(g){return san(tn(g.homeTeam))+'_v_'+san(tn(g.awayTeam))+(g.round?'_Round_'+g.round:'');}
+function gF(g){return san(tn(g.homeTeam||g.home_team))+'_v_'+san(tn(g.awayTeam||g.away_team))+(g.round?'_Round_'+g.round:'');}
 function bVP(games){const z=new JSZip(),r=z.folder('NRL_HIGHLIGHTS_2026'),gr=z.folder('NRL_HIGHLIGHTS_2026/NRL_GRABS_2026');let n=0;
-  games.forEach(g=>{const gf=r.folder(gF(g));['pre','live','post'].forEach(ph=>{const pe=g.events.filter(e=>e.phase===ph&&e.hasAudio);if(!pe.length)return;
-    const pf=gf.folder(ph==='pre'?'Pre-game':ph==='live'?'Live':'Post-game');
-    pe.forEach(ev=>{const fn=gfn(ev,g,false)+'.mp3';pf.file(fn,'[Audio placeholder]\n'+fn+'\n');n++;if(ev.starred)gr.file(fn,'[Starred]\n');});});
-    g.events.filter(e=>e.starred&&!e.hasAudio).forEach(ev=>{gr.file(gfn(ev,g,false)+'.txt','[No audio]\n');});});return{z,n};}
+  games.forEach(g=>{normGame(g);const gf=r.folder(gF(g));['pre','live','post'].forEach(ph=>{const pe=(g.events||[]).filter(e=>e.phase===ph&&e.hasAudio);if(!pe.length)return;const pf=gf.folder(ph==='pre'?'Pre-game':ph==='live'?'Live':'Post-game');
+    pe.forEach(ev=>{const fn=gfn(ev,g,false)+'.mp3';pf.file(fn,'[Audio]\n');n++;if(ev.starred)gr.file(fn,'[Starred]\n');});});
+    (g.events||[]).filter(e=>e.starred&&!e.hasAudio).forEach(ev=>{gr.file(gfn(ev,g,false)+'.txt','[No audio]\n');});});return{z,n};}
 async function dlZ(z,fn){const b=await z.generateAsync({type:'blob'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=fn;a.click();setTimeout(()=>URL.revokeObjectURL(u),200);}
-$('btnSessionVoxpro').addEventListener('click',async()=>{const g=gg();if(!g||!g.events.some(e=>e.hasAudio))return alert('No audio.');
-  const b=$('btnSessionVoxpro');b.disabled=true;b.textContent='Building...';
-  try{const{z,n}=bVP([g]);await dlZ(z,'VoxPro_'+gF(g)+'.zip');b.textContent=n+' exported';setTimeout(()=>{b.textContent='Export for VoxPro';b.disabled=false;},3000);}catch(e){alert(e.message);b.textContent='Export for VoxPro';b.disabled=false;}});
+$('btnSessionVoxpro').addEventListener('click',async()=>{const g=gg();if(!g||!(g.events||[]).some(e=>e.hasAudio))return alert('No audio.');const btn=$('btnSessionVoxpro');btn.disabled=true;btn.textContent='Building...';
+  try{const{z,n}=bVP([g]);await dlZ(z,'VoxPro_'+gF(g)+'.zip');btn.textContent=n+' exported';setTimeout(()=>{btn.textContent='Export for VoxPro';btn.disabled=false;},3000);}catch(e){alert(e.message);btn.textContent='Export for VoxPro';btn.disabled=false;}});
 
-// ARCHIVE (auto-search with debounce)
+// ═══ ARCHIVE ═══
 let starO=false;
-function renderAF(){
-  $('archTeam').innerHTML='<option value="">All teams</option>'+NRL_TEAMS.map(t=>'<option value="'+t.id+'">'+t.name+'</option>').join('');
-  $('archGame').innerHTML='<option value="">All games</option>'+S.games.slice().reverse().map(g=>'<option value="'+g.id+'">'+gLabel(g)+'</option>').join('');
-  pC();pET();doSearch();}
-const dSearch=debounce(doSearch,300);
-$('archSearch').addEventListener('input',dSearch);
+async function renderAF(){$('archTeam').innerHTML='<option value="">All teams</option>'+NRL_TEAMS.map(t=>'<option value="'+t.id+'">'+t.name+'</option>').join('');
+  try{const games=await api('/games');$('archGame').innerHTML='<option value="">All games</option>'+games.map(g=>'<option value="'+g.id+'">'+gLabel(g)+'</option>').join('');}catch{}pC();pET();doSearch();}
+const dSearch=debounce(doSearch,300);$('archSearch').addEventListener('input',dSearch);
 ['archGame','archTeam','archType','archCaller'].forEach(id=>{$(id).addEventListener('change',doSearch);});
 $('starFilter').addEventListener('click',()=>{starO=!starO;$('starFilter').classList.toggle('active',starO);doSearch();});
+async function doSearch(){const p=new URLSearchParams(),q=$('archSearch').value.trim(),gf=$('archGame').value,tf=$('archTeam').value,tyf=$('archType').value,cf=$('archCaller').value;
+  if(q)p.set('q',q);if(gf)p.set('game',gf);if(tf)p.set('team',tf);if(tyf)p.set('type',tyf);if(cf)p.set('caller',cf);if(starO)p.set('starred','1');
+  try{const res=await api('/archive?'+p.toString());const c=$('archResults');if(!res.length){c.innerHTML='<div class="empty-state">No matching events.</div>';return;}
+    c.innerHTML=res.map(r=>{r.callers=r.callers||[];r.hasAudio=!!r.has_audio;r.starred=!!r.starred;const cat=ec(r.type);
+      return'<div class="archive-item'+(r.starred?' starred':'')+'">'+(r.minute!=null?'<span class="event-minute">'+r.minute+"'</span>":'')+
+      '<span class="event-type-badge '+cat+'">'+en(r.type)+'</span><div style="flex:1"><div class="event-desc">'+(r.player||'Grab')+(r.team?' \u2014 '+tn(r.team):'')+'</div>'+
+      (r.comment?'<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:2px">\ud83d\udcac '+r.comment+'</div>':'')+
+      '<div class="archive-game-info">'+tn(r.home_team)+' v '+tn(r.away_team)+' \xb7 '+rd(r.round)+'</div></div>'+
+      (r.starred?'<span style="color:var(--warning)">\u2605</span>':'')+(r.hasAudio?'<span style="font-size:10px;color:var(--success)">\ud83c\udf99</span>':'')+
+      '<button class="copy-btn" data-a="ac" data-t="'+(r.player||'Grab').replace(/"/g,'&quot;')+'">Copy</button></div>';}).join('');
+    c.querySelectorAll('[data-a="ac"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.t).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
+  }catch(e){$('archResults').innerHTML='<div class="empty-state">Error: '+e.message+'</div>';}}
+$('btnArchVP').addEventListener('click',async()=>{try{const p=new URLSearchParams();const q=$('archSearch').value.trim(),gf=$('archGame').value;if(q)p.set('q',q);if(gf)p.set('game',gf);if(starO)p.set('starred','1');
+  const res=await api('/archive?'+p.toString());if(!res.length)return alert('No results.');const gm=new Map();
+  res.forEach(r=>{r.callers=r.callers||[];r.hasAudio=!!r.has_audio;r.starred=!!r.starred;if(!gm.has(r.game_id))gm.set(r.game_id,{homeTeam:r.home_team,awayTeam:r.away_team,round:r.round,events:[]});gm.get(r.game_id).events.push(r);});
+  const btn=$('btnArchVP');btn.disabled=true;btn.textContent='Building...';const{z,n}=bVP([...gm.values()]);await dlZ(z,'VoxPro_'+new Date().toISOString().slice(0,10)+'.zip');
+  btn.textContent=n+' files';setTimeout(()=>{btn.textContent='Export for VoxPro';btn.disabled=false;},3000);}catch(e){alert(e.message);}});
 
-function doSearch(){
-  const q=$('archSearch').value.trim().toLowerCase(),gf=$('archGame').value,tf=$('archTeam').value,tyf=$('archType').value,cf=$('archCaller').value;let res=[];
-  S.games.forEach(g=>{if(gf&&g.id!==gf)return;g.events.forEach(ev=>{
-    if(starO&&!ev.starred)return;const fn=gfn(ev,g,false);
-    const s=[ev.player||'',ev.team?tn(ev.team):'',en(ev.type),callersDisp(ev.callers),ev.comment||'',fn,tn(g.homeTeam),tn(g.awayTeam),rd(g.round)].join(' ').toLowerCase();
-    if(q&&!s.includes(q))return;if(tf&&ev.team!==tf)return;if(tyf&&ev.type!==tyf)return;
-    if(cf&&!(ev.callers||[]).includes(cf))return;
-    res.push({ev,g,fn});});});
-  const c=$('archResults');if(!res.length){c.innerHTML='<div class="empty-state">No matching events.</div>';return;}
-  c.innerHTML=res.map(r=>{const cat=ec(r.ev.type),ef=r.fn.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    return'<div class="archive-item'+(r.ev.starred?' starred':'')+'">'+
-    (r.ev.minute!=null?'<span class="event-minute">'+r.ev.minute+"'</span>":'')+
-    '<span class="event-type-badge '+cat+'">'+en(r.ev.type)+'</span><div style="flex:1"><div class="event-desc">'+(r.ev.player||'Grab')+
-    (r.ev.team?' \u2014 '+tn(r.ev.team):'')+'</div>'+(r.ev.comment?'<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:2px">\ud83d\udcac '+r.ev.comment+'</div>':'')+'<div class="archive-game-info">'+tn(r.g.homeTeam)+' v '+tn(r.g.awayTeam)+' \xb7 '+rd(r.g.round)+'</div></div>'+
-    (r.ev.starred?'<span style="color:var(--warning)">\u2605</span>':'')+
-    (r.ev.hasAudio?'<span style="font-size:10px;color:var(--success)">\ud83c\udf99</span>':'')+
-    '<button class="copy-btn" data-a="ac" data-t="'+ef+'">Copy</button></div>';}).join('');
-  c.querySelectorAll('[data-a="ac"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.t).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});}
-
-$('btnArchVP').addEventListener('click',async()=>{const q=$('archSearch').value.trim().toLowerCase(),gf=$('archGame').value,tf=$('archTeam').value,tyf=$('archType').value,cf=$('archCaller').value;
-  const mg=new Map();S.games.forEach(g=>{if(gf&&g.id!==gf)return;g.events.forEach(ev=>{if(starO&&!ev.starred)return;if(!ev.hasAudio)return;
-    const fn=gfn(ev,g,false),s=[ev.player||'',ev.team?tn(ev.team):'',en(ev.type),callersDisp(ev.callers),ev.comment||'',fn,tn(g.homeTeam),tn(g.awayTeam),rd(g.round)].join(' ').toLowerCase();
-    if(q&&!s.includes(q))return;if(tf&&ev.team!==tf)return;if(tyf&&ev.type!==tyf)return;if(cf&&!(ev.callers||[]).includes(cf))return;mg.set(g.id,g);});});
-  const games=[...mg.values()];if(!games.length)return alert('No audio.');
-  const b=$('btnArchVP');b.disabled=true;b.textContent='Building...';
-  try{const{z,n}=bVP(games);await dlZ(z,'VoxPro_'+new Date().toISOString().slice(0,10)+'.zip');b.textContent=n+' files';setTimeout(()=>{b.textContent='Export for VoxPro';b.disabled=false;},3000);}catch(e){alert(e.message);b.textContent='Export for VoxPro';b.disabled=false;}});
-
-// MISSION CONTROL
-function renderMC(){rMCC();rMCET();rMCT();}
-function rMCC(){const l=$('mcCL');if(!S.callers.length){l.innerHTML='<div class="empty-state" style="padding:16px">No callers.</div>';return;}
+// ═══ MISSION CONTROL ═══
+async function renderMC(){await rMCC();await rMCET();rMCT();}
+async function rMCC(){try{S.callers=await api('/callers');}catch{S.callers=[];}
+  const l=$('mcCL');if(!S.callers.length){l.innerHTML='<div class="empty-state" style="padding:16px">No callers.</div>';return;}
   l.innerHTML=S.callers.map(c=>'<div class="mc-item" data-cid="'+c.id+'"><span class="mc-item-name">'+c.name+(c.nick?' <span style="color:var(--accent)">('+c.nick+')</span>':'')+'</span><span class="mc-item-meta">'+c.role+'</span><div class="mc-item-actions"><button class="mc-item-btn" data-a="ec" data-id="'+c.id+'">Edit</button><button class="mc-item-btn delete" data-a="dc" data-id="'+c.id+'">Remove</button></div></div>').join('');
-  l.querySelectorAll('[data-a="dc"]').forEach(b=>{b.addEventListener('click',()=>{if(!confirm('Remove?'))return;S.callers=S.callers.filter(c=>c.id!==b.dataset.id);sv();rMCC();pC();});});
+  l.querySelectorAll('[data-a="dc"]').forEach(b=>{b.addEventListener('click',async()=>{if(!confirm('Remove?'))return;try{await apiDel('/callers/'+b.dataset.id);await rMCC();pC();}catch(e){alert(e.message);}});});
   l.querySelectorAll('[data-a="ec"]').forEach(b=>{b.addEventListener('click',()=>edC(b.dataset.id));});}
 function edC(cid){const c=S.callers.find(c=>c.id===cid);if(!c)return;const el=$('mcCL').querySelector('[data-cid="'+cid+'"]');if(!el)return;
   const ro=['Play-by-play','Host','Sideline','Expert','Analyst'].map(r=>'<option value="'+r+'"'+(r===c.role?' selected':'')+'>'+r+'</option>').join('');
   el.outerHTML='<div class="mc-edit-row" data-cid="'+cid+'"><input type="text" class="form-input" value="'+c.name+'" id="eN_'+cid+'" style="flex:2"><input type="text" class="form-input" value="'+(c.nick||'')+'" placeholder="Nickname" id="eK_'+cid+'" style="flex:1"><select class="form-select" id="eR_'+cid+'" style="flex:1">'+ro+'</select><button class="btn btn-primary btn-sm" id="eS_'+cid+'">Save</button><button class="btn btn-secondary btn-sm" id="eX_'+cid+'">Cancel</button></div>';
-  $('eS_'+cid).addEventListener('click',()=>{c.name=$('eN_'+cid).value.trim()||c.name;c.nick=$('eK_'+cid).value.trim();c.role=$('eR_'+cid).value;sv();rMCC();pC();});
+  $('eS_'+cid).addEventListener('click',async()=>{try{await apiPut('/callers/'+cid,{name:$('eN_'+cid).value.trim(),nick:$('eK_'+cid).value.trim(),role:$('eR_'+cid).value});await rMCC();pC();}catch(e){alert(e.message);}});
   $('eX_'+cid).addEventListener('click',()=>rMCC());}
-$('btnAddC').addEventListener('click',()=>{const n=$('mcCN').value.trim();if(!n)return;S.callers.push({id:'c_'+Date.now(),name:n,nick:$('mcCK').value.trim(),role:$('mcCR').value});sv();$('mcCN').value='';$('mcCK').value='';rMCC();pC();});
-function rMCET(){const l=$('mcETL');l.innerHTML=S.eventTypes.map(e=>'<div class="mc-item"><span class="mc-item-name">'+e.name+'</span><span class="mc-item-meta event-type-badge '+e.category+'">'+e.category+'</span><div class="mc-item-actions"><button class="mc-item-btn delete" data-id="'+e.id+'" data-a="dt">Remove</button></div></div>').join('');
-  l.querySelectorAll('[data-a="dt"]').forEach(b=>{b.addEventListener('click',()=>{S.eventTypes=S.eventTypes.filter(e=>e.id!==b.dataset.id);sv();rMCET();pET();});});}
-$('btnAddET').addEventListener('click',()=>{const n=$('mcETN').value.trim();if(!n)return;S.eventTypes.push({id:n.toLowerCase().replace(/\s+/g,'-'),name:n,category:$('mcETC').value});sv();$('mcETN').value='';rMCET();pET();});
+$('btnAddC').addEventListener('click',async()=>{const n=$('mcCN').value.trim();if(!n)return;try{await apiPost('/callers',{name:n,nick:$('mcCK').value.trim(),role:$('mcCR').value});$('mcCN').value='';$('mcCK').value='';await rMCC();pC();}catch(e){alert(e.message);}});
+async function rMCET(){try{S.eventTypes=await api('/event-types');}catch{S.eventTypes=[];}
+  const l=$('mcETL');l.innerHTML=S.eventTypes.map(e=>'<div class="mc-item"><span class="mc-item-name">'+e.name+'</span><span class="mc-item-meta event-type-badge '+e.category+'">'+e.category+'</span><div class="mc-item-actions"><button class="mc-item-btn delete" data-id="'+e.id+'" data-a="dt">Remove</button></div></div>').join('');
+  l.querySelectorAll('[data-a="dt"]').forEach(b=>{b.addEventListener('click',async()=>{try{await apiDel('/event-types/'+b.dataset.id);await rMCET();pET();}catch(e){alert(e.message);}});});}
+$('btnAddET').addEventListener('click',async()=>{const n=$('mcETN').value.trim();if(!n)return;try{await apiPost('/event-types',{name:n,category:$('mcETC').value});$('mcETN').value='';await rMCET();pET();}catch(e){alert(e.message);}});
 function rMCT(){$('mcTL').innerHTML=NRL_TEAMS.map(t=>'<div class="mc-item"><span class="mc-item-name">'+t.full+'</span><span class="mc-item-meta">'+t.name+'</span></div>').join('');}
 
-renderD();renderMC();
+// ═══ INIT ═══
+async function init(){try{S.callers=await api('/callers');}catch{S.callers=[];}try{S.eventTypes=await api('/event-types');}catch{S.eventTypes=[];}pC();pET();renderD();}
+init();
 })();
 </script>
 </body>
