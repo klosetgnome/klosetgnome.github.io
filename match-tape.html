@@ -241,6 +241,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
         <div style="font-family:var(--mono);font-size:11px;color:var(--text-secondary);line-height:1.8">Import the 2026 NRL draw from <a href="https://fixturedownload.com/results/nrl-2026" target="_blank" style="color:var(--accent)">fixturedownload.com</a>. Download the JSON file, then drop it below.</div>
         <div class="audio-drop" id="drawDropZone" style="width:100%;padding:20px;cursor:pointer">Drop NRL 2026 JSON file here or click to browse<input type="file" id="drawFileInput" accept=".json" style="display:none"></div>
+        <div style="display:flex;gap:8px;width:100%"><button class="btn btn-secondary btn-sm" id="btnClearDraw" style="color:var(--error);border-color:var(--error)">Clear all imported fixtures</button></div>
         <div id="drawList" class="mc-list" style="width:100%"></div>
       </div>
     </div>
@@ -756,7 +757,25 @@ async function rMCP(){
 $('btnAddP').addEventListener('click',async()=>{const n=$('mcPN').value.trim(),team=$('mcPTeam').value;if(!n||!team)return;try{await apiPost('/players',{name:n,team:team});$('mcPN').value='';await rMCP();}catch(e){mtAlert(e.message);}});
 
 // ── Draw import ──
-const _teamMap={'broncos':'broncos','bulldogs':'bulldogs','cowboys':'cowboys','dolphins':'dolphins','dragons':'dragons','eels':'eels','knights':'knights','panthers':'panthers','rabbitohs':'rabbitohs','raiders':'raiders','roosters':'roosters','sea eagles':'sea-eagles','sharks':'sharks','storm':'storm','titans':'titans','warriors':'warriors','wests tigers':'tigers','tigers':'tigers'};
+const _teamMap={
+  'broncos':'broncos','brisbane broncos':'broncos','brisbane':'broncos',
+  'bulldogs':'bulldogs','canterbury bulldogs':'bulldogs','canterbury-bankstown bulldogs':'bulldogs','canterbury bankstown bulldogs':'bulldogs','canterbury':'bulldogs',
+  'cowboys':'cowboys','north queensland cowboys':'cowboys','north queensland':'cowboys',
+  'dolphins':'dolphins','redcliffe dolphins':'dolphins',
+  'dragons':'dragons','st george illawarra dragons':'dragons','st george illawarra':'dragons','st. george illawarra dragons':'dragons','st george':'dragons',
+  'eels':'eels','parramatta eels':'eels','parramatta':'eels',
+  'knights':'knights','newcastle knights':'knights','newcastle':'knights',
+  'panthers':'panthers','penrith panthers':'panthers','penrith':'panthers',
+  'rabbitohs':'rabbitohs','south sydney rabbitohs':'rabbitohs','south sydney':'rabbitohs','souths':'rabbitohs',
+  'raiders':'raiders','canberra raiders':'raiders','canberra':'raiders',
+  'roosters':'roosters','sydney roosters':'roosters','sydney':'roosters',
+  'sea eagles':'sea-eagles','manly sea eagles':'sea-eagles','manly warringah sea eagles':'sea-eagles','manly':'sea-eagles',
+  'sharks':'sharks','cronulla sharks':'sharks','cronulla-sutherland sharks':'sharks','cronulla sutherland sharks':'sharks','cronulla':'sharks',
+  'storm':'storm','melbourne storm':'storm','melbourne':'storm',
+  'titans':'titans','gold coast titans':'titans','gold coast':'titans',
+  'warriors':'warriors','new zealand warriors':'warriors','nz warriors':'warriors',
+  'wests tigers':'tigers','tigers':'tigers','west tigers':'tigers'
+};
 function mapTeam(name){const k=(name||'').toLowerCase().trim();return _teamMap[k]||NRL_TEAMS.find(t=>t.name.toLowerCase()===k||t.full.toLowerCase()===k||t.id===k)?.id||k;}
 
 (function(){
@@ -766,6 +785,10 @@ function mapTeam(name){const k=(name||'').toLowerCase().trim();return _teamMap[k
   dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
   dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');if(e.dataTransfer.files[0])importDrawFile(e.dataTransfer.files[0]);});
   fi.addEventListener('change',()=>{if(fi.files[0])importDrawFile(fi.files[0]);fi.value='';});
+  $('btnClearDraw').addEventListener('click',async()=>{
+    if(!await mtConfirm('Delete all imported fixtures that have no events logged? Games you\'ve already used are safe.',true))return;
+    try{const res=await apiPost('/games/clear-empty',{});mtAlert('\u2713 '+res.deleted+' empty fixtures removed.');renderDrawList();populateFixturePicker();}catch(e){mtAlert(e.message);}
+  });
 })();
 
 async function importDrawFile(file){
@@ -800,7 +823,7 @@ async function importDrawFile(file){
     for(const v of venues){try{await apiPost('/venues',{name:v});}catch{}}
     fill.className='draw-overlay-fill done';fill.style.width='100%';
     txt.textContent='\u2713 '+imported+' imported'+(skipped?' \xb7 '+skipped+' skipped':'');
-    setTimeout(()=>{ov.classList.remove('visible');renderDrawList();},2000);
+    setTimeout(()=>{ov.classList.remove('visible');renderDrawList();populateFixturePicker();},2000);
   }catch(e){fill.className='draw-overlay-fill';fill.style.width='100%';fill.style.background='var(--error)';txt.textContent='\u2717 '+e.message;
     setTimeout(()=>{ov.classList.remove('visible');fill.style.background='';},3000);}
 }
