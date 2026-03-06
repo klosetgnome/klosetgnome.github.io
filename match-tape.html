@@ -539,7 +539,7 @@ async function loadGame(id){try{const g=await api('/games/'+id);S.currentGame=no
 
 // ═══ SESSION ═══
 function renderS(){const g=gg();if(!g){const bt=$('gameBannerTeams');if(bt)bt.textContent='No active game';return;}
-  $('gameBannerTeams').innerHTML=tn(g.homeTeam)+' <span class="vs">v</span> '+tn(g.awayTeam);$('gameBannerMeta').innerHTML=rd(g.round)+(g.venue?'<br>'+g.venue:'');
+  $('gameBannerTeams').innerHTML=tn(g.homeTeam)+' <span class="vs">v</span> '+tn(g.awayTeam);const ko=g.kickoff?new Date(g.kickoff).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}):'';$('gameBannerMeta').innerHTML=rd(g.round)+(g.venue?'<br>'+g.venue:'')+(ko?'<br>'+ko:'');
   $('eventTeam').innerHTML='<option value="'+g.homeTeam+'">'+tn(g.homeTeam)+'</option><option value="'+g.awayTeam+'">'+tn(g.awayTeam)+'</option><option value="">N/A (grab)</option>';
   pET();selectedCallers=[];document.querySelectorAll('.phase-btn').forEach(b=>{b.classList.remove('active','live');if(b.dataset.phase===S.activePhase){b.classList.add('active');if(S.activePhase==='live')b.classList.add('live');}});applyPh();renderEL();}
 
