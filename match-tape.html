@@ -68,7 +68,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 /* Log event row with inline clock */
 .live-clock-inline{display:none;margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;align-items:center;gap:4px}
 .live-clock-inline.visible{display:flex}
-.live-clock-inline .clock-num{color:var(--error);font-weight:600;font-size:13px}
+.live-clock-inline .clock-num{color:var(--error);font-weight:600}
 /* Caller multi-select */
 .caller-multi{display:flex;flex-wrap:wrap;gap:6px;min-height:38px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:border-color 0.2s}
 .caller-multi:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
@@ -196,7 +196,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
   <div class="view" id="view-session">
     <div class="game-banner"><div class="game-banner-teams" id="gameBannerTeams"></div><div class="game-banner-meta" id="gameBannerMeta"></div><div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0"><button class="game-banner-close" id="btnEndSession">End Session</button><button class="btn btn-secondary" id="btnSessionVoxpro" style="font-size:8px;padding:5px 10px;letter-spacing:1px">VoxPro Export</button></div></div>
     <div class="phase-bar"><button class="phase-btn active" data-phase="pre">Pre-game</button><button class="phase-btn" data-phase="live">Live</button><button class="phase-btn" data-phase="post">Post-game</button></div>
-    <div class="card"><div class="card-header"><span class="card-label">Log Event</span><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>GAME MINUTE</span></div></div><div class="card-body">
+    <div class="card"><div class="card-header"><span class="card-label">Log Event</span><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>MINUTE</span></div></div><div class="card-body">
       <div class="form-row"><div class="form-group"><span class="form-label">Event Type</span><select class="form-select" id="eventType"></select></div><div class="form-group"><span class="form-label">Team</span><select class="form-select" id="eventTeam"></select></div></div>
       <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s)</span><input type="text" class="form-input" id="callerInput" placeholder="Type caller name..." list="callerSuggest" style="margin-bottom:6px"><datalist id="callerSuggest"></datalist><div style="display:flex;flex-wrap:wrap;gap:6px;min-height:24px;padding:4px 8px" id="callerChips"></div></div></div>
       <input type="hidden" id="eventComment" value="">
