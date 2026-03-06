@@ -222,6 +222,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
   </div>
   <div class="view" id="view-session">
     <div class="game-banner"><div class="game-banner-teams" id="gameBannerTeams"></div><div class="game-banner-meta" id="gameBannerMeta"></div><button class="btn btn-secondary" id="btnSessionVoxpro" style="font-size:8px;padding:5px 10px;letter-spacing:1px;flex-shrink:0">VoxPro Export</button></div>
+    <div id="sessionContent">
     <div class="phase-bar"><button class="phase-btn active" data-phase="pre">Pre-game</button><button class="phase-btn" data-phase="live">Live</button><button class="phase-btn" data-phase="post">Post-game</button></div>
     <div class="card"><div class="card-header"><span class="card-label">Log Event</span><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>MINUTE</span></div></div><div class="card-body">
       <div class="form-row"><div class="form-group"><span class="form-label">Event Type</span><select class="form-select" id="eventType"></select></div><div class="form-group"><span class="form-label">Team</span><select class="form-select" id="eventTeam"></select></div></div>
@@ -231,6 +232,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
       <button class="btn btn-success" id="btnLogEvent" style="display:none">Log Event</button>
     </div></div>
     <div class="card"><div class="card-header"><span class="card-label">Event Timeline</span><span class="card-label" id="evCount" style="color:var(--accent)">0</span></div><div class="card-body"><div class="event-list" id="evList"><div class="empty-state">No events logged yet.</div></div></div></div>
+    </div>
   </div>
   <div class="view" id="view-archive">
     <div class="card"><div class="card-header"><span class="card-label">Search Archive</span></div>
@@ -547,7 +549,12 @@ $('btnStartGame').addEventListener('click',async()=>{
 async function loadGame(id){try{const g=await api('/games/'+id);S.currentGame=normGame(g);}catch(e){S.currentGame=null;}}
 
 // ═══ SESSION ═══
-function renderS(){const g=gg();if(!g){const bt=$('gameBannerTeams');if(bt)bt.textContent='No active game';return;}
+function renderS(){const g=gg();const sc=$('sessionContent');const vx=$('btnSessionVoxpro');const meta=$('gameBannerMeta');
+  if(!g){
+    $('gameBannerTeams').innerHTML='<span style="color:var(--text-muted)">Select a game from the Dashboard</span>';
+    if(meta)meta.innerHTML='';if(vx)vx.style.display='none';
+    if(sc)sc.style.cssText='filter:blur(6px);opacity:0.3;pointer-events:none';return;}
+  if(sc)sc.style.cssText='';if(vx)vx.style.display='';
   $('gameBannerTeams').innerHTML=tn(g.homeTeam)+' <span class="vs">v</span> '+tn(g.awayTeam)+'<span style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:12px">'+rd(g.round)+'</span>';const ko=g.kickoff?new Date(g.kickoff).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}):'';$('gameBannerMeta').innerHTML=(g.venue||'')+(ko?'<br>'+ko:'');
   $('eventTeam').innerHTML='<option value="'+g.homeTeam+'">'+tn(g.homeTeam)+'</option><option value="'+g.awayTeam+'">'+tn(g.awayTeam)+'</option><option value="">N/A (grab)</option>';
   pET();selectedCallers=[];callerEditMode=false;document.querySelectorAll('.phase-btn').forEach(b=>{b.classList.remove('active','live');if(b.dataset.phase===S.activePhase){b.classList.add('active');if(S.activePhase==='live')b.classList.add('live');}});applyPh();renderEL();}
