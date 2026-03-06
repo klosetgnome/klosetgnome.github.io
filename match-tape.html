@@ -481,12 +481,17 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
     (ev.comment?'<div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);padding:0 2px">\ud83d\udcac '+ev.comment+'</div>':'')+
     (function(){const qs=getQueueStatus(ev.id);if(!qs){
       if(!ev.hasAudio)return'';
-      if(ev.needsProcessing)return'<div style="font-family:var(--mono);font-size:10px;color:var(--warning);display:flex;align-items:center;gap:8px">\u26a0 Needs processing'+(ev.transcript?' \xb7 Transcript':'')+'<button class="retry-btn" data-a="reproc" data-id="'+ev.id+'">Reprocess</button></div>';
-      return ev.transcript?'<div style="font-family:var(--mono);font-size:10px;color:var(--success)">\u2713 Processed \xb7 Transcript</div>':'';
+      let s='<div style="font-family:var(--mono);font-size:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">';
+      if(ev.transcript)s+='<span style="color:var(--success)">\u2713 Transcribed</span>';
+      else s+='<button class="retry-btn" data-a="reproc" data-id="'+ev.id+'" style="border-color:var(--error);color:var(--error)">Retranscribe</button>';
+      s+='\xb7 ';
+      if(!ev.needsProcessing)s+='<span style="color:var(--success)">Normalised</span>';
+      else s+='<button class="retry-btn" data-a="reproc" data-id="'+ev.id+'" style="border-color:var(--error);color:var(--error)">Renormalise</button>';
+      s+='</div>';return s;
     }
       if(qs.status==='queued')return'<div class="ev-proc queued"><span class="proc-dot"></span>\u23f3 Queued</div>';if(qs.status==='uploading')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Uploading\u2026</div>';
       if(qs.status==='transcribing')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Transcribing\u2026</div>';if(qs.status==='generating')return'<div class="ev-proc generating"><span class="proc-dot"></span>Generating comment\u2026</div>';
-      if(qs.status==='done')return'<div class="ev-proc done"><span class="proc-dot"></span>\u2713 Processed</div>';if(qs.status==='failed')return'<div class="ev-proc failed"><span class="proc-dot"></span>\u26a0 '+qs.error+'<button class="retry-btn" data-a="retry" data-id="'+ev.id+'">Retry</button></div>';return''}())+'</div>';}).join('');
+      if(qs.status==='done')return'<div class="ev-proc done"><span class="proc-dot"></span>\u2713 Complete</div>';if(qs.status==='failed')return'<div class="ev-proc failed"><span class="proc-dot"></span>\u26a0 '+qs.error+'<button class="retry-btn" data-a="retry" data-id="'+ev.id+'">Retry</button></div>';return''}())+'</div>';}).join('');
   el.querySelectorAll('[data-a="cp"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.t).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
   el.querySelectorAll('[data-a="play"]').forEach(b=>{b.addEventListener('click',()=>playAudio(b.dataset.id,b));});
   el.querySelectorAll('[data-a="ed"]').forEach(b=>{b.addEventListener('click',()=>editEv(b.dataset.id));});
