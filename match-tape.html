@@ -412,7 +412,7 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
     '<span class="event-type-badge '+cat+'">'+en(ev.type)+'</span><span class="event-desc">'+(ev.player||'')+(ev.team?' \u2014 '+tn(ev.team):'')+'</span>'+
     '<div class="event-actions">'+(ev.hasAudio?'<button class="regen-btn" data-a="rg" data-id="'+ev.id+'">\u21bb</button>':'')+
     '<button class="star-btn'+(ev.starred?' starred':'')+'" data-a="st" data-id="'+ev.id+'">'+(ev.starred?'\u2605':'\u2606')+'</button><button class="edit-btn" data-a="ed" data-id="'+ev.id+'">Edit</button><button class="edit-btn" data-a="del" data-id="'+ev.id+'" style="color:var(--error)">Del</button></div></div>'+
-    '<div class="event-filename">'+(ev.hasAudio?'<button class="play-btn" data-a="play" data-id="'+ev.id+'" title="Play audio">\u25B6</button>':'')+' <span class="event-filename-text">'+fn+'</span><button class="copy-btn" data-a="cp" data-t="'+ef+'">Copy</button></div>'+
+    '<div class="event-filename"><span class="event-filename-text">'+fn+'</span>'+(ev.hasAudio?'<button class="play-btn" data-a="play" data-id="'+ev.id+'" title="Play audio">\u25B6</button>':'')+'<button class="copy-btn" data-a="cp" data-t="'+ef+'">Copy</button></div>'+
     (ev.comment?'<div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);padding:0 2px">\ud83d\udcac '+ev.comment+'</div>':'')+
     (function(){const qs=getQueueStatus(ev.id);if(!qs)return ev.hasAudio?'<div style="font-family:var(--mono);font-size:10px;color:'+(ev.needsProcessing?'var(--warning)':'var(--success)').toString()+'">'+(ev.needsProcessing?'\u26a0 Needs processing':'')+(ev.transcript?' \xb7 Transcript':'')+'</div>':'';
       if(qs.status==='queued')return'<div class="ev-proc queued"><span class="proc-dot"></span>\u23f3 Queued</div>';if(qs.status==='uploading')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Uploading\u2026</div>';
@@ -476,13 +476,24 @@ $('btnExportSummary').addEventListener('click',()=>{const g=gg();if(!g||!(g.even
 
 // VoxPro zip
 function gF(g){return san(tn(g.homeTeam||g.home_team))+'_v_'+san(tn(g.awayTeam||g.away_team))+(g.round?'_Round_'+g.round:'');}
-function bVP(games){const z=new JSZip(),r=z.folder('NRL_HIGHLIGHTS_2026'),gr=z.folder('NRL_HIGHLIGHTS_2026/NRL_GRABS_2026');let n=0;
-  games.forEach(g=>{normGame(g);const gf=r.folder(gF(g));['pre','live','post'].forEach(ph=>{const pe=(g.events||[]).filter(e=>e.phase===ph&&e.hasAudio);if(!pe.length)return;const pf=gf.folder(ph==='pre'?'Pre-game':ph==='live'?'Live':'Post-game');
-    pe.forEach(ev=>{const fn=gfn(ev,g,false)+'.mp3';pf.file(fn,'[Audio]\n');n++;if(ev.starred)gr.file(fn,'[Starred]\n');});});
-    (g.events||[]).filter(e=>e.starred&&!e.hasAudio).forEach(ev=>{gr.file(gfn(ev,g,false)+'.txt','[No audio]\n');});});return{z,n};}
+async function bVP(games,onProgress){const z=new JSZip(),r=z.folder('NRL_HIGHLIGHTS_2026'),gr=z.folder('NRL_HIGHLIGHTS_2026/NRL_GRABS_2026');let n=0,done=0,total=0;
+  // Count total audio files first
+  games.forEach(g=>{normGame(g);(g.events||[]).forEach(e=>{if(e.hasAudio)total++;});});
+  for(const g of games){normGame(g);const gf=r.folder(gF(g));
+    for(const ph of['pre','live','post']){const pe=(g.events||[]).filter(e=>e.phase===ph&&e.hasAudio);if(!pe.length)continue;
+      const pf=gf.folder(ph==='pre'?'Pre-game':ph==='live'?'Live':'Post-game');
+      for(const ev of pe){const fn=gfn(ev,g,false)+'.mp3';
+        try{const resp=await fetch(API+'/events/'+ev.id+'/audio');
+          if(resp.ok){const blob=await resp.blob();pf.file(fn,blob);n++;if(ev.starred)gr.file(fn,blob);}
+          else{pf.file(fn+'.txt','Audio not available in R2\n');}
+        }catch(e){pf.file(fn+'.txt','Fetch error: '+e.message+'\n');}
+        done++;if(onProgress)onProgress(done,total);
+      }}
+    (g.events||[]).filter(e=>e.starred&&!e.hasAudio).forEach(ev=>{gr.file(gfn(ev,g,false)+'.txt','[No audio]\n');});}
+  return{z,n};}
 async function dlZ(z,fn){const b=await z.generateAsync({type:'blob'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=fn;a.click();setTimeout(()=>URL.revokeObjectURL(u),200);}
-$('btnSessionVoxpro').addEventListener('click',async()=>{const g=gg();if(!g||!(g.events||[]).some(e=>e.hasAudio))return alert('No audio.');const btn=$('btnSessionVoxpro');btn.disabled=true;btn.textContent='Building...';
-  try{const{z,n}=bVP([g]);await dlZ(z,'VoxPro_'+gF(g)+'.zip');btn.textContent=n+' exported';setTimeout(()=>{btn.textContent='Export for VoxPro';btn.disabled=false;},3000);}catch(e){alert(e.message);btn.textContent='Export for VoxPro';btn.disabled=false;}});
+$('btnSessionVoxpro').addEventListener('click',async()=>{const g=gg();if(!g||!(g.events||[]).some(e=>e.hasAudio))return alert('No audio.');const btn=$('btnSessionVoxpro');btn.disabled=true;btn.textContent='Fetching audio...';
+  try{const{z,n}=await bVP([g],(done,total)=>{btn.textContent='Fetching '+done+'/'+total+'...';});btn.textContent='Zipping...';await dlZ(z,'VoxPro_'+gF(g)+'.zip');btn.textContent=n+' exported';setTimeout(()=>{btn.textContent='Export for VoxPro';btn.disabled=false;},3000);}catch(e){alert(e.message);btn.textContent='Export for VoxPro';btn.disabled=false;}});
 
 // ═══ ARCHIVE ═══
 let starO=false;
@@ -508,7 +519,7 @@ async function doSearch(){const p=new URLSearchParams(),q=$('archSearch').value.
 $('btnArchVP').addEventListener('click',async()=>{try{const p=new URLSearchParams();const q=$('archSearch').value.trim(),gf=$('archGame').value;if(q)p.set('q',q);if(gf)p.set('game',gf);if(starO)p.set('starred','1');
   const res=await api('/archive?'+p.toString());if(!res.length)return alert('No results.');const gm=new Map();
   res.forEach(r=>{r.callers=r.callers||[];r.hasAudio=!!r.has_audio;r.starred=!!r.starred;if(!gm.has(r.game_id))gm.set(r.game_id,{homeTeam:r.home_team,awayTeam:r.away_team,round:r.round,events:[]});gm.get(r.game_id).events.push(r);});
-  const btn=$('btnArchVP');btn.disabled=true;btn.textContent='Building...';const{z,n}=bVP([...gm.values()]);await dlZ(z,'VoxPro_'+new Date().toISOString().slice(0,10)+'.zip');
+  const btn=$('btnArchVP');btn.disabled=true;btn.textContent='Fetching audio...';const{z,n}=await bVP([...gm.values()],(done,total)=>{btn.textContent='Fetching '+done+'/'+total+'...';});btn.textContent='Zipping...';await dlZ(z,'VoxPro_'+new Date().toISOString().slice(0,10)+'.zip');
   btn.textContent=n+' files';setTimeout(()=>{btn.textContent='Export for VoxPro';btn.disabled=false;},3000);}catch(e){alert(e.message);}});
 
 // ═══ MISSION CONTROL ═══
