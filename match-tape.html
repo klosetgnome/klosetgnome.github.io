@@ -207,6 +207,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 <div class="container">
   <div class="view active" id="view-dashboard">
     <div class="info-hero"><div class="info-hero-graphic"><svg viewBox="0 0 80 80" fill="none"><rect x="6" y="14" width="48" height="32" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="30" cy="30" r="8" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M27 27l8 6-8 6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/><path d="M60 20v18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="60" cy="22" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M12 56h8M24 52h8M36 56h8M48 52h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="64" x2="58" y2="64" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><div><div class="info-hero-title">Match Tape</div><div class="info-hero-desc">NRL highlights production tool. Log <span class="hl">tries</span>, <span class="hl">scoring events</span>, and <span class="hl">key moments</span> during live games. Drop commentary audio to auto-generate tagged filenames with <span class="hl">producer comments</span>.</div></div></div>
+    <div class="card"><div class="card-header"><span class="card-label">Coming Up</span></div><div class="card-body"><div class="game-grid" id="recentGamesGrid"></div></div></div>
     <div class="card"><div class="card-header"><span class="card-label">Start a Game Session</span></div><div class="card-body">
       <div class="form-row"><div class="form-group" style="flex:3"><span class="form-label">Pick from draw</span><select class="form-select" id="fixturePicker"><option value="">— Manual entry —</option></select></div></div>
       <div id="manualGameFields">
@@ -215,7 +216,6 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
       </div>
       <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><span class="form-label">Call Team</span><input type="text" class="form-input" id="ctInput" placeholder="Type a name..." list="ctSuggest" style="margin-bottom:6px"><datalist id="ctSuggest"></datalist><div style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;padding:6px 8px" id="ctChips"></div></div><div class="form-group" style="align-self:flex-end"><button class="btn btn-primary" id="btnStartGame">Start Game Session</button></div></div>
     </div></div>
-    <div class="card"><div class="card-header"><span class="card-label">Recent Games</span></div><div class="card-body"><div class="game-grid" id="recentGamesGrid"></div></div></div>
   </div>
   <div class="view" id="view-session">
     <div class="game-banner"><div class="game-banner-teams" id="gameBannerTeams"></div><div class="game-banner-meta" id="gameBannerMeta"></div><div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0"><button class="game-banner-close" id="btnEndSession">End Session</button><button class="btn btn-secondary" id="btnSessionVoxpro" style="font-size:8px;padding:5px 10px;letter-spacing:1px">VoxPro Export</button></div></div>
@@ -493,24 +493,15 @@ document.querySelectorAll('.phase-btn').forEach(b=>{b.addEventListener('click',(
 // ═══ DASHBOARD ═══
 async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();selectedCT=[];renderCtChips();await populateFixturePicker();
   try{S.games=await api('/games');}catch{S.games=[];}
-  const gr=$('recentGamesGrid');if(!gr)return;if(!S.games.length){gr.innerHTML='<div class="empty-state">No games yet.</div>';return;}
-  const showAll=gr.dataset.showAll==='1';
-  let display;
-  if(showAll){display=S.games;}
-  else{
-    // 1 most recent past game + 2 upcoming relative to today
-    const now=new Date();
-    const past=S.games.filter(g=>g.kickoff&&new Date(g.kickoff)<now).sort((a,b)=>new Date(b.kickoff)-new Date(a.kickoff));
-    const upcoming=S.games.filter(g=>!g.kickoff||new Date(g.kickoff)>=now).sort((a,b)=>(new Date(a.kickoff||'9999')- new Date(b.kickoff||'9999')));
-    display=[...(past.length?[past[0]]:[]),...upcoming.slice(0,2)];
-  }
-  gr.innerHTML=display.map(g=>{const ko=g.kickoff?new Date(g.kickoff).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}):'';
-    return'<div class="game-tile" data-g="'+g.id+'"><div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+(ko?' \xb7 '+ko:'')+'</div><div class="game-tile-meta">'+(g.eventCount||0)+' events \xb7 '+(g.starredCount||0)+' \u2605</div></div>';}).join('');
-  if(!showAll&&S.games.length>3)gr.innerHTML+='<div style="text-align:center;cursor:pointer;color:var(--accent);font-family:var(--mono);font-size:10px;letter-spacing:1px;padding:10px;border:1px solid var(--border);border-radius:var(--radius);margin-top:4px" id="btnShowAllGames">Show all '+S.games.length+' games</div>';
+  const gr=$('recentGamesGrid');if(!gr)return;if(!S.games.length){gr.innerHTML='<div class="empty-state">No upcoming fixtures. Import a draw in Mission Control.</div>';return;}
+  const now=new Date();
+  const upcoming=S.games.filter(g=>(!g.eventCount||g.eventCount===0)&&(!g.kickoff||new Date(g.kickoff)>=now)).sort((a,b)=>new Date(a.kickoff||'9999')-new Date(b.kickoff||'9999')).slice(0,3);
+  if(!upcoming.length){gr.innerHTML='<div class="empty-state">No upcoming fixtures.</div>';return;}
+  gr.innerHTML=upcoming.map(g=>{const ko=g.kickoff?new Date(g.kickoff).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}):'';
+    return'<div class="game-tile" data-g="'+g.id+'"><div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+(ko?' \xb7 '+ko:'')+'</div></div>';}).join('');
   gr.querySelectorAll('.game-tile[data-g]').forEach(t=>{t.addEventListener('click',async()=>{S.activeGame=t.dataset.g;await loadGame(S.activeGame);
     const g=gg();if(g){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}}
-    S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();});});
-  const saBtn=$('btnShowAllGames');if(saBtn)saBtn.addEventListener('click',()=>{gr.dataset.showAll='1';renderD();});}
+    S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();});});}
 // Fixture picker toggle
 $('fixturePicker').addEventListener('change',()=>{const v=$('fixturePicker').value;$('manualGameFields').style.display=v?'none':'';});
 
