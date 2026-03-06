@@ -375,9 +375,9 @@ function playAudio(evId,btn){
 document.querySelector('.theme-toggle').addEventListener('click',()=>{const d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');localStorage.setItem('theme',d?'light':'dark');});
 
 // Nav
-document.querySelectorAll('.nav-tab').forEach(tab=>{tab.addEventListener('click',()=>{document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));tab.classList.add('active');$('view-'+tab.dataset.view).classList.add('active');
+document.querySelectorAll('.nav-tab').forEach(tab=>{tab.addEventListener('click',()=>{document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));tab.classList.add('active');$('view-'+tab.dataset.view).classList.add('active');location.hash=tab.dataset.view;
 if(tab.dataset.view==='dashboard')renderD();if(tab.dataset.view==='session')renderS();if(tab.dataset.view==='archive')renderAF();if(tab.dataset.view==='mission-control')renderMC();});});
-function sw(n){document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active',t.dataset.view===n));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$('view-'+n).classList.add('active');}
+function sw(n){document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active',t.dataset.view===n));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$('view-'+n).classList.add('active');location.hash=n;}
 
 // Selects
 function pT(){const o=NRL_TEAMS.map(t=>'<option value="'+t.id+'">'+t.name+'</option>').join('');$('newGameHome').innerHTML='<option value="">Select home team</option>'+o;$('newGameAway').innerHTML='<option value="">Select away team</option>'+o;}
@@ -446,7 +446,7 @@ async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKicko
   gr.innerHTML=S.games.map(g=>'<div class="game-tile" data-g="'+g.id+'"><div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+'</div><div style="display:flex;align-items:center;justify-content:space-between"><span class="game-tile-meta">'+(g.eventCount||0)+' events \xb7 '+(g.starredCount||0)+' \u2605</span><button class="edit-btn" data-a="delgame" data-id="'+g.id+'" style="color:var(--error);font-size:9px" onclick="event.stopPropagation()">Delete</button></div></div>').join('');
   gr.querySelectorAll('.game-tile').forEach(t=>{t.addEventListener('click',async()=>{S.activeGame=t.dataset.g;await loadGame(S.activeGame);
     const g=gg();if(g){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}}
-    S.activePhase='pre';sw('session');renderS();});});
+    S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame;renderS();});});
   gr.querySelectorAll('[data-a="delgame"]').forEach(b=>{b.addEventListener('click',async(e)=>{e.stopPropagation();const gm=S.games.find(g=>g.id===b.dataset.id);if(!gm)return;if(!await mtConfirm('Delete '+tn(gm.home_team)+' v '+tn(gm.away_team)+'? All events and audio will be permanently removed.',true))return;try{await apiDel('/games/'+b.dataset.id);renderD();}catch(e){mtAlert(e.message);}});});}
 $('btnStartGame').addEventListener('click',async()=>{const h=$('newGameHome').value,a=$('newGameAway').value;if(!h||!a)return mtAlert('Select both teams.');if(h===a)return mtAlert('Different teams.');
   const rn=parseInt(String($('newGameRound').value).replace(/\D/g,''),10);
@@ -458,7 +458,7 @@ $('btnStartGame').addEventListener('click',async()=>{const h=$('newGameHome').va
   S.activeGame=res.id;await loadGame(res.id);
   // Pre-load players for both teams
   try{const hp=await loadPlayers(h);const ap=await loadPlayers(a);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}
-  S.activePhase='pre';sw('session');renderS();}catch(e){mtAlert('Failed: '+e.message);}});
+  S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame;renderS();}catch(e){mtAlert('Failed: '+e.message);}});
 async function loadGame(id){try{const g=await api('/games/'+id);S.currentGame=normGame(g);}catch(e){S.currentGame=null;}}
 
 // ═══ SESSION ═══
@@ -713,7 +713,13 @@ async function checkServerHealth(){
 checkServerHealth();setInterval(checkServerHealth,30000);
 
 // ═══ INIT ═══
-async function init(){try{S.callers=await api('/callers');}catch{S.callers=[];}try{S.eventTypes=await api('/event-types');}catch{S.eventTypes=[];}try{S.venues=await api('/venues');}catch{S.venues=[];}pC();pET();renderD();}
+async function init(){try{S.callers=await api('/callers');}catch{S.callers=[];}try{S.eventTypes=await api('/event-types');}catch{S.eventTypes=[];}try{S.venues=await api('/venues');}catch{S.venues=[];}pC();pET();
+  const hash=(location.hash||'').replace('#','');const validTabs=['dashboard','session','archive','mission-control'];
+  const parts=hash.split(':');const tab=parts[0];const gameId=parts[1]||null;
+  if(tab&&validTabs.includes(tab)){
+    if(tab==='session'&&gameId){S.activeGame=gameId;await loadGame(gameId);try{const g=gg();if(g){const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}}catch{}}
+    sw(tab);if(tab==='dashboard')renderD();if(tab==='session')renderS();if(tab==='archive')renderAF();if(tab==='mission-control')renderMC();}
+  else renderD();}
 init();
 })();
 </script>
