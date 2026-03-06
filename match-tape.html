@@ -474,7 +474,7 @@ function renderCtChips(){const c=$('ctChips');if(!c)return;
 document.querySelectorAll('.phase-btn').forEach(b=>{b.addEventListener('click',()=>{S.activePhase=b.dataset.phase;document.querySelectorAll('.phase-btn').forEach(p=>{p.classList.remove('active','live');});b.classList.add('active');if(b.dataset.phase==='live')b.classList.add('live');if(S.activeGame)location.hash='session:'+S.activeGame+':'+S.activePhase;applyPh();renderEL();});});
 
 // ═══ DASHBOARD ═══
-async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();selectedCT=[];renderCtChips();populateFixturePicker();
+async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();selectedCT=[];renderCtChips();await populateFixturePicker();
   try{S.games=await api('/games');}catch{S.games=[];}
   const gr=$('recentGamesGrid');if(!gr)return;if(!S.games.length){gr.innerHTML='<div class="empty-state">No games yet.</div>';return;}
   const showAll=gr.dataset.showAll==='1';const display=showAll?S.games:S.games.slice(0,3);
@@ -844,12 +844,16 @@ async function renderDrawList(){
 // ── Dashboard fixture picker ──
 async function populateFixturePicker(){
   try{const games=await api('/games');
+    console.log('[FixturePicker] Total games:',games.length);
     const upcoming=games.filter(g=>!g.eventCount||g.eventCount===0).sort((a,b)=>(a.round||0)-(b.round||0));
-    const sel=$('fixturePicker');if(!sel)return;
+    console.log('[FixturePicker] Upcoming (no events):',upcoming.length);
+    if(upcoming.length)console.log('[FixturePicker] Sample:',upcoming[0].home_team,'v',upcoming[0].away_team,'round',upcoming[0].round);
+    const sel=$('fixturePicker');if(!sel){console.log('[FixturePicker] Element not found!');return;}
     sel.innerHTML='<option value="">— Manual entry —</option>'+upcoming.map(g=>{
       const ko=g.kickoff?new Date(g.kickoff).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}):'';
-      return'<option value="'+g.id+'">R'+g.round+' \xb7 '+tn(g.home_team)+' v '+tn(g.away_team)+(ko?' \xb7 '+ko:'')+'</option>';}).join('');
-  }catch{}}
+      return'<option value="'+g.id+'">R'+(g.round||'?')+' \xb7 '+tn(g.home_team)+' v '+tn(g.away_team)+(ko?' \xb7 '+ko:'')+'</option>';}).join('');
+    console.log('[FixturePicker] Options:',sel.options.length-1);
+  }catch(e){console.error('[FixturePicker] Error:',e);}}
 
 // Server health check
 async function checkServerHealth(){
