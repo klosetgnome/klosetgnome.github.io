@@ -148,6 +148,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 .retry-btn{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;background:none;border:1px solid var(--error);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--error);transition:all 0.2s;margin-left:6px}
 .retry-btn:hover{background:var(--error-glow)}
+.play-btn{background:none;border:1px solid var(--border);border-radius:4px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--success);font-size:11px;transition:all 0.2s;padding:0;flex-shrink:0;font-family:var(--mono)}.play-btn:hover{border-color:var(--success);background:color-mix(in srgb,var(--success) 10%,transparent)}.play-btn.playing{color:var(--error);border-color:var(--error)}.play-btn.playing:hover{background:color-mix(in srgb,var(--error) 10%,transparent)}
 @keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @media(max-width:600px){.site-header{padding:12px 16px}.nav-tabs{padding:0 16px;overflow-x:auto}.nav-tab{padding:12px 14px;font-size:10px}.container{padding:16px 16px 60px}.info-hero{flex-direction:column;text-align:center;padding:24px 20px;gap:16px}.game-banner{flex-direction:column;text-align:center}.form-row{flex-direction:column}.form-group{min-width:100%}.mc-add-row,.mc-edit-row{flex-direction:column}.phase-bar{flex-wrap:wrap}.settings-panel{right:-40px;min-width:260px}}
@@ -175,7 +176,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     <div class="phase-bar"><button class="phase-btn active" data-phase="pre">Pre-game</button><button class="phase-btn" data-phase="live">Live</button><button class="phase-btn" data-phase="post">Post-game</button></div>
     <div class="card"><div class="card-header"><span class="card-label">Log Event</span><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>GAME MINUTE</span></div></div><div class="card-body">
       <div class="form-row"><div class="form-group"><span class="form-label">Event Type</span><select class="form-select" id="eventType"></select></div><div class="form-group"><span class="form-label">Team</span><select class="form-select" id="eventTeam"></select></div></div>
-      <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s)</span><div class="caller-dropdown" id="callerDropdown"><div class="caller-multi" id="callerMulti"><span style="color:var(--text-muted);font-family:var(--mono);font-size:11px">Select caller(s)</span></div><div class="caller-list" id="callerList"></div></div></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s)</span><div style="display:flex;flex-wrap:wrap;gap:6px;min-height:32px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius)" id="callerChips"></div><input type="text" class="form-input" id="callerInput" placeholder="Type caller name..." list="callerSuggest" style="margin-top:6px"><datalist id="callerSuggest"></datalist></div></div>
       <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><span class="form-label">Comment (or drop audio to auto-generate)</span><div style="display:flex;gap:6px;align-items:center"><input type="text" class="form-input" id="eventComment" placeholder="e.g. Great call, Under pressure..." style="flex:1"><button class="regen-btn" id="btnRegenComment" title="Regenerate comment from audio transcript" disabled>&#8635;</button></div></div></div>
       <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><div class="audio-drop" id="eventAudioDrop">Drop commentary audio here or click to browse<input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div><div class="form-group" style="align-self:flex-end"><button class="btn btn-success" id="btnLogEvent">Log Event</button></div></div>
     </div></div>
@@ -294,6 +295,19 @@ async function regenCmt(evId){const g=gg();if(!g)return;const ev=(g.events||[]).
   const players=[...new Set((g.events||[]).filter(e=>e.player).map(e=>e.player))];
   const comment=await generateComment(ev.transcript,players);if(comment){await apiPut('/events/'+evId,{comment});await loadGame(S.activeGame);renderEL();}}
 
+// Audio player
+let activeAudio=null,activePlayBtn=null;
+function stopAudio(){if(activeAudio){activeAudio.pause();activeAudio.currentTime=0;activeAudio=null;}if(activePlayBtn){activePlayBtn.textContent='\u25B6';activePlayBtn.classList.remove('playing');activePlayBtn=null;}}
+function playAudio(evId,btn){
+  if(activeAudio&&activePlayBtn===btn){stopAudio();return;}
+  stopAudio();
+  const audio=new Audio(API+'/events/'+evId+'/audio');
+  audio.addEventListener('ended',()=>{stopAudio();});
+  audio.addEventListener('error',()=>{stopAudio();alert('Audio not available.');});
+  audio.play();activeAudio=audio;activePlayBtn=btn;
+  btn.textContent='\u25A0';btn.classList.add('playing');
+}
+
 // Theme
 document.querySelector('.theme-toggle').addEventListener('click',()=>{const d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');localStorage.setItem('theme',d?'light':'dark');});
 
@@ -329,16 +343,21 @@ function updateSug(){const dl=$('playerSuggestions'),g=gg(),live=S.activePhase==
   }else{names=S.callers.map(c=>c.nick?c.name+' ('+c.nick+')':c.name);if(g)(g.events||[]).forEach(e=>{if(e.player&&!names.includes(e.player))names.push(e.player);});}
   dl.innerHTML=[...new Set(names)].map(n=>'<option value="'+n+'">').join('');}
 
-// Caller multi-select (in-game session)
+// Caller tag input (in-game session)
 let selectedCallers=[];
-function renderCallerMulti(){const wrap=$('callerMulti'),list=$('callerList');const g=gg();const cids=g&&g.callTeam&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);
-  if(!selectedCallers.length)wrap.innerHTML='<span style="color:var(--text-muted);font-family:var(--mono);font-size:11px">Select caller(s)</span>';
-  else wrap.innerHTML=selectedCallers.map(id=>'<span class="caller-chip">'+cNick(id)+'<span class="chip-x" data-cid="'+id+'">\xd7</span></span>').join('');
-  wrap.querySelectorAll('.chip-x').forEach(x=>{x.addEventListener('click',e=>{e.stopPropagation();selectedCallers=selectedCallers.filter(id=>id!==x.dataset.cid);renderCallerMulti();updateFP();});});
-  list.innerHTML=cids.map(id=>{const c=S.callers.find(c=>c.id===id);if(!c)return'';const sel=selectedCallers.includes(id);return'<div class="caller-opt'+(sel?' selected':'')+'" data-cid="'+id+'"><span class="opt-check">'+(sel?'\u2713':'')+'</span>'+cFull(id)+'</div>';}).join('');
-  list.querySelectorAll('.caller-opt').forEach(o=>{o.addEventListener('click',()=>{const id=o.dataset.cid;if(selectedCallers.includes(id))selectedCallers=selectedCallers.filter(x=>x!==id);else selectedCallers.push(id);renderCallerMulti();updateFP();});});}
-$('callerMulti').addEventListener('click',e=>{e.stopPropagation();$('callerList').classList.toggle('open');});
-document.addEventListener('click',e=>{if(!$('callerDropdown').contains(e.target))$('callerList').classList.remove('open');});
+function renderCallerMulti(){
+  const c=$('callerChips');if(!c)return;
+  c.innerHTML=selectedCallers.length?selectedCallers.map(id=>'<span class="caller-chip" style="margin:0">'+cNick(id)+'<span class="chip-x" data-cid="'+id+'">\xd7</span></span>').join(''):'';
+  c.querySelectorAll('.chip-x').forEach(x=>{x.addEventListener('click',()=>{selectedCallers=selectedCallers.filter(id=>id!==x.dataset.cid);renderCallerMulti();updateFP();});});
+  // Update datalist with game call team only
+  const g=gg();const cids=g&&g.callTeam&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);
+  const dl=$('callerSuggest');if(dl)dl.innerHTML=cids.filter(id=>!selectedCallers.includes(id)).map(id=>{const c=S.callers.find(c=>c.id===id);return c?'<option value="'+(c.nick?c.name+' ('+c.nick+')':c.name)+'">':'';}).join('');
+}
+(function(){const inp=$('callerInput');if(!inp)return;
+  inp.addEventListener('change',function(){const v=inp.value.trim();if(!v)return;
+    const match=S.callers.find(c=>c.name.toLowerCase()===v.toLowerCase()||(c.nick&&(c.name+' ('+c.nick+')').toLowerCase()===v.toLowerCase())||c.nick&&c.nick.toLowerCase()===v.toLowerCase());
+    if(match&&!selectedCallers.includes(match.id)){selectedCallers.push(match.id);inp.value='';renderCallerMulti();updateFP();}else{inp.value='';}});
+})();
 
 // Call team tag input (dashboard)
 let selectedCT=[];
@@ -393,13 +412,14 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
     '<span class="event-type-badge '+cat+'">'+en(ev.type)+'</span><span class="event-desc">'+(ev.player||'')+(ev.team?' \u2014 '+tn(ev.team):'')+'</span>'+
     '<div class="event-actions">'+(ev.hasAudio?'<button class="regen-btn" data-a="rg" data-id="'+ev.id+'">\u21bb</button>':'')+
     '<button class="star-btn'+(ev.starred?' starred':'')+'" data-a="st" data-id="'+ev.id+'">'+(ev.starred?'\u2605':'\u2606')+'</button><button class="edit-btn" data-a="ed" data-id="'+ev.id+'">Edit</button><button class="edit-btn" data-a="del" data-id="'+ev.id+'" style="color:var(--error)">Del</button></div></div>'+
-    '<div class="event-filename"><span class="event-filename-text">'+fn+'</span><button class="copy-btn" data-a="cp" data-t="'+ef+'">Copy</button></div>'+
+    '<div class="event-filename">'+(ev.hasAudio?'<button class="play-btn" data-a="play" data-id="'+ev.id+'" title="Play audio">\u25B6</button>':'')+' <span class="event-filename-text">'+fn+'</span><button class="copy-btn" data-a="cp" data-t="'+ef+'">Copy</button></div>'+
     (ev.comment?'<div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);padding:0 2px">\ud83d\udcac '+ev.comment+'</div>':'')+
-    (function(){const qs=getQueueStatus(ev.id);if(!qs)return ev.hasAudio?'<div style="font-family:var(--mono);font-size:10px;color:'+(ev.needsProcessing?'var(--warning)':'var(--success)')+'">'+'\ud83c\udf99 '+(ev.needsProcessing?'Uploaded \xb7 Needs processing':'Audio')+(ev.transcript?' \xb7 Transcript':'')+'</div>':'';
+    (function(){const qs=getQueueStatus(ev.id);if(!qs)return ev.hasAudio?'<div style="font-family:var(--mono);font-size:10px;color:'+(ev.needsProcessing?'var(--warning)':'var(--success)').toString()+'">'+(ev.needsProcessing?'\u26a0 Needs processing':'')+(ev.transcript?' \xb7 Transcript':'')+'</div>':'';
       if(qs.status==='queued')return'<div class="ev-proc queued"><span class="proc-dot"></span>\u23f3 Queued</div>';if(qs.status==='uploading')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Uploading\u2026</div>';
       if(qs.status==='transcribing')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Transcribing\u2026</div>';if(qs.status==='generating')return'<div class="ev-proc generating"><span class="proc-dot"></span>Generating comment\u2026</div>';
       if(qs.status==='done')return'<div class="ev-proc done"><span class="proc-dot"></span>\u2713 Processed</div>';if(qs.status==='failed')return'<div class="ev-proc failed"><span class="proc-dot"></span>\u26a0 '+qs.error+'<button class="retry-btn" data-a="retry" data-id="'+ev.id+'">Retry</button></div>';return''}())+'</div>';}).join('');
   el.querySelectorAll('[data-a="cp"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.t).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
+  el.querySelectorAll('[data-a="play"]').forEach(b=>{b.addEventListener('click',()=>playAudio(b.dataset.id,b));});
   el.querySelectorAll('[data-a="ed"]').forEach(b=>{b.addEventListener('click',()=>editEv(b.dataset.id));});
   el.querySelectorAll('[data-a="st"]').forEach(b=>{b.addEventListener('click',async()=>{try{await apiPost('/events/'+b.dataset.id+'/star',{});await loadGame(S.activeGame);renderEL();}catch(e){alert(e.message);}});});
   el.querySelectorAll('[data-a="rg"]').forEach(b=>{b.addEventListener('click',async()=>{const ev=(gg().events||[]).find(e=>e.id===b.dataset.id);if(!ev||!ev.transcript){alert('No transcript yet.');return;}b.classList.add('spinning');await regenCmt(b.dataset.id);b.classList.remove('spinning');});});
@@ -479,10 +499,11 @@ async function doSearch(){const p=new URLSearchParams(),q=$('archSearch').value.
       '<span class="event-type-badge '+cat+'">'+en(r.type)+'</span><div style="flex:1"><div class="event-desc">'+(r.player||'Grab')+(r.team?' \u2014 '+tn(r.team):'')+'</div>'+
       (r.comment?'<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:2px">\ud83d\udcac '+r.comment+'</div>':'')+
       '<div class="archive-game-info">'+tn(r.home_team)+' v '+tn(r.away_team)+' \xb7 '+rd(r.round)+'</div></div>'+
-      (r.starred?'<span style="color:var(--warning)">\u2605</span>':'')+(r.hasAudio?'<span style="font-size:10px;color:var(--success)">\ud83c\udf99</span>':'')+
+      (r.starred?'<span style="color:var(--warning)">\u2605</span>':'')+(r.hasAudio?'<button class="play-btn" data-a="aplay" data-id="'+r.id+'" title="Play audio">\u25B6</button>':'')+
       '<button class="copy-btn" data-a="ac" data-t="'+(r.player||'Grab').replace(/"/g,'&quot;')+'">Copy</button><button class="copy-btn" data-a="adel" data-id="'+r.id+'" style="color:var(--error)">Del</button></div>';}).join('');
     c.querySelectorAll('[data-a="ac"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.t).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
     c.querySelectorAll('[data-a="adel"]').forEach(b=>{b.addEventListener('click',async()=>{if(!confirm('Delete this event permanently?'))return;try{await apiDel('/events/'+b.dataset.id);doSearch();}catch(e){alert(e.message);}});});
+    c.querySelectorAll('[data-a="aplay"]').forEach(b=>{b.addEventListener('click',()=>playAudio(b.dataset.id,b));});
   }catch(e){$('archResults').innerHTML='<div class="empty-state">Error: '+e.message+'</div>';}}
 $('btnArchVP').addEventListener('click',async()=>{try{const p=new URLSearchParams();const q=$('archSearch').value.trim(),gf=$('archGame').value;if(q)p.set('q',q);if(gf)p.set('game',gf);if(starO)p.set('starred','1');
   const res=await api('/archive?'+p.toString());if(!res.length)return alert('No results.');const gm=new Map();
