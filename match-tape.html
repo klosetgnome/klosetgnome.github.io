@@ -280,38 +280,68 @@ function normGame(g){g.homeTeam=g.home_team||g.homeTeam;g.awayTeam=g.away_team||
 const s=$('srtModelSelect'),st=$('srtModelStatus');s.innerHTML=FM.map(m=>'<option value="'+m[0]+'">'+m[1]+'</option>').join('');st.textContent=FM.length+' models';
 fetch(LLM_URL+'/models').then(r=>r.json()).then(d=>{const f=(d.data||[]).filter(m=>m.id&&m.id.endsWith(':free'));if(!f.length)return;f.sort((a,b)=>(a.name||a.id).localeCompare(b.name||b.id));s.innerHTML=f.map(m=>{let l=m.name||m.id;if(!/free/i.test(l))l+=' (free)';return'<option value="'+m.id+'">'+l+'</option>';}).join('');st.textContent=f.length+' models';}).catch(()=>{});})();
 
-// Audio Queue
+// Audio Queue — with FFmpeg processing via server
 let audioQueue=[],queueRunning=false;
+// lamejs for browser-side MP3 encoding when server is offline
+let lamejsLoaded=null;
+async function loadLamejs(){if(lamejsLoaded)return lamejsLoaded;lamejsLoaded=new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js';s.onload=()=>res(true);s.onerror=()=>rej(new Error('Failed to load encoder'));document.head.appendChild(s);});return lamejsLoaded;}
+async function browserEncodeMp3(audioBlob){
+  await loadLamejs();const ctx=new(window.AudioContext||window.webkitAudioContext)();const buf=await ctx.decodeAudioData(await audioBlob.arrayBuffer());ctx.close();
+  const offCtx=new OfflineAudioContext(1,Math.ceil(buf.duration*48000),48000);const src=offCtx.createBufferSource();src.buffer=buf;src.connect(offCtx.destination);src.start();
+  const rendered=await offCtx.startRendering();const pcm=rendered.getChannelData(0);
+  const mp3enc=new lamejs.Mp3Encoder(1,48000,192);const samples=new Int16Array(pcm.length);
+  for(let i=0;i<pcm.length;i++){const s=Math.max(-1,Math.min(1,pcm[i]));samples[i]=s<0?s*0x8000:s*0x7FFF;}
+  const chunks=[];const bs=1152;for(let i=0;i<samples.length;i+=bs){const b=samples.subarray(i,Math.min(i+bs,samples.length));const m=mp3enc.encodeBuffer(b);if(m.length>0)chunks.push(m);}
+  const last=mp3enc.flush();if(last.length>0)chunks.push(last);return new Blob(chunks,{type:'audio/mp3'});
+}
+
 function enqueueAudio(gameId,eventId,audioFile){audioQueue.push({gameId,eventId,audioBlob:audioFile,status:'queued',error:null});updateQBadge();renderEL();if(!queueRunning)processQueue();}
 async function processQueue(){
   if(queueRunning)return;queueRunning=true;
   while(audioQueue.some(q=>q.status==='queued')){
     const item=audioQueue.find(q=>q.status==='queued');if(!item)break;
     try{
+      // Step 1: Try FFmpeg processing on server, fall back to browser encoding
       item.status='uploading';updateQBadge();renderEL();
-      const fd=new FormData();fd.append('file',item.audioBlob,'audio_'+item.eventId+'.mp3');
+      let processedBlob=null;let serverProcessed=false;
+      try{
+        // Check if server is reachable
+        const hRes=await fetch('/api/health',{signal:AbortSignal.timeout(3000)});
+        if(hRes.ok){
+          // Send raw audio to server for FFmpeg processing
+          const pfd=new FormData();pfd.append('file',item.audioBlob,'audio_'+item.eventId);
+          const pRes=await fetch('/api/process-audio',{method:'POST',body:pfd,signal:AbortSignal.timeout(60000)});
+          if(pRes.ok){processedBlob=await pRes.blob();serverProcessed=true;console.log('[Queue] Server processed:',Math.round(processedBlob.size/1024)+'KB');}
+        }
+      }catch(e){console.log('[Queue] Server unavailable, encoding in browser');}
+      if(!processedBlob){
+        // Fallback: encode MP3 in browser (192kbps 48kHz mono via lamejs)
+        try{processedBlob=await browserEncodeMp3(item.audioBlob);console.log('[Queue] Browser encoded:',Math.round(processedBlob.size/1024)+'KB');}
+        catch(e){console.log('[Queue] Browser encode failed, uploading raw');processedBlob=item.audioBlob;}
+      }
+      // Step 2: Upload processed audio to R2
+      const fd=new FormData();fd.append('file',processedBlob,'audio_'+item.eventId+'.mp3');
       const upRes=await fetch(API+'/events/'+item.eventId+'/audio',{method:'POST',body:fd});
       if(!upRes.ok)throw new Error('Upload failed');
+      // Step 3: Transcribe via Whisper (token-based direct upload)
       item.status='transcribing';updateQBadge();renderEL();
       let transcript=null;
       try{
-        // Get direct upload URL from auth-gate (same flow as Media Clip)
         const tokenRes=await fetch('/api/transcribe-token',{signal:AbortSignal.timeout(10000)});
         if(!tokenRes.ok)throw new Error('Token failed');
         const tokenData=await tokenRes.json();
         if(tokenData.status!=='ok'||!tokenData.upload_url)throw new Error('No upload URL');
-        // Upload directly to server (bypasses CF Worker)
         const tfd=new FormData();tfd.append('file',item.audioBlob,'audio.wav');
         const tr=await fetch(tokenData.upload_url,{method:'POST',body:tfd,signal:AbortSignal.timeout(120000)});
         if(tr.ok){const td=await tr.json();if(td.status==='ok'&&td.words&&td.words.length)transcript=td.words.map(w=>w.word).join(' ');}
       }catch(e){console.log('[Queue] Transcription unavailable:',e.message);}
       if(transcript){
-        await apiPut('/events/'+item.eventId,{transcript});
+        await apiPut('/events/'+item.eventId,{transcript,needs_processing:false});
         item.status='generating';updateQBadge();renderEL();
         const g=gg();const players=g?[...new Set((g.events||[]).filter(e=>e.player).map(e=>e.player))]:[];
         const comment=await generateComment(transcript,players);
         if(comment)await apiPut('/events/'+item.eventId,{comment});
-      }else{await apiPut('/events/'+item.eventId,{needs_processing:true});}
+      }else{await apiPut('/events/'+item.eventId,{needs_processing:!serverProcessed});}
       item.status='done';item.audioBlob=null;
     }catch(e){item.status='failed';item.error=e.message;}
     updateQBadge();if(S.activeGame)await loadGame(S.activeGame);renderEL();
@@ -471,19 +501,35 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
   el.querySelectorAll('[data-a="retry"]').forEach(b=>{b.addEventListener('click',()=>retryQueueItem(b.dataset.id));});
   el.querySelectorAll('[data-a="del"]').forEach(b=>{b.addEventListener('click',async()=>{if(!await mtConfirm('Delete this event? This cannot be undone.',true))return;try{await apiDel('/events/'+b.dataset.id);await loadGame(S.activeGame);renderEL();}catch(e){mtAlert(e.message);}});});
   el.querySelectorAll('[data-a="reproc"]').forEach(b=>{b.addEventListener('click',async()=>{
-    b.textContent='Checking...';b.disabled=true;
+    b.textContent='Fetching...';b.disabled=true;
     try{
-      // Get direct upload URL
+      // Fetch audio from R2
+      const audioRes=await fetch(API+'/events/'+b.dataset.id+'/audio');
+      if(!audioRes.ok)throw new Error('No audio in storage');
+      const audioBlob=await audioRes.blob();
+      // Try FFmpeg processing on server
+      let processedBlob=null;
+      try{
+        b.textContent='Processing...';
+        const hRes=await fetch('/api/health',{signal:AbortSignal.timeout(3000)});
+        if(hRes.ok){
+          const pfd=new FormData();pfd.append('file',audioBlob,'audio.mp3');
+          const pRes=await fetch('/api/process-audio',{method:'POST',body:pfd,signal:AbortSignal.timeout(60000)});
+          if(pRes.ok)processedBlob=await pRes.blob();
+        }
+      }catch{}
+      // Re-upload processed version to R2
+      if(processedBlob){
+        b.textContent='Uploading...';
+        const fd=new FormData();fd.append('file',processedBlob,'audio_'+b.dataset.id+'.mp3');
+        await fetch(API+'/events/'+b.dataset.id+'/audio',{method:'POST',body:fd});
+      }
+      // Transcribe
+      b.textContent='Transcribing...';
       const tokenRes=await fetch('/api/transcribe-token',{signal:AbortSignal.timeout(10000)});
       if(!tokenRes.ok)throw new Error('offline');
       const tokenData=await tokenRes.json();
       if(tokenData.status!=='ok'||!tokenData.upload_url)throw new Error('offline');
-      // Fetch the audio from R2, re-upload to server for processing
-      b.textContent='Fetching audio...';
-      const audioRes=await fetch(API+'/events/'+b.dataset.id+'/audio');
-      if(!audioRes.ok)throw new Error('No audio in storage');
-      const audioBlob=await audioRes.blob();
-      b.textContent='Transcribing...';
       const tfd=new FormData();tfd.append('file',audioBlob,'audio.wav');
       const tr=await fetch(tokenData.upload_url,{method:'POST',body:tfd,signal:AbortSignal.timeout(120000)});
       if(!tr.ok)throw new Error('Transcription failed');
@@ -491,7 +537,6 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
       if(td.status==='ok'&&td.words&&td.words.length){
         const transcript=td.words.map(w=>w.word).join(' ');
         await apiPut('/events/'+b.dataset.id,{transcript,needs_processing:false});
-        // Generate comment
         const g=gg();const players=g?[...new Set((g.events||[]).filter(e=>e.player).map(e=>e.player))]:[];
         const comment=await generateComment(transcript,players);
         if(comment)await apiPut('/events/'+b.dataset.id,{comment});
