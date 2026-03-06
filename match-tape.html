@@ -381,8 +381,6 @@ async function loadGame(id){try{const g=await api('/games/'+id);S.currentGame=no
 function renderS(){const g=gg();if(!g){const bt=$('gameBannerTeams');if(bt)bt.textContent='No active game';return;}
   $('gameBannerTeams').innerHTML=tn(g.homeTeam)+' <span class="vs">v</span> '+tn(g.awayTeam);$('gameBannerMeta').innerHTML=rd(g.round)+(g.venue?'<br>'+g.venue:'');
   $('eventTeam').innerHTML='<option value="'+g.homeTeam+'">'+tn(g.homeTeam)+'</option><option value="'+g.awayTeam+'">'+tn(g.awayTeam)+'</option><option value="">N/A (grab)</option>';
-  const cids=g.callTeam&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);
-  $('eventCaller').innerHTML='<option value="">Select caller</option>'+cids.map(id=>{const c=S.callers.find(c=>c.id===id);return c?'<option value="'+c.id+'">'+(c.nick?c.name+' ('+c.nick+')':c.name)+'</option>':'';}).join('');
   pET();selectedCallers=[];document.querySelectorAll('.phase-btn').forEach(b=>{b.classList.remove('active','live');if(b.dataset.phase===S.activePhase){b.classList.add('active');if(S.activePhase==='live')b.classList.add('live');}});applyPh();renderEL();updateFP();}
 
 function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!ec2)return;if(!g){el.innerHTML='<div class="empty-state">Select a game.</div>';ec2.textContent='0';return;}
