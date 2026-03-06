@@ -594,7 +594,13 @@ async function doLogEvent(){
   if(player&&live&&team){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{}}
   renderEL();updateSug();}catch(e){mtAlert('Failed: '+e.message);}}
 $('btnLogEvent').addEventListener('click',doLogEvent);
-$('btnEndSession').addEventListener('click',()=>{stopClk();S.activeGame=null;S.currentGame=null;sw('dashboard');renderD();});
+$('btnEndSession').addEventListener('click',async()=>{
+  const g=gg();if(g){
+    const evs=g.events||[];const hasScore=evs.some(e=>e.type==='score');const hasHL=evs.some(e=>e.type==='highlights');
+    const missing=[];if(!hasScore)missing.push('Score');if(!hasHL)missing.push('Highlights');
+    if(missing.length){if(!await mtConfirm(missing.join(' and ')+' not yet captured. End session anyway?'))return;}
+  }
+  stopClk();S.activeGame=null;S.currentGame=null;sw('dashboard');renderD();});
 
 // Export summary
 // VoxPro zip
@@ -635,7 +641,7 @@ async function doSearch(){const p=new URLSearchParams(),q=$('archSearch').value.
       (r.transcript?'<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:2px;font-style:italic">'+((r.transcript.length>60)?r.transcript.substring(0,60)+'...':r.transcript)+'</div>':'')+
       '<div class="archive-game-info">'+tn(r.home_team)+' v '+tn(r.away_team)+' \xb7 '+rd(r.round)+'</div></div>'+
       (r.starred?'<span style="color:var(--warning)">\u2605</span>':'')+(r.hasAudio?'<button class="play-btn" data-a="aplay" data-id="'+r.id+'" title="Play audio">\u25B6</button>':'')+
-      (r.hasAudio?'<button class="play-btn" data-a="adl" data-id="'+r.id+'" title="Download audio" style="color:var(--accent);border-color:var(--border)">\u2193</button>':'')+'</div>';}).join('');
+      (r.hasAudio?'<button class="play-btn" data-a="adl" data-id="'+r.id+'" title="Download audio" style="color:var(--accent);border-color:var(--accent);font-size:11px;font-weight:bold">\u21E3</button>':'')+'</div>';}).join('');
     c.querySelectorAll('[data-a="adl"]').forEach(b=>{b.addEventListener('click',async()=>{const old=b.textContent;b.textContent='\u2026';try{const resp=await fetch(API+'/events/'+b.dataset.id+'/audio');if(!resp.ok)throw new Error();const blob=await resp.blob();const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='event_'+b.dataset.id+'.mp3';a.click();setTimeout(()=>URL.revokeObjectURL(u),200);b.textContent=old;}catch{b.textContent=old;}});});
     c.querySelectorAll('[data-a="adel"]').forEach(b=>{b.addEventListener('click',async()=>{if(!await mtConfirm('Delete this event permanently?',true))return;try{await apiDel('/events/'+b.dataset.id);doSearch();}catch(e){mtAlert(e.message);}});});
     c.querySelectorAll('[data-a="aplay"]').forEach(b=>{b.addEventListener('click',()=>playAudio(b.dataset.id,b));});
