@@ -331,7 +331,7 @@ function defKO(){const n=new Date();n.setMinutes(0,0,0);n.setHours(n.getHours()+
 function titleCase(s){return s.trim().replace(/\w\S*/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase());}
 function gLabel(g){const d=g.kickoff?new Date(g.kickoff).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'';return rd(g.round)+' \xb7 '+tn(g.home_team||g.homeTeam)+' v '+tn(g.away_team||g.awayTeam)+(d?' \xb7 '+d:'');}
 function debounce(fn,ms){let t;return function(){clearTimeout(t);t=setTimeout(fn,ms);};}
-function normGame(g){g.homeTeam=g.home_team||g.homeTeam;g.awayTeam=g.away_team||g.awayTeam;g.callTeam=g.callTeam||[];g.events=g.events||[];(g.events).forEach(e=>{e.callers=e.callers||[];e.hasAudio=!!e.has_audio;e.starred=!!e.starred;e.needsProcessing=!!e.needs_processing;});return g;}
+function normGame(g){g.homeTeam=g.home_team||g.homeTeam;g.awayTeam=g.away_team||g.awayTeam;g.callTeam=g.callTeam||[];g.callTeamByPhase=g.callTeamByPhase||{pre:[],live:[],post:[]};g.events=g.events||[];(g.events).forEach(e=>{e.callers=e.callers||[];e.hasAudio=!!e.has_audio;e.starred=!!e.starred;e.needsProcessing=!!e.needs_processing;});return g;}
 
 // Settings panel
 (function(){const b=$('settingsToggle'),p=$('settingsPanel');b.addEventListener('click',e=>{e.stopPropagation();p.classList.toggle('visible');b.classList.toggle('active');});document.addEventListener('click',e=>{if(!p.contains(e.target)&&e.target!==b){p.classList.remove('visible');b.classList.remove('active');}});
@@ -458,7 +458,7 @@ function applyPh(){const ph=S.activePhase,live=ph==='live';$('playerLabel').text
   if(live){const t=$('eventType').querySelector('option[value="try"]');if(t)$('eventType').value='try';}else{const g=$('eventType').querySelector('option[value="grab"]');if(g)$('eventType').value='grab';const na=$('eventTeam').querySelector('option[value=""]');if(na)$('eventTeam').value='';}
   if(!live)selectedCallers=[];
   else{selectedCallers=[];}
-  renderCallerGrid();updateSug();if(live)startClk();else stopClk();}
+  callerEditMode=false;renderCallerGrid();updateSug();if(live)startClk();else stopClk();}
 $('btnEditCT').addEventListener('click',()=>{callerEditMode=true;renderCallerGrid();});
 function updateSug(){const dl=$('playerSuggestions'),g=gg(),live=S.activePhase==='live';let names=[];
   if(live){
@@ -473,8 +473,10 @@ let selectedCallers=[];
 let callerEditMode=false;
 function renderCallerGrid(){
   const c=$('callerGrid');if(!c)return;
-  const g=gg();const hasCT=g&&g.callTeam&&g.callTeam.length>0;
-  const cids=hasCT&&!callerEditMode?g.callTeam:S.callers.map(c=>c.id);
+  const g=gg();const ph=S.activePhase||'live';
+  const phaseCT=g&&g.callTeamByPhase&&g.callTeamByPhase[ph]?g.callTeamByPhase[ph]:[];
+  const hasCT=phaseCT.length>0;
+  const cids=hasCT&&!callerEditMode?phaseCT:S.callers.map(c=>c.id);
   if(!cids.length){c.innerHTML='<span style="font-family:var(--mono);font-size:9px;color:var(--text-muted)">No callers configured</span>';return;}
   c.innerHTML=cids.map(id=>{const cal=S.callers.find(c=>c.id===id);if(!cal)return'';const on=selectedCallers.includes(id);
     return'<label class="caller-pill'+(on?' on':'')+'" data-cid="'+id+'"><span class="cp-mark">'+(on?'\u2713':'')+'</span><span class="cp-name">'+(cal.nick||cal.name)+'</span></label>';}).join('');
@@ -491,7 +493,8 @@ function renderCallerGrid(){
 function resetCallerGrid(){selectedCallers=[];callerEditMode=false;renderCallerGrid();}
 
 async function saveCallTeam(gameId,callerIds){
-  try{await apiPost('/games/'+gameId+'/call-team',{callerIds});}catch{}
+  const ph=S.activePhase||'live';
+  try{await apiPost('/games/'+gameId+'/call-team',{callerIds,phase:ph});}catch{}
   await loadGame(gameId);
 }
 
@@ -549,7 +552,7 @@ async function loadGame(id){try{const g=await api('/games/'+id);S.currentGame=no
 function renderS(){const g=gg();if(!g){const bt=$('gameBannerTeams');if(bt)bt.textContent='No active game';return;}
   $('gameBannerTeams').innerHTML=tn(g.homeTeam)+' <span class="vs">v</span> '+tn(g.awayTeam)+'<span style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:12px">'+rd(g.round)+'</span>';const ko=g.kickoff?new Date(g.kickoff).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}):'';$('gameBannerMeta').innerHTML=(g.venue||'')+(ko?'<br>'+ko:'');
   $('eventTeam').innerHTML='<option value="'+g.homeTeam+'">'+tn(g.homeTeam)+'</option><option value="'+g.awayTeam+'">'+tn(g.awayTeam)+'</option><option value="">N/A (grab)</option>';
-  pET();selectedCallers=[];document.querySelectorAll('.phase-btn').forEach(b=>{b.classList.remove('active','live');if(b.dataset.phase===S.activePhase){b.classList.add('active');if(S.activePhase==='live')b.classList.add('live');}});applyPh();renderEL();}
+  pET();selectedCallers=[];callerEditMode=false;document.querySelectorAll('.phase-btn').forEach(b=>{b.classList.remove('active','live');if(b.dataset.phase===S.activePhase){b.classList.add('active');if(S.activePhase==='live')b.classList.add('live');}});applyPh();renderEL();}
 
 function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!ec2)return;if(!g){el.innerHTML='<div class="empty-state">Select a game.</div>';ec2.textContent='0';return;}
   const pe=(g.events||[]).filter(e=>e.phase===S.activePhase);
