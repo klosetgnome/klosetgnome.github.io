@@ -64,7 +64,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 .phase-btn:hover{border-color:var(--accent);color:var(--accent)}.phase-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .phase-btn.active.live{background:var(--error);border-color:var(--error);animation:livePulse 2s ease infinite}
 @keyframes livePulse{0%,100%{opacity:1}50%{opacity:0.8}}
-.session-exports{display:flex;gap:8px;flex-wrap:wrap}
+
 /* Log event row with inline clock */
 .live-clock-inline{display:none;margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;align-items:center;gap:4px}
 .live-clock-inline.visible{display:flex}
@@ -188,7 +188,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     <div class="card"><div class="card-header"><span class="card-label">Recent Games</span></div><div class="card-body"><div class="game-grid" id="recentGamesGrid"></div></div></div>
   </div>
   <div class="view" id="view-session">
-    <div class="game-banner"><div class="game-banner-teams" id="gameBannerTeams"></div><div class="session-exports"><button class="btn btn-secondary btn-sm" id="btnSessionVoxpro">Export for VoxPro</button><button class="btn btn-secondary btn-sm" id="btnExportSummary">Export Match Summary</button></div><div class="game-banner-meta" id="gameBannerMeta"></div><button class="game-banner-close" id="btnEndSession">End Session</button></div>
+    <div class="game-banner"><div class="game-banner-teams" id="gameBannerTeams"></div><div class="game-banner-meta" id="gameBannerMeta"></div><div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0"><button class="game-banner-close" id="btnEndSession">End Session</button><button class="btn btn-secondary" id="btnSessionVoxpro" style="font-size:8px;padding:5px 10px;letter-spacing:1px">VoxPro Export</button></div></div>
     <div class="phase-bar"><button class="phase-btn active" data-phase="pre">Pre-game</button><button class="phase-btn" data-phase="live">Live</button><button class="phase-btn" data-phase="post">Post-game</button></div>
     <div class="card"><div class="card-header"><span class="card-label">Log Event</span><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>GAME MINUTE</span></div></div><div class="card-body">
       <div class="form-row"><div class="form-group"><span class="form-label">Event Type</span><select class="form-select" id="eventType"></select></div><div class="form-group"><span class="form-label">Team</span><select class="form-select" id="eventTeam"></select></div></div>
@@ -291,7 +291,7 @@ async function processQueue(){
       try{const tfd=new FormData();tfd.append('file',item.audioBlob,'audio.wav');
         const tr=await fetch(API+'/mac/api/transcribe',{method:'POST',body:tfd,signal:AbortSignal.timeout(120000)});
         if(tr.ok){const td=await tr.json();if(td.status==='ok'&&td.words&&td.words.length)transcript=td.words.map(w=>w.word).join(' ');}
-      }catch(e){console.log('[Queue] Mac Mini offline');}
+      }catch(e){console.log('[Queue] Server offline');}
       if(transcript){
         await apiPut('/events/'+item.eventId,{transcript});
         item.status='generating';updateQBadge();renderEL();
@@ -458,10 +458,10 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
   el.querySelectorAll('[data-a="reproc"]').forEach(b=>{b.addEventListener('click',async()=>{
     b.textContent='Sending...';b.disabled=true;
     try{
-      // Try sending to Mac Mini for processing
+      // Try sending for reprocessing
       const resp=await fetch(API+'/mac/api/process-audio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({eventId:b.dataset.id}),signal:AbortSignal.timeout(120000)});
       if(resp.ok){await apiPut('/events/'+b.dataset.id,{needs_processing:false});await loadGame(S.activeGame);renderEL();}
-      else{b.textContent='Mac Mini offline';b.disabled=false;setTimeout(()=>{b.textContent='Reprocess';},2000);}
+      else{b.textContent='Server offline';b.disabled=false;setTimeout(()=>{b.textContent='Reprocess';},2000);}
     }catch(e){b.textContent='Failed';b.disabled=false;setTimeout(()=>{b.textContent='Reprocess';},2000);}
   });});}
 
@@ -511,15 +511,6 @@ $('btnLogEvent').addEventListener('click',doLogEvent);
 $('btnEndSession').addEventListener('click',()=>{stopClk();S.activeGame=null;S.currentGame=null;sw('dashboard');renderD();});
 
 // Export summary
-$('btnExportSummary').addEventListener('click',async()=>{const g=gg();if(!g||!(g.events||[]).length)return mtAlert('No events.');
-  let s='MATCH TAPE \u2014 MATCH SUMMARY\n'+'='.repeat(50)+'\n\n'+tn(g.homeTeam)+' v '+tn(g.awayTeam)+'\n'+rd(g.round)+(g.venue?' \u2014 '+g.venue:'')+'\n';
-  if(g.kickoff)s+='Kickoff: '+new Date(g.kickoff).toLocaleString('en-AU',{hour12:false})+'\n';
-  ['pre','live','post'].forEach(ph=>{const pe=(g.events||[]).filter(e=>e.phase===ph);if(!pe.length)return;
-    s+='\n'+'\u2500'.repeat(50)+'\n'+(ph==='pre'?'PRE-GAME':ph==='live'?'LIVE':'POST-GAME')+' ('+pe.length+')\n'+'\u2500'.repeat(50)+'\n\n';
-    pe.forEach(ev=>{s+=(ev.starred?'\u2605 ':'')+gfn(ev,g,false)+'\n';if(ev.comment)s+='   \ud83d\udcac '+ev.comment+'\n';s+='\n';});});
-  s+='\u2500'.repeat(50)+'\nMatch Tape \u2014 '+new Date().toLocaleString('en-AU',{hour12:false})+'\n';
-  const b=new Blob([s],{type:'text/plain'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='MatchTape_'+san(tn(g.homeTeam))+'_v_'+san(tn(g.awayTeam))+(g.round?'_Round_'+g.round:'')+'_devNFcom.txt';a.click();setTimeout(()=>URL.revokeObjectURL(u),100);});
-
 // VoxPro zip
 function gF(g){return san(tn(g.homeTeam||g.home_team))+'_v_'+san(tn(g.awayTeam||g.away_team))+(g.round?'_Round_'+g.round:'');}
 async function bVP(games,onProgress){const z=new JSZip(),r=z.folder('NRL_HIGHLIGHTS_2026'),gr=z.folder('NRL_HIGHLIGHTS_2026/NRL_GRABS_2026');let n=0,done=0,total=0;
