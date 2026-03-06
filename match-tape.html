@@ -478,7 +478,7 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
     '<div class="event-actions">'+(ev.hasAudio?'<button class="regen-btn" data-a="rg" data-id="'+ev.id+'">\u21bb</button>':'')+
     '<button class="star-btn'+(ev.starred?' starred':'')+'" data-a="st" data-id="'+ev.id+'">'+(ev.starred?'\u2605':'\u2606')+'</button><button class="edit-btn" data-a="ed" data-id="'+ev.id+'">Edit</button><button class="edit-btn" data-a="del" data-id="'+ev.id+'" style="color:var(--error)">Del</button></div></div>'+
     '<div class="event-filename"><span class="event-filename-text">'+fn+'</span>'+(ev.hasAudio?'<button class="play-btn" data-a="play" data-id="'+ev.id+'" title="Play audio">\u25B6</button>':'')+'<button class="copy-btn" data-a="cp" data-t="'+ef+'">Copy</button></div>'+
-    (ev.transcript?'<div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);padding:0 2px;font-style:italic">'+((ev.transcript.length>33)?ev.transcript.substring(0,33)+'...':ev.transcript)+'</div>':'')+
+    (ev.transcript?'<div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);padding:0 2px;font-style:italic">'+((ev.transcript.length>60)?ev.transcript.substring(0,60)+'...':ev.transcript)+'</div>':'')+
     (function(){const qs=getQueueStatus(ev.id);if(!qs){
       if(!ev.hasAudio)return'';
       let s='<div style="font-family:var(--mono);font-size:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">';
@@ -631,7 +631,7 @@ async function doSearch(){const p=new URLSearchParams(),q=$('archSearch').value.
     c.innerHTML=res.map(r=>{r.callers=r.callers||[];r.hasAudio=!!r.has_audio;r.starred=!!r.starred;const cat=ec(r.type);
       return'<div class="archive-item'+(r.starred?' starred':'')+'">'+(r.minute!=null?'<span class="event-minute">'+r.minute+"'</span>":'')+
       '<span class="event-type-badge '+cat+'">'+en(r.type)+'</span><div style="flex:1"><div class="event-desc">'+(r.player||'Grab')+(r.team?' \u2014 '+tn(r.team):'')+'</div>'+
-      (r.transcript?'<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:2px;font-style:italic">'+((r.transcript.length>33)?r.transcript.substring(0,33)+'...':r.transcript)+'</div>':'')+
+      (r.transcript?'<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:2px;font-style:italic">'+((r.transcript.length>60)?r.transcript.substring(0,60)+'...':r.transcript)+'</div>':'')+
       '<div class="archive-game-info">'+tn(r.home_team)+' v '+tn(r.away_team)+' \xb7 '+rd(r.round)+'</div></div>'+
       (r.starred?'<span style="color:var(--warning)">\u2605</span>':'')+(r.hasAudio?'<button class="play-btn" data-a="aplay" data-id="'+r.id+'" title="Play audio">\u25B6</button>':'')+
       '<button class="copy-btn" data-a="ac" data-t="'+(r.player||'Grab').replace(/"/g,'&quot;')+'">Copy</button><button class="copy-btn" data-a="adel" data-id="'+r.id+'" style="color:var(--error)">Del</button></div>';}).join('');
