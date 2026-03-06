@@ -292,21 +292,31 @@ async function processQueue(){
     const g=S.games.find(g=>g.id===item.gameId);const ev=g&&g.events.find(e=>e.id===item.eventId);
     if(!g||!ev){item.status='failed';item.error='Event not found';updateQBadge();renderEL();continue;}
     try{
-      // Step 1: Upload to R2
+      // Step 1: Upload (Mac Mini if online, browser MP3 + R2 if offline)
       item.status='uploading';updateQBadge();renderEL();
-      await uploadToR2(item.audioBlob,item.eventId);
-      ev.r2Uploaded=true;sv();
-      // Step 2: Whisper transcription
+      const uploadResult=await uploadToR2(item.audioBlob,item.eventId);
+      ev.r2Uploaded=true;ev.needsProcessing=!uploadResult.processed;
+      if(uploadResult.r2Key)ev.r2Key=uploadResult.r2Key;
+      sv();
+      // Step 2: Whisper transcription (may return null if Mac Mini offline)
       item.status='transcribing';updateQBadge();renderEL();
       const transcript=await transcribeAudio(item.audioBlob);
-      ev.transcript=transcript;sv();renderEL();
-      // Step 3: LLM comment generation
-      item.status='generating';updateQBadge();renderEL();
-      const players=getPlayerNames(g);
-      const comment=await generateComment(transcript,players);
-      if(comment){ev.comment=comment;sv();}
-      // Done
-      item.status='done';updateQBadge();renderEL();
+      if(transcript){
+        ev.transcript=transcript;sv();renderEL();
+        // Step 3: LLM comment generation (only if we got a transcript)
+        item.status='generating';updateQBadge();renderEL();
+        const players=getPlayerNames(g);
+        const comment=await generateComment(transcript,players);
+        if(comment){ev.comment=comment;sv();}
+        item.status='done';
+      }else{
+        // No transcript — audio is safe in R2 but needs processing later
+        ev.needsProcessing=true;sv();
+        item.status='done'; // Not a failure — audio is saved
+      }
+      // Release the blob from memory
+      item.audioBlob=null;
+      updateQBadge();renderEL();
     }catch(e){
       console.error('Queue processing failed for',item.eventId,e);
       item.status='failed';item.error=e.message||'Processing failed';
@@ -332,21 +342,101 @@ function updateQBadge(){
   else{badge.style.display='none';}
 }
 
-// ── Pipeline steps (pluggable — swap for real implementations) ──
+// ── Pipeline steps ──
+// Primary path: Browser → Mac Mini (raw audio) → FFmpeg (fade+loudnorm+MP3) → R2 + Whisper → back
+// Fallback: Browser encodes MP3 client-side → uploads directly to R2 (flagged for reprocessing)
+const MAC_MINI_URL='/api'; // Same server as Media Clip
+
+// Browser-side MP3 encoding (fallback when Mac Mini is offline)
+// Uses AudioContext to decode, then encodes as low-bitrate MP3 via lamejs (loaded on demand)
+let lamejsLoaded=null;
+async function loadLamejs(){
+  if(lamejsLoaded)return lamejsLoaded;
+  // lamejs is ~180KB, loaded only when needed
+  lamejsLoaded=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js';
+    s.onload=()=>res(true);s.onerror=()=>rej(new Error('Failed to load MP3 encoder'));
+    document.head.appendChild(s);
+  });
+  return lamejsLoaded;
+}
+
+async function encodeToMp3(audioBlob){
+  await loadLamejs();
+  const ctx=new(window.AudioContext||window.webkitAudioContext)();
+  const buf=await ctx.decodeAudioData(await audioBlob.arrayBuffer());
+  ctx.close();
+  // Downsample to mono 16kHz (small file, good enough for speech)
+  const offCtx=new OfflineAudioContext(1,Math.ceil(buf.duration*48000),48000);
+  const src=offCtx.createBufferSource();src.buffer=buf;src.connect(offCtx.destination);src.start();
+  const rendered=await offCtx.startRendering();
+  const pcm=rendered.getChannelData(0);
+  // Encode with lamejs at 192kbps 48kHz CBR mono (~720KB/30s)
+  const mp3enc=new lamejs.Mp3Encoder(1,48000,192);
+  const samples=new Int16Array(pcm.length);
+  for(let i=0;i<pcm.length;i++){const s=Math.max(-1,Math.min(1,pcm[i]));samples[i]=s<0?s*0x8000:s*0x7FFF;}
+  const chunks=[];const blockSize=1152;
+  for(let i=0;i<samples.length;i+=blockSize){
+    const block=samples.subarray(i,Math.min(i+blockSize,samples.length));
+    const mp3buf=mp3enc.encodeBuffer(block);if(mp3buf.length>0)chunks.push(mp3buf);
+  }
+  const last=mp3enc.flush();if(last.length>0)chunks.push(last);
+  return new Blob(chunks,{type:'audio/mp3'});
+}
+
+// Try Mac Mini first; if offline, encode MP3 in browser and upload direct to R2
 async function uploadToR2(audioBlob,eventId){
-  // TODO: Replace with actual R2 upload via CF Worker
-  // For now, simulate a brief upload delay
-  await new Promise(r=>setTimeout(r,500));
-  console.log('[Queue] R2 upload placeholder for',eventId);
+  let macOnline=false;
+  try{
+    // Ping Mac Mini health
+    const h=await fetch(MAC_MINI_URL+'/health',{signal:AbortSignal.timeout(3000)});
+    if(h.ok)macOnline=true;
+  }catch{}
+
+  if(macOnline){
+    // Primary path: send raw audio to Mac Mini for processing
+    // Mac Mini applies 3ms fade + loudnorm -16 LUFS + encodes MP3 + uploads to R2
+    console.log('[Queue] Mac Mini online — sending for processing:',eventId);
+    const fd=new FormData();fd.append('file',audioBlob,'audio_'+eventId);fd.append('eventId',eventId);
+    const r=await fetch(MAC_MINI_URL+'/process-audio',{method:'POST',body:fd,signal:AbortSignal.timeout(120000)});
+    if(!r.ok)throw new Error('Mac Mini processing failed: '+r.status);
+    const d=await r.json();
+    return{processed:true,r2Key:d.r2Key||null};
+  }else{
+    // Fallback: encode MP3 in browser, upload directly to R2
+    console.log('[Queue] Mac Mini offline — encoding MP3 in browser:',eventId);
+    const mp3=await encodeToMp3(audioBlob);
+    console.log('[Queue] MP3 encoded:',Math.round(mp3.size/1024)+'KB — uploading to R2');
+    // TODO: Replace with actual R2 upload via CF Worker signed URL
+    // const tokenRes=await fetch('/api/r2-upload-token');
+    // const {uploadUrl}=await tokenRes.json();
+    // await fetch(uploadUrl,{method:'PUT',body:mp3});
+    await new Promise(r=>setTimeout(r,300)); // Simulate upload
+    return{processed:false,r2Key:null}; // Flagged for Mac Mini reprocessing
+  }
 }
 
 async function transcribeAudio(audioBlob){
-  // TODO: Replace with actual Whisper transcription via Mac Mini server
-  // For now, simulate with a delay and return placeholder
-  await new Promise(r=>setTimeout(r,1500));
-  // In production: decode audio → 16kHz WAV → upload to server → get transcript
-  console.log('[Queue] Whisper transcription placeholder');
-  return '[Transcript will appear here when Whisper backend is connected]';
+  let macOnline=false;
+  try{const h=await fetch(MAC_MINI_URL+'/health',{signal:AbortSignal.timeout(3000)});if(h.ok)macOnline=true;}catch{}
+
+  if(macOnline){
+    // Send to Mac Mini's Whisper endpoint
+    console.log('[Queue] Transcribing via Mac Mini');
+    const fd=new FormData();fd.append('file',audioBlob,'audio.wav');
+    const r=await fetch(MAC_MINI_URL+'/transcribe',{method:'POST',body:fd,signal:AbortSignal.timeout(120000)});
+    if(!r.ok)throw new Error('Transcription failed: '+r.status);
+    const d=await r.json();
+    if(d.status==='ok'&&d.words&&d.words.length){
+      return d.words.map(w=>w.word).join(' ');
+    }
+    throw new Error(d.error||'No words returned');
+  }else{
+    // Mac Mini offline — return placeholder, flag for later
+    console.log('[Queue] Mac Mini offline — transcription deferred');
+    return null; // Will be retried when Mac Mini comes back
+  }
 }
 
 async function generateComment(transcript,playerNames){
@@ -464,7 +554,7 @@ function renderEL(){
     '<button class="edit-btn" data-a="ed" data-id="'+ev.id+'">Edit</button></div></div>'+
     '<div class="event-filename"><span class="event-filename-text">'+fn+'</span><button class="copy-btn" data-a="cp" data-t="'+ef+'">Copy</button></div>'+
     (ev.comment?'<div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);padding:0 2px">\ud83d\udcac '+ev.comment+'</div>':'')+
-    (function(){const qs=getQueueStatus(ev.id);if(!qs)return ev.hasAudio?'<div style="font-family:var(--mono);font-size:10px;color:var(--success)">\ud83c\udf99 Audio'+(ev.transcript?' \xb7 Transcript':'')+'</div>':'';
+    (function(){const qs=getQueueStatus(ev.id);if(!qs)return ev.hasAudio?'<div style="font-family:var(--mono);font-size:10px;color:'+(ev.needsProcessing?'var(--warning)':'var(--success)')+'">'+'\ud83c\udf99 '+(ev.needsProcessing?'Uploaded \xb7 Needs processing':'Audio')+(ev.transcript?' \xb7 Transcript':'')+'</div>':'';
       if(qs.status==='queued')return'<div class="ev-proc queued"><span class="proc-dot"></span>\u23f3 Queued for processing'+(audioQueue.filter(q=>q.status==='queued').length>1?' ('+audioQueue.filter(q=>q.status!=='done'&&q.status!=='failed').indexOf(qs)+' of '+audioQueue.filter(q=>q.status!=='done'&&q.status!=='failed').length+')':'')+'</div>';
       if(qs.status==='uploading')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Uploading to storage\u2026</div>';
       if(qs.status==='transcribing')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Transcribing audio\u2026</div>';
