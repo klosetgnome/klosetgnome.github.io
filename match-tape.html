@@ -477,13 +477,22 @@ document.querySelectorAll('.phase-btn').forEach(b=>{b.addEventListener('click',(
 async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();selectedCT=[];renderCtChips();await populateFixturePicker();
   try{S.games=await api('/games');}catch{S.games=[];}
   const gr=$('recentGamesGrid');if(!gr)return;if(!S.games.length){gr.innerHTML='<div class="empty-state">No games yet.</div>';return;}
-  const showAll=gr.dataset.showAll==='1';const display=showAll?S.games:S.games.slice(0,3);
-  gr.innerHTML=display.map(g=>'<div class="game-tile" data-g="'+g.id+'"><div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+'</div><div style="display:flex;align-items:center;justify-content:space-between"><span class="game-tile-meta">'+(g.eventCount||0)+' events \xb7 '+(g.starredCount||0)+' \u2605</span><button class="edit-btn" data-a="delgame" data-id="'+g.id+'" style="color:var(--error);font-size:9px" onclick="event.stopPropagation()">Delete</button></div></div>').join('');
-  if(!showAll&&S.games.length>3)gr.innerHTML+='<div class="game-tile" style="text-align:center;cursor:pointer;color:var(--accent)" id="btnShowAllGames"><div class="game-tile-teams">Show all '+S.games.length+' games</div></div>';
+  const showAll=gr.dataset.showAll==='1';
+  let display;
+  if(showAll){display=S.games;}
+  else{
+    // 1 most recent past game + 2 upcoming relative to today
+    const now=new Date();
+    const past=S.games.filter(g=>g.kickoff&&new Date(g.kickoff)<now).sort((a,b)=>new Date(b.kickoff)-new Date(a.kickoff));
+    const upcoming=S.games.filter(g=>!g.kickoff||new Date(g.kickoff)>=now).sort((a,b)=>(new Date(a.kickoff||'9999')- new Date(b.kickoff||'9999')));
+    display=[...(past.length?[past[0]]:[]),...upcoming.slice(0,2)];
+  }
+  gr.innerHTML=display.map(g=>{const ko=g.kickoff?new Date(g.kickoff).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}):'';
+    return'<div class="game-tile" data-g="'+g.id+'"><div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+(ko?' \xb7 '+ko:'')+'</div><div class="game-tile-meta">'+(g.eventCount||0)+' events \xb7 '+(g.starredCount||0)+' \u2605</div></div>';}).join('');
+  if(!showAll&&S.games.length>3)gr.innerHTML+='<div style="text-align:center;cursor:pointer;color:var(--accent);font-family:var(--mono);font-size:10px;letter-spacing:1px;padding:10px;border:1px solid var(--border);border-radius:var(--radius);margin-top:4px" id="btnShowAllGames">Show all '+S.games.length+' games</div>';
   gr.querySelectorAll('.game-tile[data-g]').forEach(t=>{t.addEventListener('click',async()=>{S.activeGame=t.dataset.g;await loadGame(S.activeGame);
     const g=gg();if(g){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}}
     S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();});});
-  gr.querySelectorAll('[data-a="delgame"]').forEach(b=>{b.addEventListener('click',async(e)=>{e.stopPropagation();const gm=S.games.find(g=>g.id===b.dataset.id);if(!gm)return;if(!await mtConfirm('Delete '+tn(gm.home_team)+' v '+tn(gm.away_team)+'? All events and audio will be permanently removed.',true))return;try{await apiDel('/games/'+b.dataset.id);renderD();}catch(e){mtAlert(e.message);}});});
   const saBtn=$('btnShowAllGames');if(saBtn)saBtn.addEventListener('click',()=>{gr.dataset.showAll='1';renderD();});}
 // Fixture picker toggle
 $('fixturePicker').addEventListener('change',()=>{const v=$('fixturePicker').value;$('manualGameFields').style.display=v?'none':'';});
@@ -832,13 +841,16 @@ async function renderDrawList(){
   try{const games=await api('/games');
     const dl=$('drawList');if(!dl)return;
     if(!games.length){dl.innerHTML='<div class="empty-state">No fixtures imported yet.</div>';return;}
-    // Group by round
     const rounds={};games.forEach(g=>{const r=g.round||0;if(!rounds[r])rounds[r]=[];rounds[r].push(g);});
     dl.innerHTML=Object.keys(rounds).sort((a,b)=>a-b).map(r=>{
       const gs=rounds[r];
       return'<div style="margin-bottom:8px"><div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Round '+r+'</div>'+
       gs.map(g=>{const ko=g.kickoff?new Date(g.kickoff).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}):'TBC';
-        return'<div class="mc-item" style="padding:6px 10px"><span class="mc-item-name" style="font-size:11px">'+tn(g.home_team)+' v '+tn(g.away_team)+'</span><span class="mc-item-meta">'+ko+(g.venue?' \xb7 '+g.venue:'')+'</span></div>';}).join('')+'</div>';}).join('');
+        return'<div class="mc-item" style="padding:6px 10px"><span class="mc-item-name" style="font-size:11px">'+tn(g.home_team)+' v '+tn(g.away_team)+'</span><span class="mc-item-meta" style="flex:1;text-align:right">'+ko+(g.venue?' \xb7 '+g.venue:'')+'</span>'+(g.eventCount?'<span class="mc-item-meta" style="color:var(--success)">'+(g.eventCount||0)+' events</span>':'<button class="mc-item-btn delete" data-a="deldraw" data-id="'+g.id+'" data-name="'+tn(g.home_team)+' v '+tn(g.away_team)+'">Del</button>')+'</div>';}).join('')+'</div>';}).join('');
+    dl.querySelectorAll('[data-a="deldraw"]').forEach(b=>{b.addEventListener('click',async()=>{
+      if(!await mtConfirm('Delete '+b.dataset.name+'?',true))return;
+      try{await apiDel('/games/'+b.dataset.id);renderDrawList();populateFixturePicker();}catch(e){mtAlert(e.message);}
+    });});
   }catch{}}
 
 // ── Dashboard fixture picker ──
