@@ -850,7 +850,7 @@ async function populateFixturePicker(){
     if(upcoming.length)console.log('[FixturePicker] Sample:',upcoming[0].home_team,'v',upcoming[0].away_team,'round',upcoming[0].round);
     const sel=$('fixturePicker');if(!sel){console.log('[FixturePicker] Element not found!');return;}
     sel.innerHTML='<option value="">— Manual entry —</option>'+upcoming.map(g=>{
-      const ko=g.kickoff?new Date(g.kickoff).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}):'';
+      const ko=g.kickoff?new Date(g.kickoff).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'})+' '+new Date(g.kickoff).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',hour12:false}):'';
       return'<option value="'+g.id+'">R'+(g.round||'?')+' \xb7 '+tn(g.home_team)+' v '+tn(g.away_team)+(ko?' \xb7 '+ko:'')+'</option>';}).join('');
     console.log('[FixturePicker] Options:',sel.options.length-1);
   }catch(e){console.error('[FixturePicker] Error:',e);}}
