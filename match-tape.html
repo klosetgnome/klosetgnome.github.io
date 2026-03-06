@@ -135,6 +135,19 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 .filter-toggle{font-family:var(--mono);font-size:10px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius);background:none;color:var(--text-muted);cursor:pointer;transition:all 0.2s}
 .filter-toggle:hover{border-color:var(--accent);color:var(--accent)}.filter-toggle.active{border-color:var(--warning);color:var(--warning);background:var(--warning-glow)}
 .empty-state{text-align:center;padding:40px 20px;font-family:var(--mono);font-size:12px;color:var(--text-muted);line-height:1.8}
+/* Queue badge on nav tab */
+.nav-tab .q-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--accent);color:#fff;font-size:8px;font-weight:600;margin-left:6px;letter-spacing:0;text-transform:none;animation:fadeIn 0.2s}
+/* Processing indicators on events */
+.ev-proc{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;letter-spacing:0.3px;padding:2px 0}
+.ev-proc.queued{color:var(--text-muted)}.ev-proc.transcribing{color:var(--accent)}.ev-proc.generating{color:var(--accent)}
+.ev-proc.done{color:var(--success)}.ev-proc.failed{color:var(--error)}
+.ev-proc .proc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.ev-proc.queued .proc-dot{background:var(--text-muted);animation:pulse 1.5s ease infinite}
+.ev-proc.transcribing .proc-dot,.ev-proc.generating .proc-dot{background:var(--accent);animation:pulse 1s ease infinite}
+.ev-proc.done .proc-dot{background:var(--success)}.ev-proc.failed .proc-dot{background:var(--error)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.retry-btn{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;background:none;border:1px solid var(--error);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--error);transition:all 0.2s;margin-left:6px}
+.retry-btn:hover{background:var(--error-glow)}
 @keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @media(max-width:600px){.site-header{padding:12px 16px}.nav-tabs{padding:0 16px;overflow-x:auto}.nav-tab{padding:12px 14px;font-size:10px}.container{padding:16px 16px 60px}.info-hero{flex-direction:column;text-align:center;padding:24px 20px;gap:16px}.game-banner{flex-direction:column;text-align:center}.form-row{flex-direction:column}.form-group{min-width:100%}.mc-add-row,.mc-edit-row{flex-direction:column}.phase-bar{flex-wrap:wrap}.settings-panel{right:-40px;min-width:260px}}
@@ -145,7 +158,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 <div class="settings-wrap"><button class="hdr-btn" id="settingsToggle" aria-label="Settings"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
 <div class="settings-panel" id="settingsPanel"><div class="settings-section-label">Transcription Model</div><select id="srtModelSelect" class="format-select"></select><div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:6px" id="srtModelStatus"></div></div></div>
 <button class="hdr-btn theme-toggle" aria-label="Toggle dark mode"><svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg><svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button></div></header>
-<nav class="nav-tabs"><button class="nav-tab active" data-view="dashboard">Dashboard</button><button class="nav-tab" data-view="session">Game Session</button><button class="nav-tab" data-view="archive">Archive</button><button class="nav-tab admin-tab" data-view="mission-control">Mission Control</button></nav>
+<nav class="nav-tabs"><button class="nav-tab active" data-view="dashboard">Dashboard</button><button class="nav-tab" data-view="session">Game Session<span class="q-badge" id="qBadge" style="display:none"></span></button><button class="nav-tab" data-view="archive">Archive</button><button class="nav-tab admin-tab" data-view="mission-control">Mission Control</button></nav>
 <datalist id="stadiumList"><option value="Accor Stadium"><option value="Suncorp Stadium"><option value="CommBank Stadium"><option value="PointsBet Stadium"><option value="BlueBet Stadium"><option value="McDonald Jones Stadium"><option value="4 Pines Park"><option value="Leichhardt Oval"><option value="Campbelltown Stadium"><option value="WIN Stadium"><option value="Queensland Country Bank Stadium"><option value="Cbus Super Stadium"><option value="AAMI Park"><option value="Go Media Stadium (NZ)"><option value="GIO Stadium"><option value="Kayo Stadium"><option value="Netstrata Jubilee Stadium"><option value="Belmore Sports Ground"><option value="Allegiant Stadium (Las Vegas)"><option value="Industree Group Stadium"><option value="Totally Workwear Stadium"></datalist>
 <div class="container">
   <div class="view active" id="view-dashboard">
@@ -259,6 +272,97 @@ document.addEventListener('click',e=>{if(!$('callerDropdown').contains(e.target)
 function getPlayerNames(g){const n=new Set();g.events.forEach(e=>{if(e.player)n.add(e.player);});return[...n];}
 
 // LLM regen
+// ╔══════════════════════════════════════╗
+// ║  AUDIO PROCESSING QUEUE             ║
+// ╚══════════════════════════════════════╝
+// Queue items: { eventId, gameId, audioBlob, status: 'queued'|'uploading'|'transcribing'|'generating'|'done'|'failed', error }
+let audioQueue=[];
+let queueRunning=false;
+
+function enqueueAudio(gameId,eventId,audioFile){
+  audioQueue.push({gameId,eventId,audioBlob:audioFile,status:'queued',error:null});
+  updateQBadge();renderEL();
+  if(!queueRunning)processQueue();
+}
+
+async function processQueue(){
+  if(queueRunning)return;queueRunning=true;
+  while(audioQueue.some(q=>q.status==='queued')){
+    const item=audioQueue.find(q=>q.status==='queued');if(!item)break;
+    const g=S.games.find(g=>g.id===item.gameId);const ev=g&&g.events.find(e=>e.id===item.eventId);
+    if(!g||!ev){item.status='failed';item.error='Event not found';updateQBadge();renderEL();continue;}
+    try{
+      // Step 1: Upload to R2
+      item.status='uploading';updateQBadge();renderEL();
+      await uploadToR2(item.audioBlob,item.eventId);
+      ev.r2Uploaded=true;sv();
+      // Step 2: Whisper transcription
+      item.status='transcribing';updateQBadge();renderEL();
+      const transcript=await transcribeAudio(item.audioBlob);
+      ev.transcript=transcript;sv();renderEL();
+      // Step 3: LLM comment generation
+      item.status='generating';updateQBadge();renderEL();
+      const players=getPlayerNames(g);
+      const comment=await generateComment(transcript,players);
+      if(comment){ev.comment=comment;sv();}
+      // Done
+      item.status='done';updateQBadge();renderEL();
+    }catch(e){
+      console.error('Queue processing failed for',item.eventId,e);
+      item.status='failed';item.error=e.message||'Processing failed';
+      updateQBadge();renderEL();
+    }
+  }
+  queueRunning=false;updateQBadge();
+}
+
+function retryQueueItem(eventId){
+  const item=audioQueue.find(q=>q.eventId===eventId&&q.status==='failed');
+  if(item){item.status='queued';item.error=null;updateQBadge();renderEL();if(!queueRunning)processQueue();}
+}
+
+function getQueueStatus(eventId){
+  return audioQueue.find(q=>q.eventId===eventId)||null;
+}
+
+function updateQBadge(){
+  const pending=audioQueue.filter(q=>q.status==='queued'||q.status==='uploading'||q.status==='transcribing'||q.status==='generating').length;
+  const badge=$('qBadge');
+  if(pending>0){badge.textContent=pending;badge.style.display='';}
+  else{badge.style.display='none';}
+}
+
+// ── Pipeline steps (pluggable — swap for real implementations) ──
+async function uploadToR2(audioBlob,eventId){
+  // TODO: Replace with actual R2 upload via CF Worker
+  // For now, simulate a brief upload delay
+  await new Promise(r=>setTimeout(r,500));
+  console.log('[Queue] R2 upload placeholder for',eventId);
+}
+
+async function transcribeAudio(audioBlob){
+  // TODO: Replace with actual Whisper transcription via Mac Mini server
+  // For now, simulate with a delay and return placeholder
+  await new Promise(r=>setTimeout(r,1500));
+  // In production: decode audio → 16kHz WAV → upload to server → get transcript
+  console.log('[Queue] Whisper transcription placeholder');
+  return '[Transcript will appear here when Whisper backend is connected]';
+}
+
+async function generateComment(transcript,playerNames){
+  const model=$('srtModelSelect').value;
+  if(!model||!transcript)return null;
+  const prompt=CPROMPT+playerNames.join(', ')+'. Return only the tag.';
+  const txt=transcript.split(/\s+/).slice(0,500).join(' ');
+  try{
+    const r=await fetch(LLM_URL+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model,max_tokens:100,messages:[{role:'system',content:prompt},{role:'user',content:txt}]}),
+      signal:AbortSignal.timeout(30000)});
+    if(!r.ok)throw new Error('LLM error '+r.status);
+    const d=await r.json();return d.choices?.[0]?.message?.content?.trim()||null;
+  }catch(e){console.log('[Queue] LLM failed:',e.message);return null;}
+}
+
 async function regenCmt(evId){const g=gg();if(!g)return;const ev=g.events.find(e=>e.id===evId);if(!ev||!ev.transcript)return alert('No transcript for this event.');
   const model=$('srtModelSelect').value;if(!model)return alert('Select LLM in Settings.');
   const pl=getPlayerNames(g);const prompt=CPROMPT+pl.join(', ')+'. Return only the tag.';
@@ -360,11 +464,20 @@ function renderEL(){
     '<button class="edit-btn" data-a="ed" data-id="'+ev.id+'">Edit</button></div></div>'+
     '<div class="event-filename"><span class="event-filename-text">'+fn+'</span><button class="copy-btn" data-a="cp" data-t="'+ef+'">Copy</button></div>'+
     (ev.comment?'<div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);padding:0 2px">\ud83d\udcac '+ev.comment+'</div>':'')+
-    (ev.hasAudio?'<div style="font-family:var(--mono);font-size:10px;color:var(--success)">\ud83c\udf99 Audio'+(ht?' \xb7 Transcript':'')+'</div>':'')+'</div>';}).join('');
+    (function(){const qs=getQueueStatus(ev.id);if(!qs)return ev.hasAudio?'<div style="font-family:var(--mono);font-size:10px;color:var(--success)">\ud83c\udf99 Audio'+(ev.transcript?' \xb7 Transcript':'')+'</div>':'';
+      if(qs.status==='queued')return'<div class="ev-proc queued"><span class="proc-dot"></span>\u23f3 Queued for processing'+(audioQueue.filter(q=>q.status==='queued').length>1?' ('+audioQueue.filter(q=>q.status!=='done'&&q.status!=='failed').indexOf(qs)+' of '+audioQueue.filter(q=>q.status!=='done'&&q.status!=='failed').length+')':'')+'</div>';
+      if(qs.status==='uploading')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Uploading to storage\u2026</div>';
+      if(qs.status==='transcribing')return'<div class="ev-proc transcribing"><span class="proc-dot"></span>Transcribing audio\u2026</div>';
+      if(qs.status==='generating')return'<div class="ev-proc generating"><span class="proc-dot"></span>Generating comment\u2026</div>';
+      if(qs.status==='done')return'<div class="ev-proc done"><span class="proc-dot"></span>\u2713 Processed</div>';
+      if(qs.status==='failed')return'<div class="ev-proc failed"><span class="proc-dot"></span>\u26a0 '+qs.error+'<button class="retry-btn" data-a="retry" data-id="'+ev.id+'">Retry</button></div>';
+      return'';
+    }())+'</div>';}).join('');
   $('evList').querySelectorAll('[data-a="cp"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.t).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
   $('evList').querySelectorAll('[data-a="ed"]').forEach(b=>{b.addEventListener('click',()=>editEv(b.dataset.id));});
   $('evList').querySelectorAll('[data-a="st"]').forEach(b=>{b.addEventListener('click',()=>{const ev=g.events.find(e=>e.id===b.dataset.id);if(ev){ev.starred=!ev.starred;sv();renderEL();}});});
-  $('evList').querySelectorAll('[data-a="rg"]').forEach(b=>{b.addEventListener('click',async()=>{const g=gg();const ev=g&&g.events.find(e=>e.id===b.dataset.id);if(!ev||!ev.transcript){alert('No transcript yet. Audio needs to be processed first.');return;}b.classList.add('spinning');await regenCmt(b.dataset.id);b.classList.remove('spinning');});});}
+  $('evList').querySelectorAll('[data-a="rg"]').forEach(b=>{b.addEventListener('click',async()=>{const g=gg();const ev=g&&g.events.find(e=>e.id===b.dataset.id);if(!ev||!ev.transcript){alert('No transcript yet. Audio needs to be processed first.');return;}b.classList.add('spinning');await regenCmt(b.dataset.id);b.classList.remove('spinning');});});
+  $('evList').querySelectorAll('[data-a="retry"]').forEach(b=>{b.addEventListener('click',()=>retryQueueItem(b.dataset.id));});}
 
 function editEv(eid){const g=gg();if(!g)return;const ev=g.events.find(e=>e.id===eid);if(!ev)return;
   const el=$('evList').querySelector('[data-eid="'+eid+'"]');if(!el)return;
@@ -404,9 +517,13 @@ $('btnLogEvent').addEventListener('click',()=>{const g=gg();if(!g)return alert('
     callers:live?[...selectedCallers]:[],comment:$('eventComment').value.trim(),
     phase:S.activePhase,starred:false,hasAudio:!!pA,audioFileName:pA?pA.name:null,
     transcript:null,needsProcessing:!!pA,createdAt:new Date().toISOString()};
+  const audioFile=pA; // capture before reset
   g.events.push(ev);sv();$('eventPlayer').value='';$('eventComment').value='';
   pA=null;aD.textContent='Drop commentary audio here or click to browse';aD.classList.remove('has-audio');
-  $('fnCard').style.display='none';renderEL();updateSug();});
+  $('fnCard').style.display='none';
+  // Enqueue audio for background processing
+  if(audioFile)enqueueAudio(g.id,ev.id,audioFile);
+  renderEL();updateSug();});
 
 $('btnEndSession').addEventListener('click',()=>{stopClk();S.activeGame=null;sv();sw('dashboard');renderD();});
 
