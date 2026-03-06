@@ -93,6 +93,9 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 .game-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
 .game-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;cursor:pointer;transition:all 0.2s;display:flex;flex-direction:column;gap:10px}
 .game-tile:hover{border-color:var(--accent);background:var(--accent-light);transform:translateY(-2px);box-shadow:0 4px 16px var(--shadow)}
+.game-tile{position:relative}
+.tile-active-dot{position:absolute;top:10px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--accent);animation:tileGlow 2s ease-in-out infinite}
+@keyframes tileGlow{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(212,119,74,0.3)}50%{opacity:0.7;box-shadow:0 0 0 6px rgba(212,119,74,0)}}
 .game-tile-teams{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--text-primary)}
 .game-tile-meta{font-family:var(--mono);font-size:10px;color:var(--text-muted)}.game-tile-vs{color:var(--accent);font-weight:500}
 .game-banner{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;display:flex;align-items:center;gap:20px}
@@ -218,7 +221,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     </div></div>
   </div>
   <div class="view" id="view-session">
-    <div class="game-banner"><div class="game-banner-teams" id="gameBannerTeams"></div><div class="game-banner-meta" id="gameBannerMeta"></div><div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0"><button class="game-banner-close" id="btnEndSession">End Session</button><button class="btn btn-secondary" id="btnSessionVoxpro" style="font-size:8px;padding:5px 10px;letter-spacing:1px">VoxPro Export</button></div></div>
+    <div class="game-banner"><div class="game-banner-teams" id="gameBannerTeams"></div><div class="game-banner-meta" id="gameBannerMeta"></div><button class="btn btn-secondary" id="btnSessionVoxpro" style="font-size:8px;padding:5px 10px;letter-spacing:1px;flex-shrink:0">VoxPro Export</button></div>
     <div class="phase-bar"><button class="phase-btn active" data-phase="pre">Pre-game</button><button class="phase-btn" data-phase="live">Live</button><button class="phase-btn" data-phase="post">Post-game</button></div>
     <div class="card"><div class="card-header"><span class="card-label">Log Event</span><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>MINUTE</span></div></div><div class="card-body">
       <div class="form-row"><div class="form-group"><span class="form-label">Event Type</span><select class="form-select" id="eventType"></select></div><div class="form-group"><span class="form-label">Team</span><select class="form-select" id="eventTeam"></select></div></div>
@@ -495,10 +498,10 @@ async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKicko
   try{S.games=await api('/games');}catch{S.games=[];}
   const gr=$('recentGamesGrid');if(!gr)return;if(!S.games.length){gr.innerHTML='<div class="empty-state">No upcoming fixtures. Import a draw in Mission Control.</div>';return;}
   const now=new Date();
-  const upcoming=S.games.filter(g=>(!g.eventCount||g.eventCount===0)&&(!g.kickoff||new Date(g.kickoff)>=now)).sort((a,b)=>new Date(a.kickoff||'9999')-new Date(b.kickoff||'9999')).slice(0,3);
+  const upcoming=S.games.filter(g=>!g.kickoff||new Date(g.kickoff)>=now).sort((a,b)=>new Date(a.kickoff||'9999')-new Date(b.kickoff||'9999')).slice(0,3);
   if(!upcoming.length){gr.innerHTML='<div class="empty-state">No upcoming fixtures.</div>';return;}
-  gr.innerHTML=upcoming.map(g=>{const ko=g.kickoff?new Date(g.kickoff).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}):'';
-    return'<div class="game-tile" data-g="'+g.id+'"><div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+(ko?' \xb7 '+ko:'')+'</div></div>';}).join('');
+  gr.innerHTML=upcoming.map(g=>{const ko=g.kickoff?new Date(g.kickoff).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}):'';const active=g.eventCount&&g.eventCount>0;
+    return'<div class="game-tile" data-g="'+g.id+'">'+(active?'<span class="tile-active-dot"></span>':'')+'<div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+(ko?' \xb7 '+ko:'')+'</div></div>';}).join('');
   gr.querySelectorAll('.game-tile[data-g]').forEach(t=>{t.addEventListener('click',async()=>{S.activeGame=t.dataset.g;await loadGame(S.activeGame);
     const g=gg();if(g){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}}
     S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();});});}
@@ -661,19 +664,11 @@ async function doLogEvent(){
   if(player&&live&&team){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{}}
   renderEL();updateSug();}catch(e){mtAlert('Failed: '+e.message);}}
 $('btnLogEvent').addEventListener('click',doLogEvent);
-$('btnEndSession').addEventListener('click',async()=>{
-  const g=gg();if(g){
-    const evs=g.events||[];const hasScore=evs.some(e=>e.type==='score');const hasHL=evs.some(e=>e.type==='highlights');
-    const missing=[];if(!hasScore)missing.push('Score');if(!hasHL)missing.push('Highlights');
-    if(missing.length){if(!await mtConfirm(missing.join(' and ')+' not yet captured. End session anyway?'))return;}
-  }
-  stopClk();S.activeGame=null;S.currentGame=null;sw('dashboard');renderD();});
 
 // Export summary
 // VoxPro zip
 function gF(g){return san(tn(g.homeTeam||g.home_team))+'_v_'+san(tn(g.awayTeam||g.away_team))+(g.round?'_Round_'+g.round:'');}
 async function bVP(games,onProgress){const z=new JSZip(),r=z.folder('NRL_HIGHLIGHTS_2026'),gr=z.folder('NRL_HIGHLIGHTS_2026/NRL_GRABS_2026');let n=0,done=0,total=0;
-  // Count total audio files first
   games.forEach(g=>{normGame(g);(g.events||[]).forEach(e=>{if(e.hasAudio)total++;});});
   for(const g of games){normGame(g);const gf=r.folder(gF(g));
     for(const ph of['pre','live','post']){const pe=(g.events||[]).filter(e=>e.phase===ph&&e.hasAudio);if(!pe.length)continue;
@@ -688,7 +683,13 @@ async function bVP(games,onProgress){const z=new JSZip(),r=z.folder('NRL_HIGHLIG
     (g.events||[]).filter(e=>e.starred&&!e.hasAudio).forEach(ev=>{gr.file(gfn(ev,g,false)+'.txt','[No audio]\n');});}
   return{z,n};}
 async function dlZ(z,fn){const b=await z.generateAsync({type:'blob'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=fn;a.click();setTimeout(()=>URL.revokeObjectURL(u),200);}
-$('btnSessionVoxpro').addEventListener('click',async()=>{const g=gg();if(!g||!(g.events||[]).some(e=>e.hasAudio))return mtAlert('No audio.');const btn=$('btnSessionVoxpro');btn.disabled=true;btn.textContent='Fetching audio...';
+$('btnSessionVoxpro').addEventListener('click',async()=>{const g=gg();if(!g||!(g.events||[]).some(e=>e.hasAudio))return mtAlert('No audio.');
+  // Check for Score and Highlights
+  const evs=g.events||[];const missing=[];
+  if(!evs.some(e=>e.type==='score'))missing.push('Score');
+  if(!evs.some(e=>e.type==='highlights'))missing.push('Highlights');
+  if(missing.length){if(!await mtConfirm(missing.join(' and ')+' not yet captured. Export anyway?'))return;}
+  const btn=$('btnSessionVoxpro');btn.disabled=true;btn.textContent='Fetching audio...';
   try{const{z,n}=await bVP([g],(done,total)=>{btn.textContent='Fetching '+done+'/'+total+'...';});btn.textContent='Zipping...';await dlZ(z,'VoxPro_'+gF(g)+'.zip');btn.textContent=n+' exported';setTimeout(()=>{btn.textContent='VoxPro Export';btn.disabled=false;},3000);}catch(e){mtAlert(e.message);btn.textContent='VoxPro Export';btn.disabled=false;}});
 
 // ═══ ARCHIVE ═══
