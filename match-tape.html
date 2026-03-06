@@ -277,7 +277,6 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     </div></div>
   </div>
 </div>
-<div class="modal-bg" id="ctModal" style="display:none"><div class="modal-card" style="max-width:480px"><div class="modal-title">Set Call Team</div><div class="modal-body"><div class="caller-grid" id="ctModalGrid"></div></div><div class="modal-actions"><button class="btn btn-primary btn-sm" id="ctModalSave">Confirm</button><button class="btn btn-secondary btn-sm" id="ctModalCancel">Cancel</button></div></div></div>
 <footer><a href="index.html"><span style="color:var(--accent)">dev.</span>nialfernandes.com</a><span style="color:var(--text-muted);margin:0 8px">|</span><a href="privacy.html">Privacy Policy</a></footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
@@ -454,12 +453,13 @@ function startClk(){stopClk();const g=gg();if(!g||!g.kickoff||S.activePhase!=='l
 function stopClk(){if(clockI){clearInterval(clockI);clockI=null;}$('liveClock').classList.remove('visible');}
 
 // Phase UI
-function applyPh(){const ph=S.activePhase,live=ph==='live';$('callerGroup').classList.toggle('hidden-phase',!live);$('playerLabel').textContent=live?'Player':'Player / Speaker';
+function applyPh(){const ph=S.activePhase,live=ph==='live';$('playerLabel').textContent=live?'Player':'Speaker';
+  const clbl=$('callerGroup').querySelector('.form-label');if(clbl)clbl.firstChild.textContent=live?'Caller(s) ':'Host(s) ';
   if(live){const t=$('eventType').querySelector('option[value="try"]');if(t)$('eventType').value='try';}else{const g=$('eventType').querySelector('option[value="grab"]');if(g)$('eventType').value='grab';const na=$('eventTeam').querySelector('option[value=""]');if(na)$('eventTeam').value='';}
   if(!live)selectedCallers=[];
   else{selectedCallers=[];}
   renderCallerGrid();updateSug();if(live)startClk();else stopClk();}
-$('btnEditCT').addEventListener('click',async()=>{const picked=await showCallTeamModal();if(picked!==null&&S.activeGame){await saveCallTeam(S.activeGame,picked);renderCallerGrid();}});
+$('btnEditCT').addEventListener('click',()=>{callerEditMode=!callerEditMode;renderCallerGrid();});
 function updateSug(){const dl=$('playerSuggestions'),g=gg(),live=S.activePhase==='live';let names=[];
   if(live){
     // Suggest players from DB for current teams + previously mentioned
@@ -470,34 +470,22 @@ function updateSug(){const dl=$('playerSuggestions'),g=gg(),live=S.activePhase==
 
 // Caller checkbox grid (in-game session)
 let selectedCallers=[];
+let callerEditMode=false;
 function renderCallerGrid(){
   const c=$('callerGrid');if(!c)return;
-  const g=gg();const cids=g&&g.callTeam&&g.callTeam.length?g.callTeam:[];
-  if(!cids.length){c.innerHTML='<span style="font-family:var(--mono);font-size:9px;color:var(--text-muted)">No call team set</span>';return;}
+  const g=gg();const hasCT=g&&g.callTeam&&g.callTeam.length>0;
+  const cids=hasCT&&!callerEditMode?g.callTeam:S.callers.map(c=>c.id);
+  if(!cids.length){c.innerHTML='<span style="font-family:var(--mono);font-size:9px;color:var(--text-muted)">No callers configured</span>';return;}
   c.innerHTML=cids.map(id=>{const cal=S.callers.find(c=>c.id===id);if(!cal)return'';const on=selectedCallers.includes(id);
     return'<label class="caller-pill'+(on?' on':'')+'" data-cid="'+id+'"><span class="cp-mark">'+(on?'\u2713':'')+'</span><span class="cp-name">'+(cal.nick||cal.name)+'</span></label>';}).join('');
   c.querySelectorAll('.caller-pill').forEach(p=>{p.addEventListener('click',()=>{
     const id=p.dataset.cid;if(selectedCallers.includes(id))selectedCallers=selectedCallers.filter(x=>x!==id);else selectedCallers.push(id);renderCallerGrid();});});
+  // Show/hide edit button
+  const eb=$('btnEditCT');if(eb)eb.style.display=hasCT&&!callerEditMode?'':'none';
 }
-function resetCallerGrid(){selectedCallers=[];renderCallerGrid();}
-
-// Call team picker modal
-function showCallTeamModal(){return new Promise(res=>{
-  const modal=$('ctModal'),grid=$('ctModalGrid');
-  let picked=[];const g=gg();if(g&&g.callTeam)picked=[...g.callTeam];
-  function render(){
-    grid.innerHTML=S.callers.map(c=>{const on=picked.includes(c.id);
-      return'<label class="caller-pill'+(on?' on':'')+'" data-cid="'+c.id+'"><span class="cp-mark">'+(on?'\u2713':'')+'</span><span class="cp-name">'+(c.nick||c.name)+'</span></label>';}).join('');
-    grid.querySelectorAll('.caller-pill').forEach(p=>{p.addEventListener('click',()=>{
-      const id=p.dataset.cid;if(picked.includes(id))picked=picked.filter(x=>x!==id);else picked.push(id);render();});});
-  }
-  render();modal.style.display='flex';
-  $('ctModalSave').onclick=()=>{modal.style.display='none';res(picked);};
-  $('ctModalCancel').onclick=()=>{modal.style.display='none';res(null);};
-});}
+function resetCallerGrid(){selectedCallers=[];callerEditMode=false;renderCallerGrid();}
 
 async function saveCallTeam(gameId,callerIds){
-  // Clear existing and set new
   try{await apiPost('/games/'+gameId+'/call-team',{callerIds});}catch{}
   await loadGame(gameId);
 }
@@ -528,8 +516,6 @@ async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKicko
     return'<div class="game-tile" data-g="'+g.id+'">'+(active?'<span class="tile-active-dot"></span>':'')+'<div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+(ko?' \xb7 '+ko:'')+'</div></div>';}).join('');
   gr.querySelectorAll('.game-tile[data-g]').forEach(t=>{t.addEventListener('click',async()=>{S.activeGame=t.dataset.g;await loadGame(S.activeGame);
     const g=gg();if(g){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}}
-    // Prompt for call team if not set
-    if(!gg()||!gg().callTeam||!gg().callTeam.length){const picked=await showCallTeamModal();if(picked&&picked.length){await saveCallTeam(S.activeGame,picked);}else if(picked===null){S.activeGame=null;S.currentGame=null;return;}}
     S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();});});}
 // Fixture picker toggle
 $('fixturePicker').addEventListener('change',()=>{const v=$('fixturePicker').value;$('manualGameFields').style.display=v?'none':'';});
@@ -538,11 +524,8 @@ $('btnStartGame').addEventListener('click',async()=>{
   const picked=$('fixturePicker').value;
   if(picked){
     S.activeGame=picked;await loadGame(picked);
-    // Assign call team from dashboard chips if any
     if(selectedCT.length){await saveCallTeam(picked,selectedCT);}
     try{const g=gg();if(g){const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}}catch{S._gamePlayers=[];}
-    // Prompt for call team if still none
-    if(!gg()||!gg().callTeam||!gg().callTeam.length){const ct=await showCallTeamModal();if(ct&&ct.length){await saveCallTeam(S.activeGame,ct);}else if(ct===null){S.activeGame=null;S.currentGame=null;return;}}
     S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();
   }else{
     const h=$('newGameHome').value,a=$('newGameAway').value;if(!h||!a)return mtAlert('Select both teams.');if(h===a)return mtAlert('Different teams.');
@@ -553,8 +536,6 @@ $('btnStartGame').addEventListener('click',async()=>{
     try{const res=await apiPost('/games',{homeTeam:h,awayTeam:a,round:isNaN(rn)?null:rn,venue:venue||null,kickoff:kickoff,callTeam:[...selectedCT]});
     S.activeGame=res.id;await loadGame(res.id);
     try{const hp=await loadPlayers(h);const ap=await loadPlayers(a);S._gamePlayers=[...hp,...ap];}catch{S._gamePlayers=[];}
-    // Prompt for call team if none from dashboard
-    if(!selectedCT.length){const ct=await showCallTeamModal();if(ct&&ct.length){await saveCallTeam(S.activeGame,ct);}}
     S.activePhase='pre';sw('session');location.hash='session:'+S.activeGame+':'+S.activePhase;renderS();}catch(e){mtAlert('Failed: '+e.message);}
   }});
 async function loadGame(id){try{const g=await api('/games/'+id);S.currentGame=normGame(g);}catch(e){S.currentGame=null;}}
@@ -686,7 +667,9 @@ async function doLogEvent(){
   if(!isGrab&&!player&&live)return mtAlert('Enter a player name before dropping audio.');
   const audioFile=pA;const team=$('eventTeam').value||null;
   if(player&&live&&team){try{await apiPost('/players',{name:player,team:team});}catch{}}
-  try{const res=await apiPost('/games/'+S.activeGame+'/events',{type,phase:S.activePhase,minute,team,player:player||null,callers:live?[...selectedCallers]:[],comment:'',hasAudio:!!audioFile,audioFileName:audioFile?audioFile.name:null});
+  try{const res=await apiPost('/games/'+S.activeGame+'/events',{type,phase:S.activePhase,minute,team,player:player||null,callers:[...selectedCallers],comment:'',hasAudio:!!audioFile,audioFileName:audioFile?audioFile.name:null});
+  // Auto-save call team if not yet set and callers were selected
+  if(selectedCallers.length&&(!g.callTeam||!g.callTeam.length)){await saveCallTeam(S.activeGame,selectedCallers);}
   $('eventPlayer').value='';$('eventComment').value='';pA=null;resetCallerGrid();
   if(audioFile)enqueueAudio(S.activeGame,res.id,audioFile);await loadGame(S.activeGame);
   if(player&&live&&team){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{}}
