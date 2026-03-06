@@ -630,12 +630,13 @@ async function doSearch(){const p=new URLSearchParams(),q=$('archSearch').value.
   try{const res=await api('/archive?'+p.toString());const c=$('archResults');if(!res.length){c.innerHTML='<div class="empty-state">No matching events.</div>';return;}
     c.innerHTML=res.map(r=>{r.callers=r.callers||[];r.hasAudio=!!r.has_audio;r.starred=!!r.starred;const cat=ec(r.type);
       return'<div class="archive-item'+(r.starred?' starred':'')+'">'+(r.minute!=null?'<span class="event-minute">'+r.minute+"'</span>":'')+
-      '<span class="event-type-badge '+cat+'">'+en(r.type)+'</span><div style="flex:1"><div class="event-desc">'+(r.player||'Grab')+(r.team?' \u2014 '+tn(r.team):'')+'</div>'+
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:4px"><span class="event-type-badge '+cat+'">'+en(r.type)+'</span><button class="copy-btn" data-a="adel" data-id="'+r.id+'" style="color:var(--error);font-size:8px;padding:2px 6px">Del</button></div>'+
+      '<div style="flex:1"><div class="event-desc">'+(r.player||'Grab')+(r.team?' \u2014 '+tn(r.team):'')+'</div>'+
       (r.transcript?'<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:2px;font-style:italic">'+((r.transcript.length>60)?r.transcript.substring(0,60)+'...':r.transcript)+'</div>':'')+
       '<div class="archive-game-info">'+tn(r.home_team)+' v '+tn(r.away_team)+' \xb7 '+rd(r.round)+'</div></div>'+
       (r.starred?'<span style="color:var(--warning)">\u2605</span>':'')+(r.hasAudio?'<button class="play-btn" data-a="aplay" data-id="'+r.id+'" title="Play audio">\u25B6</button>':'')+
-      '<button class="copy-btn" data-a="ac" data-t="'+(r.player||'Grab').replace(/"/g,'&quot;')+'">Copy</button><button class="copy-btn" data-a="adel" data-id="'+r.id+'" style="color:var(--error)">Del</button></div>';}).join('');
-    c.querySelectorAll('[data-a="ac"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.t).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
+      (r.hasAudio?'<button class="copy-btn" data-a="adl" data-id="'+r.id+'">Download</button>':'')+'</div>';}).join('');
+    c.querySelectorAll('[data-a="adl"]').forEach(b=>{b.addEventListener('click',async()=>{b.textContent='...';try{const resp=await fetch(API+'/events/'+b.dataset.id+'/audio');if(!resp.ok)throw new Error();const blob=await resp.blob();const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='event_'+b.dataset.id+'.mp3';a.click();setTimeout(()=>URL.revokeObjectURL(u),200);b.textContent='Download';}catch{b.textContent='Download';}});});
     c.querySelectorAll('[data-a="adel"]').forEach(b=>{b.addEventListener('click',async()=>{if(!await mtConfirm('Delete this event permanently?',true))return;try{await apiDel('/events/'+b.dataset.id);doSearch();}catch(e){mtAlert(e.message);}});});
     c.querySelectorAll('[data-a="aplay"]').forEach(b=>{b.addEventListener('click',()=>playAudio(b.dataset.id,b));});
   }catch(e){$('archResults').innerHTML='<div class="empty-state">Error: '+e.message+'</div>';}}
