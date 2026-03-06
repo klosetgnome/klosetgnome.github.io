@@ -116,6 +116,13 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 .star-btn{font-size:12px;padding:2px 6px;line-height:1}.star-btn:hover{border-color:var(--warning);color:var(--warning)}
 .star-btn.starred{border-color:var(--warning);color:var(--warning);background:var(--warning-glow)}
 .audio-drop{border:1px dashed var(--border);border-radius:var(--radius);padding:10px 14px;text-align:center;cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;transition:all 0.2s}
+.audio-drop-lg{padding:32px 20px;border-width:2px;border-color:var(--accent);border-style:dashed;background:color-mix(in srgb,var(--accent) 3%,transparent);display:flex;flex-direction:column;align-items:center;gap:10px}
+.audio-drop-lg:hover{background:color-mix(in srgb,var(--accent) 8%,transparent);border-color:var(--accent)}
+.audio-drop-lg.dragover{background:color-mix(in srgb,var(--accent) 12%,transparent);border-color:var(--accent);border-style:solid}
+.audio-drop-lg.has-audio{border-color:var(--success);background:color-mix(in srgb,var(--success) 5%,transparent)}
+.audio-drop-icon{width:40px;height:40px;color:var(--accent);opacity:0.6}.audio-drop-icon svg{width:100%;height:100%}
+.audio-drop-text{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-primary)}
+.audio-drop-hint{font-family:var(--mono);font-size:9px;letter-spacing:0.5px;color:var(--text-muted);text-transform:none}
 .audio-drop:hover,.audio-drop.dragover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 .audio-drop.has-audio{border-style:solid;border-color:var(--success);color:var(--success);background:var(--success-glow)}
 .mc-list{display:flex;flex-direction:column;gap:6px}
@@ -186,9 +193,10 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     <div class="phase-bar"><button class="phase-btn active" data-phase="pre">Pre-game</button><button class="phase-btn" data-phase="live">Live</button><button class="phase-btn" data-phase="post">Post-game</button></div>
     <div class="card"><div class="card-header"><span class="card-label">Log Event</span><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>GAME MINUTE</span></div></div><div class="card-body">
       <div class="form-row"><div class="form-group"><span class="form-label">Event Type</span><select class="form-select" id="eventType"></select></div><div class="form-group"><span class="form-label">Team</span><select class="form-select" id="eventTeam"></select></div></div>
-      <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s)</span><div style="display:flex;flex-wrap:wrap;gap:6px;min-height:32px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius)" id="callerChips"></div><input type="text" class="form-input" id="callerInput" placeholder="Type caller name..." list="callerSuggest" style="margin-top:6px"><datalist id="callerSuggest"></datalist></div></div>
-      <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><span class="form-label">Comment (or drop audio to auto-generate)</span><div style="display:flex;gap:6px;align-items:center"><input type="text" class="form-input" id="eventComment" placeholder="e.g. Great call, Under pressure..." style="flex:1"><button class="regen-btn" id="btnRegenComment" title="Regenerate comment from audio transcript" disabled>&#8635;</button></div></div></div>
-      <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><div class="audio-drop" id="eventAudioDrop">Drop commentary audio here or click to browse<input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div><div class="form-group" style="align-self:flex-end"><button class="btn btn-success" id="btnLogEvent">Log Event</button></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s)</span><input type="text" class="form-input" id="callerInput" placeholder="Type caller name..." list="callerSuggest" style="margin-bottom:6px"><datalist id="callerSuggest"></datalist><div style="display:flex;flex-wrap:wrap;gap:6px;min-height:24px;padding:4px 8px" id="callerChips"></div></div></div>
+      <input type="hidden" id="eventComment" value="">
+      <div class="form-row" style="margin-top:16px"><div class="form-group" style="flex:2"><div class="audio-drop audio-drop-lg" id="eventAudioDrop"><div class="audio-drop-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div><div class="audio-drop-text">Drop commentary audio here or click to browse</div><div class="audio-drop-hint">Event logs automatically when audio is dropped</div><input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div></div>
+      <button class="btn btn-success" id="btnLogEvent" style="display:none">Log Event</button>
     </div></div>
     <div class="card" id="fnCard" style="display:none"><div class="card-header"><span class="card-label">Generated Filename</span></div><div class="card-body"><div class="event-filename"><span class="event-filename-text" id="fnPreview"></span><button class="copy-btn" id="btnCopyFn">Copy</button></div></div></div>
     <div class="card"><div class="card-header"><span class="card-label">Event Timeline</span><span class="card-label" id="evCount" style="color:var(--accent)">0</span></div><div class="card-body"><div class="event-list" id="evList"><div class="empty-state">No events logged yet.</div></div></div></div>
@@ -465,30 +473,42 @@ function editEv(eid){const g=gg();if(!g)return;const ev=(g.events||[]).find(e=>e
   if($('eR_'+eid))$('eR_'+eid).addEventListener('click',async()=>{if(!ev.transcript){mtAlert('No transcript yet.');return;}$('eR_'+eid).classList.add('spinning');await regenCmt(eid);$('eR_'+eid).classList.remove('spinning');});}
 
 function updateFP(){const g=gg();if(!g){$('fnCard').style.display='none';return;}const p=$('eventPlayer').value.trim();if(!p){$('fnCard').style.display='none';return;}
-  const m=S.activePhase==='live'?calcM(g.kickoff):null;const mock={id:'_',type:$('eventType').value,minute:m,team:$('eventTeam').value||null,player:p,callers:selectedCallers,comment:$('eventComment').value.trim(),phase:S.activePhase};
+  const m=S.activePhase==='live'?calcM(g.kickoff):null;const mock={id:'_',type:$('eventType').value,minute:m,team:$('eventTeam').value||null,player:p,callers:selectedCallers,comment:'',phase:S.activePhase};
   $('fnPreview').textContent=gfn(mock,g,false);$('fnCard').style.display='';
   $('btnCopyFn').onclick=()=>{navigator.clipboard.writeText($('fnPreview').textContent).then(()=>{$('btnCopyFn').textContent='Copied';$('btnCopyFn').classList.add('copied');setTimeout(()=>{$('btnCopyFn').textContent='Copy';$('btnCopyFn').classList.remove('copied');},2000);});};}
-['eventType','eventTeam','eventPlayer','eventComment'].forEach(id=>{$(id).addEventListener('input',updateFP);$(id).addEventListener('change',updateFP);});
+['eventType','eventTeam','eventPlayer'].forEach(id=>{$(id).addEventListener('input',updateFP);$(id).addEventListener('change',updateFP);});
 
 // Audio drop
 const aD=$('eventAudioDrop'),aI=$('eventAudioFile');let pA=null;
 aD.addEventListener('click',()=>aI.click());aD.addEventListener('dragover',e=>{e.preventDefault();aD.classList.add('dragover');});aD.addEventListener('dragleave',()=>aD.classList.remove('dragover'));
 aD.addEventListener('drop',e=>{e.preventDefault();aD.classList.remove('dragover');if(e.dataTransfer.files[0])atA(e.dataTransfer.files[0]);});aI.addEventListener('change',()=>{if(aI.files[0])atA(aI.files[0]);aI.value='';});
-function atA(f){pA=f;aD.textContent='\ud83c\udf99 '+f.name;aD.classList.add('has-audio');}
+async function atA(f){
+  pA=f;
+  // Show file name briefly
+  const icon=aD.querySelector('.audio-drop-icon');const txt=aD.querySelector('.audio-drop-text');const hint=aD.querySelector('.audio-drop-hint');
+  if(txt)txt.textContent='\ud83c\udf99 '+f.name;if(hint)hint.textContent='Logging event...';if(icon)icon.style.display='none';
+  aD.classList.add('has-audio');
+  // Auto-log
+  await doLogEvent();
+  // Reset drop zone
+  if(txt)txt.textContent='Drop commentary audio here or click to browse';if(hint)hint.textContent='Event logs automatically when audio is dropped';if(icon)icon.style.display='';
+  aD.classList.remove('has-audio');
+}
 
 // Log event
-$('btnLogEvent').addEventListener('click',async()=>{const g=gg();if(!g)return mtAlert('No active game.');const type=$('eventType').value,live=S.activePhase==='live';
+async function doLogEvent(){
+  const g=gg();if(!g)return mtAlert('No active game.');const type=$('eventType').value,live=S.activePhase==='live';
   let player=$('eventPlayer').value.trim();if(player)player=titleCase(player);
-  const isGrab=type==='grab';const minute=live?calcM(g.kickoff):null;if(!isGrab&&!player&&live)return mtAlert('Enter a player name.');const audioFile=pA;
-  const team=$('eventTeam').value||null;
-  // Auto-save player to DB if new and in live phase with a team
+  const isGrab=type==='grab';const minute=live?calcM(g.kickoff):null;
+  if(!isGrab&&!player&&live)return mtAlert('Enter a player name before dropping audio.');
+  const audioFile=pA;const team=$('eventTeam').value||null;
   if(player&&live&&team){try{await apiPost('/players',{name:player,team:team});}catch{}}
-  try{const res=await apiPost('/games/'+S.activeGame+'/events',{type,phase:S.activePhase,minute,team,player:player||null,callers:live?[...selectedCallers]:[],comment:$('eventComment').value.trim(),hasAudio:!!audioFile,audioFileName:audioFile?audioFile.name:null});
-  $('eventPlayer').value='';$('eventComment').value='';pA=null;aD.textContent='Drop commentary audio here or click to browse';aD.classList.remove('has-audio');$('fnCard').style.display='none';
+  try{const res=await apiPost('/games/'+S.activeGame+'/events',{type,phase:S.activePhase,minute,team,player:player||null,callers:live?[...selectedCallers]:[],comment:'',hasAudio:!!audioFile,audioFileName:audioFile?audioFile.name:null});
+  $('eventPlayer').value='';$('eventComment').value='';pA=null;$('fnCard').style.display='none';
   if(audioFile)enqueueAudio(S.activeGame,res.id,audioFile);await loadGame(S.activeGame);
-  // Refresh player suggestions
   if(player&&live&&team){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{}}
-  renderEL();updateSug();}catch(e){mtAlert('Failed: '+e.message);}});
+  renderEL();updateSug();}catch(e){mtAlert('Failed: '+e.message);}}
+$('btnLogEvent').addEventListener('click',doLogEvent);
 $('btnEndSession').addEventListener('click',()=>{stopClk();S.activeGame=null;S.currentGame=null;sw('dashboard');renderD();});
 
 // Export summary
