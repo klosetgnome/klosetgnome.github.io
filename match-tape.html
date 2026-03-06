@@ -14,9 +14,6 @@
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* ══════════════════════════════════════
-   BASE TOKENS (from astyle.css)
-   ══════════════════════════════════════ */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
   --bg: #efeae3; --surface: #f5f2ec; --surface-raised: #f8f6f1;
@@ -30,7 +27,6 @@
   --serif: 'Source Serif 4', Georgia, serif;
   --mono: 'DM Mono', 'Courier New', monospace;
   --radius: 8px; --radius-lg: 12px;
-  --in-color: #4a8c3f; --out-color: #b5392e;
 }
 [data-theme="dark"] {
   --bg: #1b1816; --surface: #272421; --surface-raised: #302c28;
@@ -42,313 +38,112 @@
   --error: #d4564a; --error-glow: rgba(212, 86, 74, 0.12);
   --shadow: rgba(0, 0, 0, 0.22); --shadow-sm: rgba(0, 0, 0, 0.15);
 }
-body {
-  font-family: var(--serif); background: var(--bg); color: var(--text-primary);
-  min-height: 100vh; display: flex; flex-direction: column;
-  transition: background 0.3s ease, color 0.3s ease; overflow-x: hidden;
-}
-
-/* ── Header ── */
-.site-header {
-  padding: 14px 40px; border-bottom: 2px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-  position: sticky; top: 0; z-index: 50; background: var(--bg);
-  transition: border-color 0.3s ease;
-}
-.site-header h1 {
-  font-family: var(--mono); font-size: 13px; font-weight: 400;
-  letter-spacing: 3px; text-transform: uppercase; flex-shrink: 0;
-}
+body { font-family: 'Source Serif 4', Georgia, serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; transition: background 0.3s ease, color 0.3s ease; overflow-x: hidden; }
+.site-header { padding: 14px 40px; border-bottom: 2px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; background: var(--bg); transition: border-color 0.3s ease; }
+.site-header h1 { font-family: var(--mono); font-size: 13px; font-weight: 400; letter-spacing: 3px; text-transform: uppercase; flex-shrink: 0; }
 .site-header h1 span { color: var(--accent); }
 .site-header h1 a { color: inherit; text-decoration: none; }
 .header-actions { display: flex; align-items: center; gap: 8px; }
-
-/* ── Theme Toggle ── */
-.theme-toggle {
-  background: none; border: 1px solid var(--border); border-radius: 10px;
-  padding: 8px; cursor: pointer; color: var(--text-secondary);
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.25s ease; width: 38px; height: 38px; flex-shrink: 0;
-}
+.theme-toggle { background: none; border: 1px solid var(--border); border-radius: 10px; padding: 8px; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; transition: all 0.25s ease; width: 38px; height: 38px; flex-shrink: 0; }
 .theme-toggle:hover { color: var(--accent); border-color: var(--accent); }
 .theme-toggle svg { width: 18px; height: 18px; stroke-width: 1.5; }
 .theme-toggle .icon-sun, .theme-toggle .icon-moon { display: none; }
 .theme-toggle .icon-moon { display: block; }
 [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
 [data-theme="dark"] .theme-toggle .icon-sun { display: block; }
-
-/* ── Navigation ── */
-.nav-tabs {
-  display: flex; gap: 2px; padding: 0 40px;
-  border-bottom: 1px solid var(--border); background: var(--bg);
-}
-.nav-tab {
-  font-family: var(--mono); font-size: 11px; font-weight: 500;
-  letter-spacing: 2px; text-transform: uppercase;
-  padding: 14px 20px; cursor: pointer; border: none; background: none;
-  color: var(--text-muted); position: relative;
-  transition: color 0.2s ease;
-}
+.nav-tabs { display: flex; gap: 2px; padding: 0 40px; border-bottom: 1px solid var(--border); background: var(--bg); }
+.nav-tab { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; padding: 14px 20px; cursor: pointer; border: none; background: none; color: var(--text-muted); position: relative; transition: color 0.2s ease; }
 .nav-tab:hover { color: var(--text-secondary); }
 .nav-tab.active { color: var(--accent); }
-.nav-tab.active::after {
-  content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
-  height: 2px; background: var(--accent);
-}
+.nav-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--accent); }
 .nav-tab.admin-tab { margin-left: auto; }
-
-/* ── Container ── */
-.container {
-  max-width: 900px; margin: 0 auto; padding: 24px 24px 80px;
-  flex: 1; width: 100%; display: flex; flex-direction: column; gap: 20px;
-}
-
-/* ── Footer ── */
-footer {
-  padding: 28px 40px; border-top: 1px solid var(--border); text-align: center;
-  font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px; color: var(--text-secondary);
-}
+.container { max-width: 900px; margin: 0 auto; padding: 24px 24px 80px; flex: 1; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+footer { padding: 28px 40px; border-top: 1px solid var(--border); text-align: center; font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px; color: var(--text-secondary); }
 footer a { text-decoration: none; color: inherit; transition: color 0.2s; }
 footer a:hover { color: var(--accent); }
-
-/* ── View switching ── */
 .view { display: none; flex-direction: column; gap: 20px; animation: fadeInUp 0.4s ease; }
 .view.active { display: flex; }
-
-/* ── Cards ── */
-.card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); overflow: hidden;
-  transition: background 0.3s, border-color 0.3s;
-}
-.card-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px; border-bottom: 1px solid var(--border);
-}
-.card-label {
-  font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
-  text-transform: uppercase; color: var(--text-secondary);
-}
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; transition: background 0.3s, border-color 0.3s; }
+.card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.card-label { font-family: var(--mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-secondary); }
 .card-body { padding: 16px 20px; }
 .card-body + .card-body { border-top: 1px solid var(--border); }
-
-/* ── Form elements ── */
 .form-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
 .form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
-.form-label {
-  font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
-  text-transform: uppercase; color: var(--text-muted);
-}
-.form-select, .form-input {
-  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 10px 14px; color: var(--text-primary); font-family: var(--mono); font-size: 13px;
-  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
-  width: 100%;
-}
-.form-select { cursor: pointer; appearance: none; -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a756b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
-}
+.form-label { font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); }
+.form-select, .form-input { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; color: var(--text-primary); font-family: var(--mono); font-size: 13px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; width: 100%; }
+.form-select { cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a756b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
 .form-select option { background: var(--surface); color: var(--text-primary); }
 .form-input:focus, .form-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 .form-input::placeholder { color: var(--text-muted); }
-textarea.form-input { resize: vertical; min-height: 60px; line-height: 1.6; }
-
-/* ── Buttons ── */
-.btn {
-  font-family: var(--mono); font-size: 10px; font-weight: 500;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  border: none; border-radius: var(--radius); padding: 10px 18px;
-  cursor: pointer; transition: all 0.2s; white-space: nowrap; display: inline-flex;
-  align-items: center; gap: 6px;
-}
+input[type="datetime-local"] { color-scheme: light; }
+[data-theme="dark"] input[type="datetime-local"] { color-scheme: dark; }
+.btn { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; border: none; border-radius: var(--radius); padding: 10px 18px; cursor: pointer; transition: all 0.2s; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: #d4623e; transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent-glow); }
-.btn-secondary {
-  background: none; border: 1px solid var(--border); color: var(--text-secondary);
-}
+.btn-secondary { background: none; border: 1px solid var(--border); color: var(--text-secondary); }
 .btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 .btn-success { background: var(--success); color: #fff; }
 .btn-success:hover { filter: brightness(1.1); transform: translateY(-1px); }
-.btn-danger { background: none; border: 1px solid var(--error); color: var(--error); }
-.btn-danger:hover { background: var(--error-glow); }
 .btn-sm { font-size: 9px; padding: 7px 12px; letter-spacing: 1px; }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
-
-/* ── Info Hero ── */
-.info-hero {
-  display: flex; align-items: center; gap: 24px; padding: 28px 32px;
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
-  animation: fadeInUp 0.5s ease 0.1s both;
-}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+.info-hero { display: flex; align-items: center; gap: 24px; padding: 28px 32px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); animation: fadeInUp 0.5s ease 0.1s both; }
 .info-hero-graphic { flex-shrink: 0; width: 80px; height: 80px; color: var(--accent); opacity: 0.7; }
 .info-hero-graphic svg { width: 100%; height: 100%; }
-.info-hero-title {
-  font-family: var(--mono); font-size: 13px; font-weight: 600;
-  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px;
-}
-.info-hero-desc {
-  font-family: var(--mono); font-size: 11px; line-height: 1.8;
-  color: var(--text-secondary); letter-spacing: 0.3px;
-}
+.info-hero-title { font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+.info-hero-desc { font-family: var(--mono); font-size: 11px; line-height: 1.8; color: var(--text-secondary); letter-spacing: 0.3px; }
 .info-hero-desc .hl { color: var(--accent); font-weight: 500; }
-
-/* ══════════════════════════════════════
-   DASHBOARD VIEW
-   ══════════════════════════════════════ */
 .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-.game-tile {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
-  padding: 18px 20px; cursor: pointer; transition: all 0.2s;
-  display: flex; flex-direction: column; gap: 10px;
-}
+.game-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; gap: 10px; }
 .game-tile:hover { border-color: var(--accent); background: var(--accent-light); transform: translateY(-2px); box-shadow: 0 4px 16px var(--shadow); }
-.game-tile-teams {
-  font-family: var(--mono); font-size: 13px; font-weight: 500;
-  color: var(--text-primary); letter-spacing: 0.5px;
-}
-.game-tile-meta {
-  font-family: var(--mono); font-size: 10px; color: var(--text-muted);
-  letter-spacing: 0.5px;
-}
+.game-tile-teams { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.game-tile-meta { font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
 .game-tile-vs { color: var(--accent); font-weight: 500; }
-
-/* ══════════════════════════════════════
-   GAME SESSION VIEW
-   ══════════════════════════════════════ */
-.game-banner {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
-  padding: 20px 24px; display: flex; align-items: center; gap: 20px;
-}
-.game-banner-teams {
-  font-family: var(--mono); font-size: 15px; font-weight: 600;
-  letter-spacing: 1px; flex: 1;
-}
+.game-banner { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 24px; display: flex; align-items: center; gap: 20px; }
+.game-banner-teams { font-family: var(--mono); font-size: 15px; font-weight: 600; letter-spacing: 1px; flex: 1; }
 .game-banner-teams .vs { color: var(--accent); margin: 0 8px; font-weight: 400; }
-.game-banner-meta {
-  font-family: var(--mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px;
-  text-align: right;
-}
-.game-banner-close {
-  background: none; border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 6px 12px; cursor: pointer; font-family: var(--mono); font-size: 10px;
-  letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted);
-  transition: all 0.2s;
-}
+.game-banner-meta { font-family: var(--mono); font-size: 11px; color: var(--text-muted); text-align: right; }
+.game-banner-close { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 12px; cursor: pointer; font-family: var(--mono); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); transition: all 0.2s; }
 .game-banner-close:hover { border-color: var(--error); color: var(--error); background: var(--error-glow); }
-
-/* Event log */
 .event-list { display: flex; flex-direction: column; gap: 8px; }
-.event-item {
-  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
-  animation: fadeInUp 0.3s ease;
-}
+.event-item { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; animation: fadeInUp 0.3s ease; }
 .event-item-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.event-minute {
-  font-family: var(--mono); font-size: 11px; font-weight: 600;
-  color: var(--accent); min-width: 40px;
-}
-.event-type-badge {
-  font-family: var(--mono); font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
-  padding: 3px 8px; border-radius: 4px; font-weight: 500;
-}
+.event-minute { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--accent); min-width: 40px; }
+.event-type-badge { font-family: var(--mono); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; font-weight: 500; }
 .event-type-badge.try { background: var(--success-glow); color: var(--success); border: 1px solid rgba(74,140,63,0.3); }
 .event-type-badge.scoring { background: var(--accent-light); color: var(--accent); border: 1px solid rgba(192,81,45,0.3); }
 .event-type-badge.moment { background: var(--warning-glow); color: var(--warning); border: 1px solid rgba(160,120,40,0.3); }
 .event-type-badge.discipline { background: var(--error-glow); color: var(--error); border: 1px solid rgba(181,57,46,0.3); }
-.event-desc {
-  font-family: var(--mono); font-size: 12px; color: var(--text-primary);
-  letter-spacing: 0.3px; flex: 1;
-}
-.event-filename {
-  font-family: var(--mono); font-size: 10px; color: var(--text-muted);
-  letter-spacing: 0.3px; word-break: break-all; padding: 8px 10px;
-  background: var(--surface); border-radius: 4px; border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-}
+.event-desc { font-family: var(--mono); font-size: 12px; color: var(--text-primary); flex: 1; }
+.event-filename { font-family: var(--mono); font-size: 10px; color: var(--text-muted); word-break: break-all; padding: 8px 10px; background: var(--surface); border-radius: 4px; border: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
 .event-filename-text { flex: 1; user-select: all; }
-.copy-btn {
-  font-family: var(--mono); font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
-  background: none; border: 1px solid var(--border); border-radius: 4px;
-  padding: 3px 8px; cursor: pointer; color: var(--text-muted);
-  transition: all 0.2s; flex-shrink: 0;
-}
-.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+.event-actions { display: flex; gap: 4px; flex-shrink: 0; margin-left: auto; }
+.copy-btn, .edit-btn { font-family: var(--mono); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; background: none; border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; cursor: pointer; color: var(--text-muted); transition: all 0.2s; flex-shrink: 0; }
+.copy-btn:hover, .edit-btn:hover { border-color: var(--accent); color: var(--accent); }
 .copy-btn.copied { border-color: var(--success); color: var(--success); }
-
-/* Audio drop zone */
-.audio-drop {
-  border: 1px dashed var(--border); border-radius: var(--radius);
-  padding: 10px 14px; text-align: center; cursor: pointer;
-  font-family: var(--mono); font-size: 10px; color: var(--text-muted);
-  letter-spacing: 1px; text-transform: uppercase;
-  transition: all 0.2s;
-}
-.audio-drop:hover, .audio-drop.dragover {
-  border-color: var(--accent); color: var(--accent); background: var(--accent-light);
-}
-.audio-drop.has-audio {
-  border-style: solid; border-color: var(--success);
-  color: var(--success); background: var(--success-glow);
-}
-
-/* ══════════════════════════════════════
-   MISSION CONTROL
-   ══════════════════════════════════════ */
+.audio-drop { border: 1px dashed var(--border); border-radius: var(--radius); padding: 10px 14px; text-align: center; cursor: pointer; font-family: var(--mono); font-size: 10px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; transition: all 0.2s; }
+.audio-drop:hover, .audio-drop.dragover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.audio-drop.has-audio { border-style: solid; border-color: var(--success); color: var(--success); background: var(--success-glow); }
 .mc-list { display: flex; flex-direction: column; gap: 6px; }
-.mc-item {
-  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
-  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
-  font-family: var(--mono); font-size: 12px; color: var(--text-primary);
-}
+.mc-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--mono); font-size: 12px; color: var(--text-primary); }
 .mc-item-name { flex: 1; }
-.mc-item-meta { font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
+.mc-item-meta { font-size: 10px; color: var(--text-muted); }
 .mc-item-actions { display: flex; gap: 6px; }
-.mc-item-btn {
-  background: none; border: 1px solid var(--border); border-radius: 4px;
-  padding: 4px 8px; cursor: pointer; font-family: var(--mono); font-size: 9px;
-  letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted);
-  transition: all 0.2s;
-}
+.mc-item-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; cursor: pointer; font-family: var(--mono); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); transition: all 0.2s; }
 .mc-item-btn:hover { border-color: var(--accent); color: var(--accent); }
 .mc-item-btn.delete:hover { border-color: var(--error); color: var(--error); }
-.mc-add-row { display: flex; gap: 8px; margin-top: 10px; }
-
-/* ══════════════════════════════════════
-   ARCHIVE VIEW
-   ══════════════════════════════════════ */
-.search-bar {
-  display: flex; gap: 8px; padding: 16px 20px;
-}
+.mc-add-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.mc-edit-row { display: flex; gap: 6px; padding: 10px 14px; align-items: center; flex-wrap: wrap; background: var(--accent-light); border: 1px solid var(--accent); border-radius: var(--radius); animation: fadeIn 0.2s ease; }
+.mc-edit-row .form-input, .mc-edit-row .form-select { padding: 6px 10px; font-size: 12px; flex: 1; min-width: 80px; }
+.search-bar { display: flex; gap: 8px; padding: 16px 20px; }
 .search-bar .form-input { flex: 1; }
 .archive-results { display: flex; flex-direction: column; gap: 6px; padding: 0 20px 20px; }
-.archive-item {
-  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
-  transition: border-color 0.2s;
-}
+.archive-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); transition: border-color 0.2s; }
 .archive-item:hover { border-color: var(--accent); }
-.archive-game-info {
-  font-family: var(--mono); font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px;
-}
-
-/* ── Empty states ── */
-.empty-state {
-  text-align: center; padding: 40px 20px;
-  font-family: var(--mono); font-size: 12px; color: var(--text-muted);
-  letter-spacing: 0.5px; line-height: 1.8;
-}
-
-/* ── Animations ── */
+.archive-game-info { font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
+.empty-state { text-align: center; padding: 40px 20px; font-family: var(--mono); font-size: 12px; color: var(--text-muted); line-height: 1.8; }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-
-/* ── Ordinal helper ── */
-.ordinal { font-variant-numeric: ordinal; }
-
-/* ── Responsive ── */
 @media (max-width: 600px) {
   .site-header { padding: 12px 16px; }
   .nav-tabs { padding: 0 16px; overflow-x: auto; }
@@ -356,16 +151,15 @@ textarea.form-input { resize: vertical; min-height: 60px; line-height: 1.6; }
   .container { padding: 16px 16px 60px; }
   .info-hero { flex-direction: column; text-align: center; padding: 24px 20px; gap: 16px; }
   .game-banner { flex-direction: column; text-align: center; }
-  .game-banner-meta { text-align: center; }
   .form-row { flex-direction: column; }
   .form-group { min-width: 100%; }
+  .mc-add-row, .mc-edit-row { flex-direction: column; }
 }
 </style>
 </head>
 <body>
-
 <header class="site-header">
-  <h1><a href="#"><span>MATCH</span> TAPE</a></h1>
+  <h1><a href="index.html"><span>MATCH</span> TAPE</a></h1>
   <div class="header-actions">
     <button class="theme-toggle" aria-label="Toggle dark mode">
       <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
@@ -373,936 +167,263 @@ textarea.form-input { resize: vertical; min-height: 60px; line-height: 1.6; }
     </button>
   </div>
 </header>
-
-<nav class="nav-tabs" id="navTabs">
-  <button class="nav-tab active" data-view="dashboard">Dashboard</button>
-  <button class="nav-tab" data-view="session">Game Session</button>
-  <button class="nav-tab" data-view="archive">Archive</button>
-  <button class="nav-tab admin-tab" data-view="mission-control">Mission Control</button>
-</nav>
-
+<nav class="nav-tabs"><button class="nav-tab active" data-view="dashboard">Dashboard</button><button class="nav-tab" data-view="session">Game Session</button><button class="nav-tab" data-view="archive">Archive</button><button class="nav-tab admin-tab" data-view="mission-control">Mission Control</button></nav>
 <div class="container">
-
-  <!-- ═══════════════════════════════════════
-       DASHBOARD VIEW
-       ═══════════════════════════════════════ -->
   <div class="view active" id="view-dashboard">
     <div class="info-hero">
-      <div class="info-hero-graphic">
-        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="6" y="14" width="48" height="32" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
-          <circle cx="30" cy="30" r="8" stroke="currentColor" stroke-width="1.5" fill="none"/>
-          <path d="M27 27l8 6-8 6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
-          <path d="M60 20v18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <circle cx="60" cy="22" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
-          <path d="M12 56h8M24 52h8M36 56h8M48 52h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <line x1="8" y1="64" x2="58" y2="64" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <path d="M60 42c-2 0-4 2-4 4s2 4 4 4 4-2 4-4-2-4-4-4z" stroke="currentColor" stroke-width="1.5" fill="none"/>
-          <path d="M64 50l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div>
-        <div class="info-hero-title">Match Tape</div>
-        <div class="info-hero-desc">
-          NRL highlights production tool. Log <span class="hl">tries</span>, <span class="hl">scoring events</span>, and <span class="hl">key moments</span> during live games. Drop commentary audio to auto-generate tagged filenames with <span class="hl">AI producer comments</span>. Search and find any clip from any game, any season.
-        </div>
-      </div>
+      <div class="info-hero-graphic"><svg viewBox="0 0 80 80" fill="none"><rect x="6" y="14" width="48" height="32" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="30" cy="30" r="8" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M27 27l8 6-8 6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/><path d="M60 20v18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="60" cy="22" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M12 56h8M24 52h8M36 56h8M48 52h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="64" x2="58" y2="64" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <div><div class="info-hero-title">Match Tape</div><div class="info-hero-desc">NRL highlights production tool. Log <span class="hl">tries</span>, <span class="hl">scoring events</span>, and <span class="hl">key moments</span> during live games. Drop commentary audio to auto-generate tagged filenames with <span class="hl">producer comments</span>. Search and find any clip from any game, any season.</div></div>
     </div>
-
-    <!-- New game form -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-label">Start a Game Session</span>
-      </div>
-      <div class="card-body">
-        <div class="form-row">
-          <div class="form-group">
-            <span class="form-label">Home Team</span>
-            <select class="form-select" id="newGameHome"></select>
-          </div>
-          <div class="form-group">
-            <span class="form-label">Away Team</span>
-            <select class="form-select" id="newGameAway"></select>
-          </div>
-        </div>
-        <div class="form-row" style="margin-top:12px;">
-          <div class="form-group">
-            <span class="form-label">Round</span>
-            <input type="text" class="form-input" id="newGameRound" placeholder="e.g. Round 5">
-          </div>
-          <div class="form-group">
-            <span class="form-label">Venue</span>
-            <input type="text" class="form-input" id="newGameVenue" placeholder="e.g. Accor Stadium">
-          </div>
-          <div class="form-group">
-            <span class="form-label">Kickoff</span>
-            <input type="datetime-local" class="form-input" id="newGameKickoff">
-          </div>
-        </div>
-        <div class="form-row" style="margin-top:12px;">
-          <div class="form-group" style="flex:2;">
-            <span class="form-label">Call Team</span>
-            <select class="form-select" id="newGameCallTeam" multiple style="min-height:60px;"></select>
-          </div>
-          <div class="form-group" style="align-self:flex-end;">
-            <button class="btn btn-primary" id="btnStartGame">Start Game Session</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Recent games -->
-    <div class="card" id="recentGamesCard">
-      <div class="card-header">
-        <span class="card-label">Recent Games</span>
-      </div>
-      <div class="card-body">
-        <div class="game-grid" id="recentGamesGrid"></div>
-      </div>
-    </div>
+    <div class="card"><div class="card-header"><span class="card-label">Start a Game Session</span></div><div class="card-body">
+      <div class="form-row"><div class="form-group"><span class="form-label">Home Team</span><select class="form-select" id="newGameHome"></select></div><div class="form-group"><span class="form-label">Away Team</span><select class="form-select" id="newGameAway"></select></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group" style="max-width:120px"><span class="form-label">Round</span><input type="number" class="form-input" id="newGameRound" placeholder="5" min="1" max="30"></div><div class="form-group"><span class="form-label">Venue</span><input type="text" class="form-input" id="newGameVenue" placeholder="e.g. Accor Stadium"></div><div class="form-group"><span class="form-label">Kickoff</span><input type="datetime-local" class="form-input" id="newGameKickoff"></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><span class="form-label">Call Team</span><select class="form-select" id="newGameCallTeam" multiple style="min-height:60px"></select></div><div class="form-group" style="align-self:flex-end"><button class="btn btn-primary" id="btnStartGame">Start Game Session</button></div></div>
+    </div></div>
+    <div class="card"><div class="card-header"><span class="card-label">Recent Games</span></div><div class="card-body"><div class="game-grid" id="recentGamesGrid"></div></div></div>
   </div>
-
-  <!-- ═══════════════════════════════════════
-       GAME SESSION VIEW
-       ═══════════════════════════════════════ -->
   <div class="view" id="view-session">
-    <div class="game-banner" id="gameBanner">
-      <div class="game-banner-teams" id="gameBannerTeams"></div>
-      <div class="game-banner-meta" id="gameBannerMeta"></div>
-      <button class="game-banner-close" id="btnEndSession">End Session</button>
-    </div>
-
-    <!-- Add event form -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-label">Log Event</span>
-      </div>
-      <div class="card-body">
-        <div class="form-row">
-          <div class="form-group">
-            <span class="form-label">Event Type</span>
-            <select class="form-select" id="eventType"></select>
-          </div>
-          <div class="form-group">
-            <span class="form-label">Minute</span>
-            <input type="number" class="form-input" id="eventMinute" placeholder="13" min="0" max="120" style="max-width:80px;">
-          </div>
-          <div class="form-group">
-            <span class="form-label">Team</span>
-            <select class="form-select" id="eventTeam"></select>
-          </div>
-        </div>
-        <div class="form-row" style="margin-top:12px;">
-          <div class="form-group">
-            <span class="form-label">Player</span>
-            <input type="text" class="form-input" id="eventPlayer" placeholder="Player name" list="playerSuggestions">
-            <datalist id="playerSuggestions"></datalist>
-          </div>
-          <div class="form-group">
-            <span class="form-label">Caller</span>
-            <select class="form-select" id="eventCaller"></select>
-          </div>
-        </div>
-        <div class="form-row" style="margin-top:12px;">
-          <div class="form-group" style="flex:2;">
-            <span class="form-label">Producer Comment (or drop audio to auto-generate)</span>
-            <input type="text" class="form-input" id="eventComment" placeholder="e.g. Great call, Under pressure...">
-          </div>
-        </div>
-        <div class="form-row" style="margin-top:12px;">
-          <div class="form-group" style="flex:2;">
-            <div class="audio-drop" id="eventAudioDrop">
-              Drop commentary audio here or click to browse
-              <input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none;">
-            </div>
-          </div>
-          <div class="form-group" style="align-self:flex-end;">
-            <button class="btn btn-success" id="btnLogEvent">Log Event</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Filename preview -->
-    <div class="card" id="filenamePreviewCard" style="display:none;">
-      <div class="card-header">
-        <span class="card-label">Generated Filename</span>
-      </div>
-      <div class="card-body">
-        <div class="event-filename">
-          <span class="event-filename-text" id="filenamePreview"></span>
-          <button class="copy-btn" id="btnCopyFilename">Copy</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Event timeline -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-label">Event Timeline</span>
-        <span class="card-label" id="eventCount" style="color:var(--accent);">0 events</span>
-      </div>
-      <div class="card-body">
-        <div class="event-list" id="eventList">
-          <div class="empty-state">No events logged yet. Start logging as the game unfolds.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Match summary export -->
-    <div style="display:flex; gap:10px; justify-content:flex-end;">
-      <button class="btn btn-secondary" id="btnExportSummary">Export Match Summary</button>
-    </div>
+    <div class="game-banner"><div class="game-banner-teams" id="gameBannerTeams"></div><div class="game-banner-meta" id="gameBannerMeta"></div><button class="game-banner-close" id="btnEndSession">End Session</button></div>
+    <div class="card"><div class="card-header"><span class="card-label">Log Event</span></div><div class="card-body">
+      <div class="form-row"><div class="form-group"><span class="form-label">Event Type</span><select class="form-select" id="eventType"></select></div><div class="form-group" style="max-width:100px"><span class="form-label">Minute</span><input type="number" class="form-input" id="eventMinute" placeholder="—" min="0" max="120"></div><div class="form-group"><span class="form-label">Team</span><select class="form-select" id="eventTeam"></select></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label">Player</span><input type="text" class="form-input" id="eventPlayer" placeholder="Player name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group"><span class="form-label">Caller</span><select class="form-select" id="eventCaller"></select></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><span class="form-label">Producer Comment (or drop audio to auto-generate)</span><input type="text" class="form-input" id="eventComment" placeholder="e.g. Great call, Under pressure..."></div></div>
+      <div class="form-row" style="margin-top:12px"><div class="form-group" style="flex:2"><div class="audio-drop" id="eventAudioDrop">Drop commentary audio here or click to browse<input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div><div class="form-group" style="align-self:flex-end"><button class="btn btn-success" id="btnLogEvent">Log Event</button></div></div>
+    </div></div>
+    <div class="card" id="filenamePreviewCard" style="display:none"><div class="card-header"><span class="card-label">Generated Filename</span></div><div class="card-body"><div class="event-filename"><span class="event-filename-text" id="filenamePreview"></span><button class="copy-btn" id="btnCopyFilename">Copy</button></div></div></div>
+    <div class="card"><div class="card-header"><span class="card-label">Event Timeline</span><span class="card-label" id="eventCount" style="color:var(--accent)">0 events</span></div><div class="card-body"><div class="event-list" id="eventList"><div class="empty-state">No events logged yet. Start logging as the game unfolds.</div></div></div></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-secondary" id="btnExportSummary">Export Match Summary</button></div>
   </div>
-
-  <!-- ═══════════════════════════════════════
-       ARCHIVE VIEW
-       ═══════════════════════════════════════ -->
   <div class="view" id="view-archive">
-    <div class="card">
-      <div class="card-header">
-        <span class="card-label">Search Archive</span>
-      </div>
-      <div class="search-bar">
-        <input type="text" class="form-input" id="archiveSearch" placeholder="Search by player, team, caller, comment...">
-        <button class="btn btn-primary" id="btnSearch">Search</button>
-      </div>
-      <div class="card-body" style="padding-top:0;">
-        <div class="form-row" style="gap:8px;">
-          <div class="form-group" style="min-width:100px;">
-            <span class="form-label">Season</span>
-            <select class="form-select" id="archiveSeason"><option value="">All</option><option value="2026">2026</option></select>
-          </div>
-          <div class="form-group" style="min-width:100px;">
-            <span class="form-label">Team</span>
-            <select class="form-select" id="archiveTeam"><option value="">All teams</option></select>
-          </div>
-          <div class="form-group" style="min-width:100px;">
-            <span class="form-label">Event Type</span>
-            <select class="form-select" id="archiveType"><option value="">All types</option></select>
-          </div>
-          <div class="form-group" style="min-width:100px;">
-            <span class="form-label">Caller</span>
-            <select class="form-select" id="archiveCaller"><option value="">All callers</option></select>
-          </div>
-        </div>
-      </div>
-      <div class="archive-results" id="archiveResults">
-        <div class="empty-state">Search for events across all games and seasons. Try a player name, team, or keyword.</div>
-      </div>
+    <div class="card"><div class="card-header"><span class="card-label">Search Archive</span></div>
+      <div class="search-bar"><input type="text" class="form-input" id="archiveSearch" placeholder="Search by player, team, caller, comment..."><button class="btn btn-primary" id="btnSearch">Search</button></div>
+      <div class="card-body" style="padding-top:0"><div class="form-row" style="gap:8px"><div class="form-group" style="min-width:100px"><span class="form-label">Season</span><select class="form-select" id="archiveSeason"><option value="">All</option><option value="2026">2026</option></select></div><div class="form-group" style="min-width:100px"><span class="form-label">Team</span><select class="form-select" id="archiveTeam"><option value="">All teams</option></select></div><div class="form-group" style="min-width:100px"><span class="form-label">Event Type</span><select class="form-select" id="archiveType"><option value="">All types</option></select></div><div class="form-group" style="min-width:100px"><span class="form-label">Caller</span><select class="form-select" id="archiveCaller"><option value="">All callers</option></select></div></div></div>
+      <div class="archive-results" id="archiveResults"><div class="empty-state">Search for events across all games and seasons.</div></div>
     </div>
   </div>
-
-  <!-- ═══════════════════════════════════════
-       MISSION CONTROL VIEW
-       ═══════════════════════════════════════ -->
   <div class="view" id="view-mission-control">
-    <div class="info-hero" style="animation-delay:0s;">
-      <div class="info-hero-graphic" style="width:50px;height:50px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
-      </div>
-      <div>
-        <div class="info-hero-title">Mission Control</div>
-        <div class="info-hero-desc">Manage call team talent, event types, and system settings. Changes here apply across all game sessions.</div>
-      </div>
-    </div>
-
-    <!-- Call Team Management -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-label">Call Team</span>
-      </div>
-      <div class="card-body">
-        <div class="mc-list" id="mcCallerList"></div>
-        <div class="mc-add-row">
-          <input type="text" class="form-input" id="mcCallerName" placeholder="Full name" style="flex:2;">
-          <input type="text" class="form-input" id="mcCallerNick" placeholder="Nickname" style="flex:1;">
-          <select class="form-select" id="mcCallerRole" style="flex:1;">
-            <option value="Play-by-play">Play-by-play</option>
-            <option value="Colour">Colour</option>
-            <option value="Sideline">Sideline</option>
-            <option value="Host">Host</option>
-          </select>
-          <button class="btn btn-primary btn-sm" id="btnAddCaller">Add</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Event Types Management -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-label">Event Types</span>
-      </div>
-      <div class="card-body">
-        <div class="mc-list" id="mcEventTypeList"></div>
-        <div class="mc-add-row">
-          <input type="text" class="form-input" id="mcEventTypeName" placeholder="Event type name" style="flex:2;">
-          <select class="form-select" id="mcEventTypeCategory" style="flex:1;">
-            <option value="try">Try (scoring)</option>
-            <option value="scoring">Scoring (other)</option>
-            <option value="discipline">Discipline</option>
-            <option value="moment">Key Moment</option>
-          </select>
-          <button class="btn btn-primary btn-sm" id="btnAddEventType">Add</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- NRL Teams (read-only for reference) -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-label">NRL Teams (2026)</span>
-      </div>
-      <div class="card-body">
-        <div class="mc-list" id="mcTeamList"></div>
-      </div>
-    </div>
+    <div class="info-hero" style="animation-delay:0s"><div class="info-hero-graphic" style="width:50px;height:50px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></div><div><div class="info-hero-title">Mission Control</div><div class="info-hero-desc">Manage call team talent, event types, and system settings. Changes here apply across all game sessions.</div></div></div>
+    <div class="card"><div class="card-header"><span class="card-label">Call Team</span></div><div class="card-body"><div class="mc-list" id="mcCallerList"></div><div class="mc-add-row"><input type="text" class="form-input" id="mcCallerName" placeholder="Full name" style="flex:2"><input type="text" class="form-input" id="mcCallerNick" placeholder="Nickname" style="flex:1"><select class="form-select" id="mcCallerRole" style="flex:1"><option value="Play-by-play">Play-by-play</option><option value="Host">Host</option><option value="Sideline">Sideline</option><option value="Expert">Expert</option></select><button class="btn btn-primary btn-sm" id="btnAddCaller">Add</button></div></div></div>
+    <div class="card"><div class="card-header"><span class="card-label">Event Types</span></div><div class="card-body"><div class="mc-list" id="mcEventTypeList"></div><div class="mc-add-row"><input type="text" class="form-input" id="mcEventTypeName" placeholder="Event type name" style="flex:2"><select class="form-select" id="mcEventTypeCategory" style="flex:1"><option value="try">Try (scoring)</option><option value="scoring">Scoring (other)</option><option value="discipline">Discipline</option><option value="moment">Key Moment</option></select><button class="btn btn-primary btn-sm" id="btnAddEventType">Add</button></div></div></div>
+    <div class="card"><div class="card-header"><span class="card-label">NRL Teams (2026)</span></div><div class="card-body"><div class="mc-list" id="mcTeamList"></div></div></div>
   </div>
-
 </div>
-
-<footer>
-  <a href="#"><span style="color: var(--accent);">dev.</span>nialfernandes.com</a>
-  <span style="color: var(--text-muted); margin: 0 8px;">|</span>
-  <a href="#">Privacy Policy</a>
-</footer>
-
+<footer><a href="index.html"><span style="color:var(--accent)">dev.</span>nialfernandes.com</a><span style="color:var(--text-muted);margin:0 8px">|</span><a href="privacy.html">Privacy Policy</a></footer>
 <script>
-(function () {
-  'use strict';
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const NRL_TEAMS=[
+{id:'broncos',name:'Broncos',full:'Brisbane Broncos'},{id:'bulldogs',name:'Bulldogs',full:'Canterbury-Bankstown Bulldogs'},
+{id:'cowboys',name:'Cowboys',full:'North Queensland Cowboys'},{id:'dolphins',name:'Dolphins',full:'Dolphins'},
+{id:'dragons',name:'Dragons',full:'St George Illawarra Dragons'},{id:'eels',name:'Eels',full:'Parramatta Eels'},
+{id:'knights',name:'Knights',full:'Newcastle Knights'},{id:'panthers',name:'Panthers',full:'Penrith Panthers'},
+{id:'rabbitohs',name:'Rabbitohs',full:'South Sydney Rabbitohs'},{id:'raiders',name:'Raiders',full:'Canberra Raiders'},
+{id:'roosters',name:'Roosters',full:'Sydney Roosters'},{id:'sea-eagles',name:'Sea Eagles',full:'Manly Warringah Sea Eagles'},
+{id:'sharks',name:'Sharks',full:'Cronulla-Sutherland Sharks'},{id:'storm',name:'Storm',full:'Melbourne Storm'},
+{id:'titans',name:'Titans',full:'Gold Coast Titans'},{id:'warriors',name:'Warriors',full:'New Zealand Warriors'},
+{id:'tigers',name:'Wests Tigers',full:'Wests Tigers'}];
+const DEFAULT_CALLERS=[
+{id:'c_lawrence',name:'Emma Lawrence',nick:'',role:'Play-by-play'},
+{id:'c_ginnane',name:'Dan Ginnane',nick:'',role:'Play-by-play'},
+{id:'c_maroon',name:'Anthony Maroon',nick:'',role:'Play-by-play'},
+{id:'c_dobbin',name:'Ben Dobbin',nick:'Dobbo',role:'Play-by-play'},
+{id:'c_lovejoy',name:'Elliott Lovejoy',nick:'',role:'Play-by-play'},
+{id:'c_squires',name:'Tony Squires',nick:'',role:'Host'},
+{id:'c_keary',name:'Luke Keary',nick:'',role:'Expert'},
+{id:'c_girdler',name:'Ryan Girdler',nick:'',role:'Expert'},
+{id:'c_jgraham',name:'James Graham',nick:'',role:'Expert'},
+{id:'c_wgraham',name:'Wade Graham',nick:'',role:'Expert'},
+{id:'c_woods',name:'Aaron Woods',nick:'Woodsy',role:'Expert'},
+{id:'c_webcke',name:'Shane Webcke',nick:'',role:'Expert'},
+{id:'c_tallis',name:'Gorden Tallis',nick:'',role:'Expert'},
+{id:'c_reynolds',name:'Josh Reynolds',nick:'',role:'Expert'},
+{id:'c_teo',name:'Ben Teo',nick:'',role:'Expert'},
+{id:'c_hannant',name:'Ben Hannant',nick:'',role:'Expert'}];
+let state={callers:[],eventTypes:[
+{id:'try',name:'Try',category:'try'},{id:'penalty-goal',name:'Penalty Goal',category:'scoring'},
+{id:'field-goal',name:'Field Goal',category:'scoring'},{id:'conversion',name:'Conversion',category:'scoring'},
+{id:'sin-bin',name:'Sin Bin',category:'discipline'},{id:'send-off',name:'Send Off',category:'discipline'},
+{id:'injury',name:'Injury',category:'moment'},{id:'key-moment',name:'Key Moment',category:'moment'}],
+games:[],activeGame:null,callersSeeded:false};
+try{const s=localStorage.getItem('matchtape_state');if(s){state={...state,...JSON.parse(s)};}}catch{}
+if(!state.callersSeeded){state.callers=DEFAULT_CALLERS;state.callersSeeded=true;saveState();}
+function saveState(){try{localStorage.setItem('matchtape_state',JSON.stringify(state));}catch{}}
+function ordinal(n){const s=['th','st','nd','rd'];const v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+function teamName(id){const t=NRL_TEAMS.find(t=>t.id===id);return t?t.name:id;}
+function callerDisplay(id){const c=state.callers.find(c=>c.id===id);if(!c)return id;return c.nick?c.name+' ('+c.nick+')':c.name;}
+function eventTypeName(id){const e=state.eventTypes.find(e=>e.id===id);return e?e.name:id;}
+function eventCategory(id){const e=state.eventTypes.find(e=>e.id===id);return e?e.category:'moment';}
+function getGame(){return state.games.find(g=>g.id===state.activeGame);}
+function tryCount(g,tid,pn){return g.events.filter(e=>e.type==='try'&&e.team===tid&&e.player.toLowerCase()===pn.toLowerCase()).length;}
+function generateFilename(ev,g){
+  const p=ev.player||'Unknown',t=teamName(ev.team),tn=eventTypeName(ev.type),m=ordinal(ev.minute),c=callerDisplay(ev.caller),cm=ev.comment||'';
+  if(ev.type==='try'){const cnt=tryCount(g,ev.team,ev.player);return p+' - Scores '+t+' '+ordinal(cnt)+' Try in '+m+' minute - '+c+(cm?' - '+cm:'');}
+  return p+' - '+tn+' '+t+' in '+m+' minute - '+c+(cm?' - '+cm:'');
+}
+function sanitizeFilename(s){return s.replace(/[^a-zA-Z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');}
+function calcGameMinute(ko){if(!ko)return '';const el=Math.floor((Date.now()-new Date(ko).getTime())/60000);return el<0?0:el>120?80:el;}
+function defaultKickoff(){const n=new Date();n.setMinutes(0,0,0);n.setHours(n.getHours()+1);return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0')+'T'+String(n.getHours()).padStart(2,'0')+':00';}
+function roundDisplay(v){if(!v&&v!==0)return '';return 'Round '+v;}
 
-  // ╔══════════════════════════════════════╗
-  // ║  NRL DATA                            ║
-  // ╚══════════════════════════════════════╝
-  const NRL_TEAMS = [
-    { id: 'broncos',    name: 'Broncos',     full: 'Brisbane Broncos' },
-    { id: 'bulldogs',   name: 'Bulldogs',    full: 'Canterbury-Bankstown Bulldogs' },
-    { id: 'cowboys',    name: 'Cowboys',     full: 'North Queensland Cowboys' },
-    { id: 'dolphins',   name: 'Dolphins',    full: 'Dolphins' },
-    { id: 'dragons',    name: 'Dragons',     full: 'St George Illawarra Dragons' },
-    { id: 'eels',       name: 'Eels',        full: 'Parramatta Eels' },
-    { id: 'knights',    name: 'Knights',     full: 'Newcastle Knights' },
-    { id: 'panthers',   name: 'Panthers',    full: 'Penrith Panthers' },
-    { id: 'rabbitohs',  name: 'Rabbitohs',   full: 'South Sydney Rabbitohs' },
-    { id: 'raiders',    name: 'Raiders',     full: 'Canberra Raiders' },
-    { id: 'roosters',   name: 'Roosters',    full: 'Sydney Roosters' },
-    { id: 'sea-eagles', name: 'Sea Eagles',  full: 'Manly Warringah Sea Eagles' },
-    { id: 'sharks',     name: 'Sharks',      full: 'Cronulla-Sutherland Sharks' },
-    { id: 'storm',      name: 'Storm',       full: 'Melbourne Storm' },
-    { id: 'titans',     name: 'Titans',      full: 'Gold Coast Titans' },
-    { id: 'warriors',   name: 'Warriors',    full: 'New Zealand Warriors' },
-    { id: 'tigers',     name: 'Wests Tigers', full: 'Wests Tigers' },
-  ];
+document.querySelector('.theme-toggle').addEventListener('click',()=>{const d=document.documentElement.getAttribute('data-theme')==='dark';const n=d?'light':'dark';document.documentElement.setAttribute('data-theme',n);localStorage.setItem('theme',n);});
 
-  // ╔══════════════════════════════════════╗
-  // ║  STATE (in-memory, will be D1 later) ║
-  // ╚══════════════════════════════════════╝
-  let state = {
-    callers: [
-      // Placeholder — managed via Mission Control
-    ],
-    eventTypes: [
-      { id: 'try',           name: 'Try',           category: 'try' },
-      { id: 'penalty-goal',  name: 'Penalty Goal',  category: 'scoring' },
-      { id: 'field-goal',    name: 'Field Goal',    category: 'scoring' },
-      { id: 'conversion',    name: 'Conversion',    category: 'scoring' },
-      { id: 'sin-bin',       name: 'Sin Bin',       category: 'discipline' },
-      { id: 'send-off',      name: 'Send Off',      category: 'discipline' },
-      { id: 'injury',        name: 'Injury',        category: 'moment' },
-      { id: 'key-moment',    name: 'Key Moment',    category: 'moment' },
-    ],
-    games: [],       // { id, homeTeam, awayTeam, round, venue, kickoff, callTeam:[], events:[] }
-    activeGame: null, // current game id
-  };
+document.querySelectorAll('.nav-tab').forEach(tab=>{tab.addEventListener('click',()=>{
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  tab.classList.add('active');$('view-'+tab.dataset.view).classList.add('active');
+  if(tab.dataset.view==='dashboard')renderDashboard();if(tab.dataset.view==='session')renderSession();
+  if(tab.dataset.view==='archive')renderArchiveFilters();if(tab.dataset.view==='mission-control')renderMissionControl();
+});});
+function switchToView(n){document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active',t.dataset.view===n));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$('view-'+n).classList.add('active');}
 
-  // Load from localStorage
-  try {
-    const saved = localStorage.getItem('matchtape_state');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      state = { ...state, ...parsed };
-    }
-  } catch {}
+function populateTeamSelects(){const o=NRL_TEAMS.map(t=>'<option value="'+t.id+'">'+t.name+'</option>').join('');$('newGameHome').innerHTML='<option value="">Select home team</option>'+o;$('newGameAway').innerHTML='<option value="">Select away team</option>'+o;}
+function populateCallerSelects(){const o=state.callers.map(c=>'<option value="'+c.id+'">'+(c.nick?c.name+' ('+c.nick+')':c.name)+' — '+c.role+'</option>').join('');$('newGameCallTeam').innerHTML=o;$('eventCaller').innerHTML='<option value="">Select caller</option>'+o;$('archiveCaller').innerHTML='<option value="">All callers</option>'+o;}
+function populateEventTypeSelect(){const o=state.eventTypes.map(e=>'<option value="'+e.id+'">'+e.name+'</option>').join('');$('eventType').innerHTML=o;$('archiveType').innerHTML='<option value="">All types</option>'+o;}
 
-  function saveState() {
-    try { localStorage.setItem('matchtape_state', JSON.stringify(state)); } catch {}
-  }
+function renderDashboard(){
+  populateTeamSelects();populateCallerSelects();
+  if(!$('newGameKickoff').value)$('newGameKickoff').value=defaultKickoff();
+  const g=$('recentGamesGrid');
+  if(!state.games.length){g.innerHTML='<div class="empty-state">No games yet. Start a new session above.</div>';return;}
+  g.innerHTML=state.games.slice().reverse().map(g=>'<div class="game-tile" data-game="'+g.id+'"><div class="game-tile-teams">'+teamName(g.homeTeam)+' <span class="game-tile-vs">v</span> '+teamName(g.awayTeam)+'</div><div class="game-tile-meta">'+roundDisplay(g.round)+(g.venue?' · '+g.venue:'')+'</div><div class="game-tile-meta">'+g.events.length+' event'+(g.events.length!==1?'s':'')+' logged</div></div>').join('');
+  g.querySelectorAll('.game-tile').forEach(t=>{t.addEventListener('click',()=>{state.activeGame=t.dataset.game;saveState();switchToView('session');renderSession();});});
+}
 
-  // ╔══════════════════════════════════════╗
-  // ║  HELPERS                             ║
-  // ╚══════════════════════════════════════╝
-  const $ = id => document.getElementById(id);
+$('btnStartGame').addEventListener('click',()=>{
+  const h=$('newGameHome').value,a=$('newGameAway').value;
+  if(!h||!a)return alert('Please select both teams.');if(h===a)return alert('Teams must be different.');
+  const ct=Array.from($('newGameCallTeam').selectedOptions).map(o=>o.value);
+  const rn=parseInt(String($('newGameRound').value).replace(/\D/g,''),10);
+  const game={id:'game_'+Date.now(),homeTeam:h,awayTeam:a,round:isNaN(rn)?'':rn,venue:$('newGameVenue').value.trim(),kickoff:$('newGameKickoff').value,callTeam:ct,events:[],createdAt:new Date().toISOString()};
+  state.games.push(game);state.activeGame=game.id;saveState();switchToView('session');renderSession();
+});
 
-  function ordinal(n) {
-    const s = ['th','st','nd','rd'];
-    const v = n % 100;
-    return n + (s[(v - 20) % 10] || s[v] || s[0]);
-  }
+function renderSession(){
+  const g=getGame();if(!g){$('gameBannerTeams').textContent='No active game';$('gameBannerMeta').textContent='';$('eventList').innerHTML='<div class="empty-state">Select a game from the dashboard.</div>';return;}
+  $('gameBannerTeams').innerHTML=teamName(g.homeTeam)+' <span class="vs">v</span> '+teamName(g.awayTeam);
+  $('gameBannerMeta').innerHTML=roundDisplay(g.round)+(g.venue?'<br>'+g.venue:'');
+  $('eventTeam').innerHTML='<option value="'+g.homeTeam+'">'+teamName(g.homeTeam)+'</option><option value="'+g.awayTeam+'">'+teamName(g.awayTeam)+'</option>';
+  const cids=g.callTeam.length?g.callTeam:state.callers.map(c=>c.id);
+  $('eventCaller').innerHTML='<option value="">Select caller</option>'+cids.map(id=>{const c=state.callers.find(c=>c.id===id);return c?'<option value="'+c.id+'">'+(c.nick?c.name+' ('+c.nick+')':c.name)+'</option>':'';}).join('');
+  populateEventTypeSelect();renderEventList();updateFilenamePreview();
+}
 
-  function teamName(id) {
-    const t = NRL_TEAMS.find(t => t.id === id);
-    return t ? t.name : id;
-  }
+$('eventPlayer').addEventListener('input',()=>{const g=getGame();if(!g||!g.kickoff)return;if(!$('eventMinute').value)$('eventMinute').value=calcGameMinute(g.kickoff);updateFilenamePreview();});
 
-  function callerDisplay(id) {
-    const c = state.callers.find(c => c.id === id);
-    if (!c) return id;
-    return c.nick ? `${c.name} (${c.nick})` : c.name;
-  }
+function renderEventList(){
+  const g=getGame();if(!g||!g.events.length){$('eventList').innerHTML='<div class="empty-state">No events logged yet.</div>';$('eventCount').textContent='0 events';return;}
+  $('eventCount').textContent=g.events.length+' event'+(g.events.length!==1?'s':'');
+  $('eventList').innerHTML=g.events.slice().reverse().map(ev=>{
+    const cat=eventCategory(ev.type),fn=generateFilename(ev,g),efn=fn.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    return '<div class="event-item" data-event-id="'+ev.id+'"><div class="event-item-header"><span class="event-minute">'+ev.minute+"'</span>"+
+    '<span class="event-type-badge '+cat+'">'+eventTypeName(ev.type)+'</span><span class="event-desc">'+
+    (ev.player||'')+' — '+teamName(ev.team)+'</span><div class="event-actions"><button class="edit-btn" data-action="edit-event" data-id="'+ev.id+'">Edit</button></div></div>'+
+    '<div class="event-filename"><span class="event-filename-text">'+fn+'</span><button class="copy-btn" data-action="copy" data-text="'+efn+'">Copy</button></div>'+
+    (ev.comment?'<div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);padding:0 2px">💬 '+ev.comment+'</div>':'')+
+    (ev.hasAudio?'<div style="font-family:var(--mono);font-size:10px;color:var(--success)">🎙 Audio attached</div>':'')+'</div>';
+  }).join('');
+  $('eventList').querySelectorAll('[data-action="copy"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.text).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
+  $('eventList').querySelectorAll('[data-action="edit-event"]').forEach(b=>{b.addEventListener('click',()=>editEvent(b.dataset.id));});
+}
 
-  function callerShort(id) {
-    const c = state.callers.find(c => c.id === id);
-    if (!c) return id;
-    return c.nick || c.name;
-  }
+function editEvent(eid){
+  const g=getGame();if(!g)return;const ev=g.events.find(e=>e.id===eid);if(!ev)return;
+  const item=$('eventList').querySelector('[data-event-id="'+eid+'"]');if(!item)return;
+  item.innerHTML='<div class="mc-edit-row"><input type="number" class="form-input" value="'+ev.minute+'" min="0" max="120" style="max-width:70px" id="editMin_'+eid+'"><input type="text" class="form-input" value="'+ev.player+'" id="editPlayer_'+eid+'"><input type="text" class="form-input" value="'+(ev.comment||'')+'" placeholder="Producer comment" id="editComment_'+eid+'"><button class="btn btn-primary btn-sm" id="editSave_'+eid+'">Save</button><button class="btn btn-secondary btn-sm" id="editCancel_'+eid+'">Cancel</button></div>';
+  $('editSave_'+eid).addEventListener('click',()=>{ev.minute=parseInt($('editMin_'+eid).value)||ev.minute;ev.player=$('editPlayer_'+eid).value.trim()||ev.player;ev.comment=$('editComment_'+eid).value.trim();saveState();renderEventList();});
+  $('editCancel_'+eid).addEventListener('click',()=>renderEventList());
+}
 
-  function eventTypeName(id) {
-    const e = state.eventTypes.find(e => e.id === id);
-    return e ? e.name : id;
-  }
+function updateFilenamePreview(){
+  const g=getGame();if(!g){$('filenamePreviewCard').style.display='none';return;}
+  const p=$('eventPlayer').value.trim(),m=parseInt($('eventMinute').value)||0;
+  if(!p&&!m){$('filenamePreviewCard').style.display='none';return;}
+  const mock={type:$('eventType').value,minute:m,team:$('eventTeam').value,player:p||'Player',caller:$('eventCaller').value,comment:$('eventComment').value.trim()};
+  const fn=generateFilename(mock,g);$('filenamePreview').textContent=fn;$('filenamePreviewCard').style.display='';
+  $('btnCopyFilename').onclick=()=>{navigator.clipboard.writeText(fn).then(()=>{$('btnCopyFilename').textContent='Copied';$('btnCopyFilename').classList.add('copied');setTimeout(()=>{$('btnCopyFilename').textContent='Copy';$('btnCopyFilename').classList.remove('copied');},2000);});};
+}
+['eventType','eventMinute','eventTeam','eventPlayer','eventCaller','eventComment'].forEach(id=>{$(id).addEventListener('input',updateFilenamePreview);$(id).addEventListener('change',updateFilenamePreview);});
 
-  function eventCategory(id) {
-    const e = state.eventTypes.find(e => e.id === id);
-    return e ? e.category : 'moment';
-  }
+const audioDrop=$('eventAudioDrop'),audioFileInput=$('eventAudioFile');let pendingAudioFile=null;
+audioDrop.addEventListener('click',()=>audioFileInput.click());
+audioDrop.addEventListener('dragover',e=>{e.preventDefault();audioDrop.classList.add('dragover');});
+audioDrop.addEventListener('dragleave',()=>audioDrop.classList.remove('dragover'));
+audioDrop.addEventListener('drop',e=>{e.preventDefault();audioDrop.classList.remove('dragover');if(e.dataTransfer.files[0])attachAudio(e.dataTransfer.files[0]);});
+audioFileInput.addEventListener('change',()=>{if(audioFileInput.files[0])attachAudio(audioFileInput.files[0]);audioFileInput.value='';});
+function attachAudio(f){pendingAudioFile=f;audioDrop.textContent='🎙 '+f.name;audioDrop.classList.add('has-audio');}
 
-  function getGame() {
-    return state.games.find(g => g.id === state.activeGame);
-  }
+$('btnLogEvent').addEventListener('click',()=>{
+  const g=getGame();if(!g)return alert('No active game.');
+  const minute=parseInt($('eventMinute').value),player=$('eventPlayer').value.trim();
+  if(isNaN(minute))return alert('Please enter the minute.');if(!player)return alert('Please enter a player name.');
+  g.events.push({id:'ev_'+Date.now(),type:$('eventType').value,minute,team:$('eventTeam').value,player,caller:$('eventCaller').value,comment:$('eventComment').value.trim(),hasAudio:!!pendingAudioFile,audioFileName:pendingAudioFile?pendingAudioFile.name:null,createdAt:new Date().toISOString()});
+  saveState();$('eventMinute').value='';$('eventPlayer').value='';$('eventComment').value='';pendingAudioFile=null;audioDrop.textContent='Drop commentary audio here or click to browse';audioDrop.classList.remove('has-audio');$('filenamePreviewCard').style.display='none';renderEventList();
+});
 
-  // Count tries for a given team+player in a game
-  function tryCount(game, teamId, playerName) {
-    return game.events.filter(e =>
-      e.type === 'try' && e.team === teamId &&
-      e.player.toLowerCase() === playerName.toLowerCase()
-    ).length;
-  }
+$('btnEndSession').addEventListener('click',()=>{state.activeGame=null;saveState();switchToView('dashboard');renderDashboard();});
 
-  function generateFilename(event, game) {
-    const player = event.player || 'Unknown';
-    const team = teamName(event.team);
-    const typeName = eventTypeName(event.type);
-    const minute = ordinal(event.minute);
-    const caller = callerDisplay(event.caller);
-    const comment = event.comment || '';
-
-    if (event.type === 'try') {
-      const count = tryCount(game, event.team, event.player);
-      return `${player} - Scores ${team} ${ordinal(count)} Try in ${minute} minute - ${caller}${comment ? ' - ' + comment : ''}`;
-    }
-    return `${player} - ${typeName} ${team} in ${minute} minute - ${caller}${comment ? ' - ' + comment : ''}`;
-  }
-
-  // ╔══════════════════════════════════════╗
-  // ║  THEME                               ║
-  // ╚══════════════════════════════════════╝
-  document.querySelector('.theme-toggle').addEventListener('click', () => {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const next = isDark ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
+$('btnExportSummary').addEventListener('click',()=>{
+  const g=getGame();if(!g||!g.events.length)return alert('No events to export.');
+  let s='MATCH TAPE — MATCH SUMMARY\n'+'='.repeat(50)+'\n\n'+teamName(g.homeTeam)+' v '+teamName(g.awayTeam)+'\n'+roundDisplay(g.round)+(g.venue?' — '+g.venue:'')+'\n';
+  if(g.kickoff)s+='Kickoff: '+new Date(g.kickoff).toLocaleString('en-AU',{hour12:false})+'\n';
+  s+='\nCall Team: '+(g.callTeam.map(callerDisplay).join(', ')||'Not specified')+'\n\n'+'─'.repeat(50)+'\nEVENT TIMELINE ('+g.events.length+' events)\n'+'─'.repeat(50)+'\n\n';
+  g.events.slice().sort((a,b)=>a.minute-b.minute).forEach((ev,i)=>{
+    s+=(i+1)+". ["+ev.minute+"'] "+eventTypeName(ev.type)+' — '+ev.player+' ('+teamName(ev.team)+')\n   Caller: '+callerDisplay(ev.caller)+'\n';
+    if(ev.comment)s+='   Comment: '+ev.comment+'\n';s+='   Filename: '+generateFilename(ev,g)+'\n';if(ev.hasAudio)s+='   Audio: '+ev.audioFileName+'\n';s+='\n';
   });
-
-  // ╔══════════════════════════════════════╗
-  // ║  NAVIGATION                          ║
-  // ╚══════════════════════════════════════╝
-  document.querySelectorAll('.nav-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      tab.classList.add('active');
-      $('view-' + tab.dataset.view).classList.add('active');
-      // Refresh view
-      if (tab.dataset.view === 'dashboard') renderDashboard();
-      if (tab.dataset.view === 'session') renderSession();
-      if (tab.dataset.view === 'archive') renderArchiveFilters();
-      if (tab.dataset.view === 'mission-control') renderMissionControl();
-    });
-  });
-
-  function switchToView(name) {
-    document.querySelectorAll('.nav-tab').forEach(t => {
-      t.classList.toggle('active', t.dataset.view === name);
-    });
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    $('view-' + name).classList.add('active');
-  }
-
-  // ╔══════════════════════════════════════╗
-  // ║  POPULATE SELECTS                    ║
-  // ╚══════════════════════════════════════╝
-  function populateTeamSelects() {
-    const opts = NRL_TEAMS.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-    $('newGameHome').innerHTML = '<option value="">Select home team</option>' + opts;
-    $('newGameAway').innerHTML = '<option value="">Select away team</option>' + opts;
-  }
-
-  function populateCallerSelects() {
-    const opts = state.callers.map(c =>
-      `<option value="${c.id}">${c.nick ? c.name + ' (' + c.nick + ')' : c.name} — ${c.role}</option>`
-    ).join('');
-    $('newGameCallTeam').innerHTML = opts;
-    $('eventCaller').innerHTML = '<option value="">Select caller</option>' + opts;
-    $('archiveCaller').innerHTML = '<option value="">All callers</option>' + opts;
-  }
-
-  function populateEventTypeSelect() {
-    const opts = state.eventTypes.map(e =>
-      `<option value="${e.id}">${e.name}</option>`
-    ).join('');
-    $('eventType').innerHTML = opts;
-    $('archiveType').innerHTML = '<option value="">All types</option>' + opts;
-  }
-
-  function populateArchiveTeamSelect() {
-    const opts = NRL_TEAMS.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-    $('archiveTeam').innerHTML = '<option value="">All teams</option>' + opts;
-  }
-
-  // ╔══════════════════════════════════════╗
-  // ║  DASHBOARD                           ║
-  // ╚══════════════════════════════════════╝
-  function renderDashboard() {
-    populateTeamSelects();
-    populateCallerSelects();
-
-    const grid = $('recentGamesGrid');
-    if (state.games.length === 0) {
-      grid.innerHTML = '<div class="empty-state">No games yet. Start a new game session above.</div>';
-      return;
-    }
-    grid.innerHTML = state.games.slice().reverse().map(g => `
-      <div class="game-tile" data-game="${g.id}">
-        <div class="game-tile-teams">${teamName(g.homeTeam)} <span class="game-tile-vs">v</span> ${teamName(g.awayTeam)}</div>
-        <div class="game-tile-meta">${g.round || ''}${g.venue ? ' · ' + g.venue : ''}</div>
-        <div class="game-tile-meta">${g.events.length} event${g.events.length !== 1 ? 's' : ''} logged</div>
-      </div>
-    `).join('');
-
-    grid.querySelectorAll('.game-tile').forEach(tile => {
-      tile.addEventListener('click', () => {
-        state.activeGame = tile.dataset.game;
-        saveState();
-        switchToView('session');
-        renderSession();
-      });
-    });
-  }
-
-  // Start new game
-  $('btnStartGame').addEventListener('click', () => {
-    const home = $('newGameHome').value;
-    const away = $('newGameAway').value;
-    if (!home || !away) return alert('Please select both teams.');
-    if (home === away) return alert('Home and away teams must be different.');
-
-    const callTeamOpts = $('newGameCallTeam').selectedOptions;
-    const callTeam = Array.from(callTeamOpts).map(o => o.value);
-
-    const game = {
-      id: 'game_' + Date.now(),
-      homeTeam: home,
-      awayTeam: away,
-      round: $('newGameRound').value.trim(),
-      venue: $('newGameVenue').value.trim(),
-      kickoff: $('newGameKickoff').value,
-      callTeam,
-      events: [],
-      createdAt: new Date().toISOString(),
-    };
-
-    state.games.push(game);
-    state.activeGame = game.id;
-    saveState();
-    switchToView('session');
-    renderSession();
-  });
-
-  // ╔══════════════════════════════════════╗
-  // ║  GAME SESSION                        ║
-  // ╚══════════════════════════════════════╝
-  function renderSession() {
-    const game = getGame();
-    if (!game) {
-      $('gameBannerTeams').textContent = 'No active game';
-      $('gameBannerMeta').textContent = '';
-      $('eventList').innerHTML = '<div class="empty-state">Select a game from the dashboard to begin.</div>';
-      return;
-    }
-
-    $('gameBannerTeams').innerHTML = `${teamName(game.homeTeam)} <span class="vs">v</span> ${teamName(game.awayTeam)}`;
-    $('gameBannerMeta').innerHTML = `${game.round || ''}${game.venue ? '<br>' + game.venue : ''}`;
-
-    // Populate team select for events (just the two playing teams)
-    $('eventTeam').innerHTML = `
-      <option value="${game.homeTeam}">${teamName(game.homeTeam)}</option>
-      <option value="${game.awayTeam}">${teamName(game.awayTeam)}</option>
-    `;
-
-    // Populate caller from game's call team, falling back to all callers
-    const callerIds = game.callTeam.length ? game.callTeam : state.callers.map(c => c.id);
-    $('eventCaller').innerHTML = '<option value="">Select caller</option>' +
-      callerIds.map(id => {
-        const c = state.callers.find(c => c.id === id);
-        return c ? `<option value="${c.id}">${c.nick ? c.name + ' (' + c.nick + ')' : c.name}</option>` : '';
-      }).join('');
-
-    populateEventTypeSelect();
-    renderEventList();
-    updateFilenamePreview();
-  }
-
-  function renderEventList() {
-    const game = getGame();
-    if (!game || game.events.length === 0) {
-      $('eventList').innerHTML = '<div class="empty-state">No events logged yet. Start logging as the game unfolds.</div>';
-      $('eventCount').textContent = '0 events';
-      return;
-    }
-
-    $('eventCount').textContent = game.events.length + ' event' + (game.events.length !== 1 ? 's' : '');
-
-    $('eventList').innerHTML = game.events.slice().reverse().map((ev, idx) => {
-      const cat = eventCategory(ev.type);
-      const filename = generateFilename(ev, game);
-      return `
-        <div class="event-item">
-          <div class="event-item-header">
-            <span class="event-minute">${ev.minute}'</span>
-            <span class="event-type-badge ${cat}">${eventTypeName(ev.type)}</span>
-            <span class="event-desc">${ev.player || ''} — ${teamName(ev.team)}</span>
-          </div>
-          <div class="event-filename">
-            <span class="event-filename-text">${filename}</span>
-            <button class="copy-btn" onclick="copyText(this,'${filename.replace(/'/g, "\\'")}')">Copy</button>
-          </div>
-          ${ev.comment ? '<div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:0.3px;padding:0 2px;">💬 ' + ev.comment + '</div>' : ''}
-          ${ev.hasAudio ? '<div style="font-family:var(--mono);font-size:10px;color:var(--success);letter-spacing:0.3px;">🎙 Audio attached</div>' : ''}
-        </div>
-      `;
-    }).join('');
-  }
-
-  // Copy to clipboard
-  window.copyText = function(btn, text) {
-    navigator.clipboard.writeText(text).then(() => {
-      btn.textContent = 'Copied';
-      btn.classList.add('copied');
-      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
-    });
-  };
-
-  // Live filename preview
-  function updateFilenamePreview() {
-    const game = getGame();
-    if (!game) { $('filenamePreviewCard').style.display = 'none'; return; }
-
-    const type = $('eventType').value;
-    const minute = parseInt($('eventMinute').value) || 0;
-    const team = $('eventTeam').value;
-    const player = $('eventPlayer').value.trim();
-    const caller = $('eventCaller').value;
-    const comment = $('eventComment').value.trim();
-
-    if (!player && !minute) {
-      $('filenamePreviewCard').style.display = 'none';
-      return;
-    }
-
-    const mockEvent = { type, minute, team, player: player || 'Player', caller, comment };
-    const filename = generateFilename(mockEvent, game);
-    $('filenamePreview').textContent = filename;
-    $('filenamePreviewCard').style.display = '';
-
-    $('btnCopyFilename').onclick = () => {
-      navigator.clipboard.writeText(filename).then(() => {
-        $('btnCopyFilename').textContent = 'Copied';
-        $('btnCopyFilename').classList.add('copied');
-        setTimeout(() => { $('btnCopyFilename').textContent = 'Copy'; $('btnCopyFilename').classList.remove('copied'); }, 2000);
-      });
-    };
-  }
-
-  // Wire up live preview
-  ['eventType','eventMinute','eventTeam','eventPlayer','eventCaller','eventComment'].forEach(id => {
-    $(id).addEventListener('input', updateFilenamePreview);
-    $(id).addEventListener('change', updateFilenamePreview);
-  });
-
-  // Audio drop zone
-  const audioDrop = $('eventAudioDrop');
-  const audioFileInput = $('eventAudioFile');
-  let pendingAudioFile = null;
-
-  audioDrop.addEventListener('click', () => audioFileInput.click());
-  audioDrop.addEventListener('dragover', e => { e.preventDefault(); audioDrop.classList.add('dragover'); });
-  audioDrop.addEventListener('dragleave', () => audioDrop.classList.remove('dragover'));
-  audioDrop.addEventListener('drop', e => {
-    e.preventDefault(); audioDrop.classList.remove('dragover');
-    if (e.dataTransfer.files[0]) attachAudio(e.dataTransfer.files[0]);
-  });
-  audioFileInput.addEventListener('change', () => {
-    if (audioFileInput.files[0]) attachAudio(audioFileInput.files[0]);
-    audioFileInput.value = '';
-  });
-
-  function attachAudio(file) {
-    pendingAudioFile = file;
-    audioDrop.textContent = '🎙 ' + file.name;
-    audioDrop.classList.add('has-audio');
-  }
-
-  // Log event
-  $('btnLogEvent').addEventListener('click', () => {
-    const game = getGame();
-    if (!game) return alert('No active game session.');
-
-    const type = $('eventType').value;
-    const minute = parseInt($('eventMinute').value);
-    const team = $('eventTeam').value;
-    const player = $('eventPlayer').value.trim();
-    const caller = $('eventCaller').value;
-    const comment = $('eventComment').value.trim();
-
-    if (isNaN(minute)) return alert('Please enter the minute.');
-    if (!player) return alert('Please enter a player name.');
-
-    const event = {
-      id: 'ev_' + Date.now(),
-      type, minute, team, player, caller, comment,
-      hasAudio: !!pendingAudioFile,
-      audioFileName: pendingAudioFile ? pendingAudioFile.name : null,
-      createdAt: new Date().toISOString(),
-    };
-
-    game.events.push(event);
-    saveState();
-
-    // Reset form
-    $('eventMinute').value = '';
-    $('eventPlayer').value = '';
-    $('eventComment').value = '';
-    pendingAudioFile = null;
-    audioDrop.textContent = 'Drop commentary audio here or click to browse';
-    audioDrop.classList.remove('has-audio');
-    $('filenamePreviewCard').style.display = 'none';
-
-    renderEventList();
-  });
-
-  // End session
-  $('btnEndSession').addEventListener('click', () => {
-    state.activeGame = null;
-    saveState();
-    switchToView('dashboard');
-    renderDashboard();
-  });
-
-  // Export match summary
-  $('btnExportSummary').addEventListener('click', () => {
-    const game = getGame();
-    if (!game || game.events.length === 0) return alert('No events to export.');
-
-    let summary = `MATCH TAPE — MATCH SUMMARY\n`;
-    summary += `${'='.repeat(50)}\n\n`;
-    summary += `${teamName(game.homeTeam)} v ${teamName(game.awayTeam)}\n`;
-    summary += `${game.round || ''}${game.venue ? ' — ' + game.venue : ''}\n`;
-    if (game.kickoff) summary += `Kickoff: ${new Date(game.kickoff).toLocaleString('en-AU')}\n`;
-    summary += `\nCall Team: ${game.callTeam.map(callerDisplay).join(', ') || 'Not specified'}\n`;
-    summary += `\n${'─'.repeat(50)}\n`;
-    summary += `EVENT TIMELINE (${game.events.length} events)\n`;
-    summary += `${'─'.repeat(50)}\n\n`;
-
-    game.events.sort((a, b) => a.minute - b.minute).forEach((ev, i) => {
-      const filename = generateFilename(ev, game);
-      summary += `${i + 1}. [${ev.minute}'] ${eventTypeName(ev.type)} — ${ev.player} (${teamName(ev.team)})\n`;
-      summary += `   Caller: ${callerDisplay(ev.caller)}\n`;
-      if (ev.comment) summary += `   Comment: ${ev.comment}\n`;
-      summary += `   Filename: ${filename}\n`;
-      if (ev.hasAudio) summary += `   Audio: ${ev.audioFileName}\n`;
-      summary += `\n`;
-    });
-
-    summary += `${'─'.repeat(50)}\n`;
-    summary += `Generated by Match Tape — ${new Date().toLocaleString('en-AU')}\n`;
-
-    const blob = new Blob([summary], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `MatchTape_${teamName(game.homeTeam)}_v_${teamName(game.awayTeam)}_${game.round || 'summary'}.txt`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 100);
-  });
-
-  // ╔══════════════════════════════════════╗
-  // ║  ARCHIVE                             ║
-  // ╚══════════════════════════════════════╝
-  function renderArchiveFilters() {
-    populateArchiveTeamSelect();
-    populateCallerSelects();
-    populateEventTypeSelect();
-  }
-
-  $('btnSearch').addEventListener('click', searchArchive);
-  $('archiveSearch').addEventListener('keydown', e => { if (e.key === 'Enter') searchArchive(); });
-
-  function searchArchive() {
-    const query = $('archiveSearch').value.trim().toLowerCase();
-    const teamFilter = $('archiveTeam').value;
-    const typeFilter = $('archiveType').value;
-    const callerFilter = $('archiveCaller').value;
-
-    let results = [];
-
-    state.games.forEach(game => {
-      game.events.forEach(ev => {
-        const filename = generateFilename(ev, game);
-        const searchable = [
-          ev.player, teamName(ev.team), eventTypeName(ev.type),
-          callerDisplay(ev.caller), ev.comment, filename,
-          teamName(game.homeTeam), teamName(game.awayTeam), game.round
-        ].join(' ').toLowerCase();
-
-        if (query && !searchable.includes(query)) return;
-        if (teamFilter && ev.team !== teamFilter) return;
-        if (typeFilter && ev.type !== typeFilter) return;
-        if (callerFilter && ev.caller !== callerFilter) return;
-
-        results.push({ event: ev, game, filename });
-      });
-    });
-
-    const container = $('archiveResults');
-    if (results.length === 0) {
-      container.innerHTML = '<div class="empty-state">No matching events found.</div>';
-      return;
-    }
-
-    container.innerHTML = results.map(r => {
-      const cat = eventCategory(r.event.type);
-      return `
-        <div class="archive-item">
-          <span class="event-minute">${r.event.minute}'</span>
-          <span class="event-type-badge ${cat}">${eventTypeName(r.event.type)}</span>
-          <div style="flex:1;">
-            <div class="event-desc">${r.event.player} — ${teamName(r.event.team)}</div>
-            <div class="archive-game-info">${teamName(r.game.homeTeam)} v ${teamName(r.game.awayTeam)} · ${r.game.round || ''}</div>
-          </div>
-          <button class="copy-btn" onclick="copyText(this,'${r.filename.replace(/'/g, "\\'")}')">Copy</button>
-        </div>
-      `;
-    }).join('');
-  }
-
-  // ╔══════════════════════════════════════╗
-  // ║  MISSION CONTROL                     ║
-  // ╚══════════════════════════════════════╝
-  function renderMissionControl() {
-    renderMcCallers();
-    renderMcEventTypes();
-    renderMcTeams();
-  }
-
-  // ── Call Team ──
-  function renderMcCallers() {
-    const list = $('mcCallerList');
-    if (state.callers.length === 0) {
-      list.innerHTML = '<div class="empty-state" style="padding:16px;">No call team members yet. Add your first commentator below.</div>';
-      return;
-    }
-    list.innerHTML = state.callers.map(c => `
-      <div class="mc-item">
-        <span class="mc-item-name">${c.name}${c.nick ? ' <span style="color:var(--accent);">(' + c.nick + ')</span>' : ''}</span>
-        <span class="mc-item-meta">${c.role}</span>
-        <div class="mc-item-actions">
-          <button class="mc-item-btn delete" data-id="${c.id}" data-action="delete-caller">Remove</button>
-        </div>
-      </div>
-    `).join('');
-
-    list.querySelectorAll('[data-action="delete-caller"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        state.callers = state.callers.filter(c => c.id !== btn.dataset.id);
-        saveState(); renderMcCallers(); populateCallerSelects();
-      });
-    });
-  }
-
-  $('btnAddCaller').addEventListener('click', () => {
-    const name = $('mcCallerName').value.trim();
-    const nick = $('mcCallerNick').value.trim();
-    const role = $('mcCallerRole').value;
-    if (!name) return;
-
-    state.callers.push({
-      id: 'caller_' + Date.now(),
-      name, nick, role
-    });
-    saveState();
-    $('mcCallerName').value = '';
-    $('mcCallerNick').value = '';
-    renderMcCallers();
-    populateCallerSelects();
-  });
-
-  // ── Event Types ──
-  function renderMcEventTypes() {
-    const list = $('mcEventTypeList');
-    list.innerHTML = state.eventTypes.map(e => `
-      <div class="mc-item">
-        <span class="mc-item-name">${e.name}</span>
-        <span class="mc-item-meta event-type-badge ${e.category}">${e.category}</span>
-        <div class="mc-item-actions">
-          <button class="mc-item-btn delete" data-id="${e.id}" data-action="delete-type">Remove</button>
-        </div>
-      </div>
-    `).join('');
-
-    list.querySelectorAll('[data-action="delete-type"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        state.eventTypes = state.eventTypes.filter(e => e.id !== btn.dataset.id);
-        saveState(); renderMcEventTypes(); populateEventTypeSelect();
-      });
-    });
-  }
-
-  $('btnAddEventType').addEventListener('click', () => {
-    const name = $('mcEventTypeName').value.trim();
-    const category = $('mcEventTypeCategory').value;
-    if (!name) return;
-
-    state.eventTypes.push({
-      id: name.toLowerCase().replace(/\s+/g, '-'),
-      name, category
-    });
-    saveState();
-    $('mcEventTypeName').value = '';
-    renderMcEventTypes();
-    populateEventTypeSelect();
-  });
-
-  // ── Teams ──
-  function renderMcTeams() {
-    $('mcTeamList').innerHTML = NRL_TEAMS.map(t => `
-      <div class="mc-item">
-        <span class="mc-item-name">${t.full}</span>
-        <span class="mc-item-meta">${t.name}</span>
-      </div>
-    `).join('');
-  }
-
-  // ╔══════════════════════════════════════╗
-  // ║  INIT                                ║
-  // ╚══════════════════════════════════════╝
-  renderDashboard();
-  renderMissionControl();
-
+  s+='─'.repeat(50)+'\nGenerated by Match Tape — '+new Date().toLocaleString('en-AU',{hour12:false})+'\n';
+  const b=new Blob([s],{type:'text/plain'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;
+  const rnd=g.round?'_Round_'+g.round:'';
+  a.download='MatchTape_'+sanitizeFilename(teamName(g.homeTeam))+'_v_'+sanitizeFilename(teamName(g.awayTeam))+rnd+'_devNFcom.txt';
+  a.click();setTimeout(()=>URL.revokeObjectURL(u),100);
+});
+
+function renderArchiveFilters(){const o=NRL_TEAMS.map(t=>'<option value="'+t.id+'">'+t.name+'</option>').join('');$('archiveTeam').innerHTML='<option value="">All teams</option>'+o;populateCallerSelects();populateEventTypeSelect();}
+$('btnSearch').addEventListener('click',searchArchive);$('archiveSearch').addEventListener('keydown',e=>{if(e.key==='Enter')searchArchive();});
+function searchArchive(){
+  const q=$('archiveSearch').value.trim().toLowerCase(),tf=$('archiveTeam').value,tyf=$('archiveType').value,cf=$('archiveCaller').value;let res=[];
+  state.games.forEach(g=>{g.events.forEach(ev=>{
+    const fn=generateFilename(ev,g),s=[ev.player,teamName(ev.team),eventTypeName(ev.type),callerDisplay(ev.caller),ev.comment,fn,teamName(g.homeTeam),teamName(g.awayTeam),roundDisplay(g.round)].join(' ').toLowerCase();
+    if(q&&!s.includes(q))return;if(tf&&ev.team!==tf)return;if(tyf&&ev.type!==tyf)return;if(cf&&ev.caller!==cf)return;
+    res.push({event:ev,game:g,filename:fn});
+  });});
+  const c=$('archiveResults');if(!res.length){c.innerHTML='<div class="empty-state">No matching events found.</div>';return;}
+  c.innerHTML=res.map(r=>{const cat=eventCategory(r.event.type),efn=r.filename.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    return '<div class="archive-item"><span class="event-minute">'+r.event.minute+"'</span>"+
+    '<span class="event-type-badge '+cat+'">'+eventTypeName(r.event.type)+'</span><div style="flex:1"><div class="event-desc">'+r.event.player+' — '+teamName(r.event.team)+'</div><div class="archive-game-info">'+teamName(r.game.homeTeam)+' v '+teamName(r.game.awayTeam)+' · '+roundDisplay(r.game.round)+'</div></div>'+
+    (r.event.hasAudio?'<span style="font-size:10px;color:var(--success)" title="Audio available">🎙</span>':'')+
+    '<button class="copy-btn" data-action="archive-copy" data-text="'+efn+'">Copy</button></div>';
+  }).join('');
+  c.querySelectorAll('[data-action="archive-copy"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.text).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
+}
+
+function renderMissionControl(){renderMcCallers();renderMcEventTypes();renderMcTeams();}
+function renderMcCallers(){
+  const l=$('mcCallerList');if(!state.callers.length){l.innerHTML='<div class="empty-state" style="padding:16px">No call team members yet.</div>';return;}
+  l.innerHTML=state.callers.map(c=>'<div class="mc-item" data-caller-id="'+c.id+'"><span class="mc-item-name">'+c.name+(c.nick?' <span style="color:var(--accent)">('+c.nick+')</span>':'')+'</span><span class="mc-item-meta">'+c.role+'</span><div class="mc-item-actions"><button class="mc-item-btn" data-action="edit-caller" data-id="'+c.id+'">Edit</button><button class="mc-item-btn delete" data-action="delete-caller" data-id="'+c.id+'">Remove</button></div></div>').join('');
+  l.querySelectorAll('[data-action="delete-caller"]').forEach(b=>{b.addEventListener('click',()=>{if(!confirm('Remove '+callerDisplay(b.dataset.id)+'?'))return;state.callers=state.callers.filter(c=>c.id!==b.dataset.id);saveState();renderMcCallers();populateCallerSelects();});});
+  l.querySelectorAll('[data-action="edit-caller"]').forEach(b=>{b.addEventListener('click',()=>editCaller(b.dataset.id));});
+}
+function editCaller(cid){
+  const c=state.callers.find(c=>c.id===cid);if(!c)return;
+  const item=$('mcCallerList').querySelector('[data-caller-id="'+cid+'"]');if(!item)return;
+  const ro=['Play-by-play','Host','Sideline','Expert'].map(r=>'<option value="'+r+'"'+(r===c.role?' selected':'')+'>'+r+'</option>').join('');
+  item.outerHTML='<div class="mc-edit-row" data-caller-id="'+cid+'"><input type="text" class="form-input" value="'+c.name+'" id="ecN_'+cid+'" style="flex:2"><input type="text" class="form-input" value="'+(c.nick||'')+'" placeholder="Nickname" id="ecK_'+cid+'" style="flex:1"><select class="form-select" id="ecR_'+cid+'" style="flex:1">'+ro+'</select><button class="btn btn-primary btn-sm" id="ecS_'+cid+'">Save</button><button class="btn btn-secondary btn-sm" id="ecC_'+cid+'">Cancel</button></div>';
+  $('ecS_'+cid).addEventListener('click',()=>{c.name=$('ecN_'+cid).value.trim()||c.name;c.nick=$('ecK_'+cid).value.trim();c.role=$('ecR_'+cid).value;saveState();renderMcCallers();populateCallerSelects();});
+  $('ecC_'+cid).addEventListener('click',()=>renderMcCallers());
+}
+$('btnAddCaller').addEventListener('click',()=>{const n=$('mcCallerName').value.trim(),k=$('mcCallerNick').value.trim(),r=$('mcCallerRole').value;if(!n)return;state.callers.push({id:'caller_'+Date.now(),name:n,nick:k,role:r});saveState();$('mcCallerName').value='';$('mcCallerNick').value='';renderMcCallers();populateCallerSelects();});
+
+function renderMcEventTypes(){
+  const l=$('mcEventTypeList');l.innerHTML=state.eventTypes.map(e=>'<div class="mc-item"><span class="mc-item-name">'+e.name+'</span><span class="mc-item-meta event-type-badge '+e.category+'">'+e.category+'</span><div class="mc-item-actions"><button class="mc-item-btn delete" data-id="'+e.id+'" data-action="delete-type">Remove</button></div></div>').join('');
+  l.querySelectorAll('[data-action="delete-type"]').forEach(b=>{b.addEventListener('click',()=>{state.eventTypes=state.eventTypes.filter(e=>e.id!==b.dataset.id);saveState();renderMcEventTypes();populateEventTypeSelect();});});
+}
+$('btnAddEventType').addEventListener('click',()=>{const n=$('mcEventTypeName').value.trim(),c=$('mcEventTypeCategory').value;if(!n)return;state.eventTypes.push({id:n.toLowerCase().replace(/\s+/g,'-'),name:n,category:c});saveState();$('mcEventTypeName').value='';renderMcEventTypes();populateEventTypeSelect();});
+
+function renderMcTeams(){$('mcTeamList').innerHTML=NRL_TEAMS.map(t=>'<div class="mc-item"><span class="mc-item-name">'+t.full+'</span><span class="mc-item-meta">'+t.name+'</span></div>').join('');}
+
+renderDashboard();renderMissionControl();
 })();
 </script>
-
 </body>
 </html>
