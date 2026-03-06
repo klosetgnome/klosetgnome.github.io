@@ -337,8 +337,9 @@ document.querySelectorAll('.phase-btn').forEach(b=>{b.addEventListener('click',(
 async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();
   try{S.games=await api('/games');}catch{S.games=[];}
   const gr=$('recentGamesGrid');if(!S.games.length){gr.innerHTML='<div class="empty-state">No games yet.</div>';return;}
-  gr.innerHTML=S.games.map(g=>'<div class="game-tile" data-g="'+g.id+'"><div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+'</div><div class="game-tile-meta">'+(g.eventCount||0)+' events \xb7 '+(g.starredCount||0)+' \u2605</div></div>').join('');
-  gr.querySelectorAll('.game-tile').forEach(t=>{t.addEventListener('click',async()=>{S.activeGame=t.dataset.g;await loadGame(S.activeGame);S.activePhase='pre';sw('session');renderS();});});}
+  gr.innerHTML=S.games.map(g=>'<div class="game-tile" data-g="'+g.id+'"><div class="game-tile-teams">'+tn(g.home_team)+' <span class="game-tile-vs">v</span> '+tn(g.away_team)+'</div><div class="game-tile-meta">'+rd(g.round)+(g.venue?' \xb7 '+g.venue:'')+'</div><div style="display:flex;align-items:center;justify-content:space-between"><span class="game-tile-meta">'+(g.eventCount||0)+' events \xb7 '+(g.starredCount||0)+' \u2605</span><button class="edit-btn" data-a="delgame" data-id="'+g.id+'" style="color:var(--error);font-size:9px" onclick="event.stopPropagation()">Delete</button></div></div>').join('');
+  gr.querySelectorAll('.game-tile').forEach(t=>{t.addEventListener('click',async()=>{S.activeGame=t.dataset.g;await loadGame(S.activeGame);S.activePhase='pre';sw('session');renderS();});});
+  gr.querySelectorAll('[data-a="delgame"]').forEach(b=>{b.addEventListener('click',async(e)=>{e.stopPropagation();const gm=S.games.find(g=>g.id===b.dataset.id);if(!gm)return;if(!confirm('Delete '+tn(gm.home_team)+' v '+tn(gm.away_team)+'? All events and audio will be permanently removed.'))return;try{await apiDel('/games/'+b.dataset.id);renderD();}catch(e){alert(e.message);}});});}
 $('btnStartGame').addEventListener('click',async()=>{const h=$('newGameHome').value,a=$('newGameAway').value;if(!h||!a)return alert('Select both teams.');if(h===a)return alert('Different teams.');
   const rn=parseInt(String($('newGameRound').value).replace(/\D/g,''),10);
   try{const res=await apiPost('/games',{homeTeam:h,awayTeam:a,round:isNaN(rn)?null:rn,venue:$('newGameVenue').value.trim(),kickoff:$('newGameKickoff').value,callTeam:Array.from($('newGameCallTeam').selectedOptions).map(o=>o.value)});
@@ -362,7 +363,7 @@ function renderEL(){const g=gg();if(!g){$('evList').innerHTML='<div class="empty
     return'<div class="event-item'+(ev.starred?' starred':'')+'" data-eid="'+ev.id+'"><div class="event-item-header"><span class="event-phase-tag '+pt+'">'+pl+'</span>'+(ev.minute!=null?'<span class="event-minute">'+ev.minute+"'</span>":'')+
     '<span class="event-type-badge '+cat+'">'+en(ev.type)+'</span><span class="event-desc">'+(ev.player||'')+(ev.team?' \u2014 '+tn(ev.team):'')+'</span>'+
     '<div class="event-actions">'+(ev.hasAudio?'<button class="regen-btn" data-a="rg" data-id="'+ev.id+'">\u21bb</button>':'')+
-    '<button class="star-btn'+(ev.starred?' starred':'')+'" data-a="st" data-id="'+ev.id+'">'+(ev.starred?'\u2605':'\u2606')+'</button><button class="edit-btn" data-a="ed" data-id="'+ev.id+'">Edit</button></div></div>'+
+    '<button class="star-btn'+(ev.starred?' starred':'')+'" data-a="st" data-id="'+ev.id+'">'+(ev.starred?'\u2605':'\u2606')+'</button><button class="edit-btn" data-a="ed" data-id="'+ev.id+'">Edit</button><button class="edit-btn" data-a="del" data-id="'+ev.id+'" style="color:var(--error)">Del</button></div></div>'+
     '<div class="event-filename"><span class="event-filename-text">'+fn+'</span><button class="copy-btn" data-a="cp" data-t="'+ef+'">Copy</button></div>'+
     (ev.comment?'<div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);padding:0 2px">\ud83d\udcac '+ev.comment+'</div>':'')+
     (function(){const qs=getQueueStatus(ev.id);if(!qs)return ev.hasAudio?'<div style="font-family:var(--mono);font-size:10px;color:'+(ev.needsProcessing?'var(--warning)':'var(--success)')+'">'+'\ud83c\udf99 '+(ev.needsProcessing?'Uploaded \xb7 Needs processing':'Audio')+(ev.transcript?' \xb7 Transcript':'')+'</div>':'';
@@ -373,7 +374,8 @@ function renderEL(){const g=gg();if(!g){$('evList').innerHTML='<div class="empty
   $('evList').querySelectorAll('[data-a="ed"]').forEach(b=>{b.addEventListener('click',()=>editEv(b.dataset.id));});
   $('evList').querySelectorAll('[data-a="st"]').forEach(b=>{b.addEventListener('click',async()=>{try{await apiPost('/events/'+b.dataset.id+'/star',{});await loadGame(S.activeGame);renderEL();}catch(e){alert(e.message);}});});
   $('evList').querySelectorAll('[data-a="rg"]').forEach(b=>{b.addEventListener('click',async()=>{const ev=(gg().events||[]).find(e=>e.id===b.dataset.id);if(!ev||!ev.transcript){alert('No transcript yet.');return;}b.classList.add('spinning');await regenCmt(b.dataset.id);b.classList.remove('spinning');});});
-  $('evList').querySelectorAll('[data-a="retry"]').forEach(b=>{b.addEventListener('click',()=>retryQueueItem(b.dataset.id));});}
+  $('evList').querySelectorAll('[data-a="retry"]').forEach(b=>{b.addEventListener('click',()=>retryQueueItem(b.dataset.id));});
+  $('evList').querySelectorAll('[data-a="del"]').forEach(b=>{b.addEventListener('click',async()=>{if(!confirm('Delete this event? This cannot be undone.'))return;try{await apiDel('/events/'+b.dataset.id);await loadGame(S.activeGame);renderEL();}catch(e){alert(e.message);}});});}
 
 function editEv(eid){const g=gg();if(!g)return;const ev=(g.events||[]).find(e=>e.id===eid);if(!ev)return;const el=$('evList').querySelector('[data-eid="'+eid+'"]');if(!el)return;
   const allN=[...S.callers.map(c=>c.nick?c.name+' ('+c.nick+')':c.name),...new Set((g.events||[]).filter(e=>e.player).map(e=>e.player))];const dlId='dl_'+eid;
@@ -442,8 +444,9 @@ async function doSearch(){const p=new URLSearchParams(),q=$('archSearch').value.
       (r.comment?'<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:2px">\ud83d\udcac '+r.comment+'</div>':'')+
       '<div class="archive-game-info">'+tn(r.home_team)+' v '+tn(r.away_team)+' \xb7 '+rd(r.round)+'</div></div>'+
       (r.starred?'<span style="color:var(--warning)">\u2605</span>':'')+(r.hasAudio?'<span style="font-size:10px;color:var(--success)">\ud83c\udf99</span>':'')+
-      '<button class="copy-btn" data-a="ac" data-t="'+(r.player||'Grab').replace(/"/g,'&quot;')+'">Copy</button></div>';}).join('');
+      '<button class="copy-btn" data-a="ac" data-t="'+(r.player||'Grab').replace(/"/g,'&quot;')+'">Copy</button><button class="copy-btn" data-a="adel" data-id="'+r.id+'" style="color:var(--error)">Del</button></div>';}).join('');
     c.querySelectorAll('[data-a="ac"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.t).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
+    c.querySelectorAll('[data-a="adel"]').forEach(b=>{b.addEventListener('click',async()=>{if(!confirm('Delete this event permanently?'))return;try{await apiDel('/events/'+b.dataset.id);doSearch();}catch(e){alert(e.message);}});});
   }catch(e){$('archResults').innerHTML='<div class="empty-state">Error: '+e.message+'</div>';}}
 $('btnArchVP').addEventListener('click',async()=>{try{const p=new URLSearchParams();const q=$('archSearch').value.trim(),gf=$('archGame').value;if(q)p.set('q',q);if(gf)p.set('game',gf);if(starO)p.set('starred','1');
   const res=await api('/archive?'+p.toString());if(!res.length)return alert('No results.');const gm=new Map();
