@@ -198,7 +198,6 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
       <div class="form-row" style="margin-top:16px"><div class="form-group" style="flex:2"><div class="audio-drop audio-drop-lg" id="eventAudioDrop"><div class="audio-drop-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div><div class="audio-drop-text">Drop commentary audio here or click to browse</div><div class="audio-drop-hint">Event logs automatically when audio is dropped</div><input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div></div>
       <button class="btn btn-success" id="btnLogEvent" style="display:none">Log Event</button>
     </div></div>
-    <div class="card" id="fnCard" style="display:none"><div class="card-header"><span class="card-label">Generated Filename</span></div><div class="card-body"><div class="event-filename"><span class="event-filename-text" id="fnPreview"></span><button class="copy-btn" id="btnCopyFn">Copy</button></div></div></div>
     <div class="card"><div class="card-header"><span class="card-label">Event Timeline</span><span class="card-label" id="evCount" style="color:var(--accent)">0</span></div><div class="card-body"><div class="event-list" id="evList"><div class="empty-state">No events logged yet.</div></div></div></div>
   </div>
   <div class="view" id="view-archive">
@@ -356,7 +355,9 @@ function stopClk(){if(clockI){clearInterval(clockI);clockI=null;}$('liveClock').
 // Phase UI
 function applyPh(){const ph=S.activePhase,live=ph==='live';$('callerGroup').classList.toggle('hidden-phase',!live);$('playerLabel').textContent=live?'Player':'Player / Speaker';
   if(live){const t=$('eventType').querySelector('option[value="try"]');if(t)$('eventType').value='try';}else{const g=$('eventType').querySelector('option[value="grab"]');if(g)$('eventType').value='grab';const na=$('eventTeam').querySelector('option[value=""]');if(na)$('eventTeam').value='';}
-  if(!live)selectedCallers=[];renderCallerMulti();updateSug();if(live)startClk();else stopClk();}
+  if(!live)selectedCallers=[];
+  else{const g=gg();const cids=g&&g.callTeam&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);if(!selectedCallers.length)selectedCallers=[...cids];}
+  renderCallerMulti();updateSug();if(live)startClk();else stopClk();}
 function updateSug(){const dl=$('playerSuggestions'),g=gg(),live=S.activePhase==='live';let names=[];
   if(live){
     // Suggest players from DB for current teams + previously mentioned
@@ -370,7 +371,7 @@ let selectedCallers=[];
 function renderCallerMulti(){
   const c=$('callerChips');if(!c)return;
   c.innerHTML=selectedCallers.length?selectedCallers.map(id=>'<span class="caller-chip" style="margin:0">'+cNick(id)+'<span class="chip-x" data-cid="'+id+'">\xd7</span></span>').join(''):'';
-  c.querySelectorAll('.chip-x').forEach(x=>{x.addEventListener('click',()=>{selectedCallers=selectedCallers.filter(id=>id!==x.dataset.cid);renderCallerMulti();updateFP();});});
+  c.querySelectorAll('.chip-x').forEach(x=>{x.addEventListener('click',()=>{selectedCallers=selectedCallers.filter(id=>id!==x.dataset.cid);renderCallerMulti();});});
   // Update datalist with game call team only
   const g=gg();const cids=g&&g.callTeam&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);
   const dl=$('callerSuggest');if(dl)dl.innerHTML=cids.filter(id=>!selectedCallers.includes(id)).map(id=>{const c=S.callers.find(c=>c.id===id);return c?'<option value="'+(c.nick?c.name+' ('+c.nick+')':c.name)+'">':'';}).join('');
@@ -378,7 +379,7 @@ function renderCallerMulti(){
 (function(){const inp=$('callerInput');if(!inp)return;
   inp.addEventListener('change',function(){const v=inp.value.trim();if(!v)return;
     const match=S.callers.find(c=>c.name.toLowerCase()===v.toLowerCase()||(c.nick&&(c.name+' ('+c.nick+')').toLowerCase()===v.toLowerCase())||c.nick&&c.nick.toLowerCase()===v.toLowerCase());
-    if(match&&!selectedCallers.includes(match.id)){selectedCallers.push(match.id);inp.value='';renderCallerMulti();updateFP();}else{inp.value='';}});
+    if(match&&!selectedCallers.includes(match.id)){selectedCallers.push(match.id);inp.value='';renderCallerMulti();}else{inp.value='';}});
 })();
 
 // Call team tag input (dashboard)
@@ -422,7 +423,7 @@ async function loadGame(id){try{const g=await api('/games/'+id);S.currentGame=no
 function renderS(){const g=gg();if(!g){const bt=$('gameBannerTeams');if(bt)bt.textContent='No active game';return;}
   $('gameBannerTeams').innerHTML=tn(g.homeTeam)+' <span class="vs">v</span> '+tn(g.awayTeam);$('gameBannerMeta').innerHTML=rd(g.round)+(g.venue?'<br>'+g.venue:'');
   $('eventTeam').innerHTML='<option value="'+g.homeTeam+'">'+tn(g.homeTeam)+'</option><option value="'+g.awayTeam+'">'+tn(g.awayTeam)+'</option><option value="">N/A (grab)</option>';
-  pET();selectedCallers=[];document.querySelectorAll('.phase-btn').forEach(b=>{b.classList.remove('active','live');if(b.dataset.phase===S.activePhase){b.classList.add('active');if(S.activePhase==='live')b.classList.add('live');}});applyPh();renderEL();updateFP();}
+  pET();const gcids=g.callTeam&&g.callTeam.length?g.callTeam:S.callers.map(c=>c.id);selectedCallers=[...gcids];document.querySelectorAll('.phase-btn').forEach(b=>{b.classList.remove('active','live');if(b.dataset.phase===S.activePhase){b.classList.add('active');if(S.activePhase==='live')b.classList.add('live');}});applyPh();renderEL();}
 
 function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!ec2)return;if(!g){el.innerHTML='<div class="empty-state">Select a game.</div>';ec2.textContent='0';return;}
   const pe=(g.events||[]).filter(e=>e.phase===S.activePhase);
@@ -447,7 +448,11 @@ function renderEL(){const g=gg();const el=$('evList'),ec2=$('evCount');if(!el||!
   el.querySelectorAll('[data-a="cp"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.t).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
   el.querySelectorAll('[data-a="play"]').forEach(b=>{b.addEventListener('click',()=>playAudio(b.dataset.id,b));});
   el.querySelectorAll('[data-a="ed"]').forEach(b=>{b.addEventListener('click',()=>editEv(b.dataset.id));});
-  el.querySelectorAll('[data-a="st"]').forEach(b=>{b.addEventListener('click',async()=>{try{await apiPost('/events/'+b.dataset.id+'/star',{});await loadGame(S.activeGame);renderEL();}catch(e){mtAlert(e.message);}});});
+  el.querySelectorAll('[data-a="st"]').forEach(b=>{b.addEventListener('click',async()=>{
+    // Optimistic toggle - instant UI update
+    const evId=b.dataset.id;const g=gg();const ev=g&&(g.events||[]).find(e=>e.id===evId);
+    if(ev){ev.starred=!ev.starred;renderEL();}
+    try{await apiPost('/events/'+evId+'/star',{});await loadGame(S.activeGame);renderEL();}catch(e){if(ev)ev.starred=!ev.starred;renderEL();}});});
   el.querySelectorAll('[data-a="rg"]').forEach(b=>{b.addEventListener('click',async()=>{const ev=(gg().events||[]).find(e=>e.id===b.dataset.id);if(!ev||!ev.transcript){mtAlert('No transcript yet.');return;}b.classList.add('spinning');await regenCmt(b.dataset.id);b.classList.remove('spinning');});});
   el.querySelectorAll('[data-a="retry"]').forEach(b=>{b.addEventListener('click',()=>retryQueueItem(b.dataset.id));});
   el.querySelectorAll('[data-a="del"]').forEach(b=>{b.addEventListener('click',async()=>{if(!await mtConfirm('Delete this event? This cannot be undone.',true))return;try{await apiDel('/events/'+b.dataset.id);await loadGame(S.activeGame);renderEL();}catch(e){mtAlert(e.message);}});});
@@ -472,11 +477,6 @@ function editEv(eid){const g=gg();if(!g)return;const ev=(g.events||[]).find(e=>e
   $('eX_'+eid).addEventListener('click',()=>renderEL());
   if($('eR_'+eid))$('eR_'+eid).addEventListener('click',async()=>{if(!ev.transcript){mtAlert('No transcript yet.');return;}$('eR_'+eid).classList.add('spinning');await regenCmt(eid);$('eR_'+eid).classList.remove('spinning');});}
 
-function updateFP(){const g=gg();if(!g){$('fnCard').style.display='none';return;}const p=$('eventPlayer').value.trim();if(!p){$('fnCard').style.display='none';return;}
-  const m=S.activePhase==='live'?calcM(g.kickoff):null;const mock={id:'_',type:$('eventType').value,minute:m,team:$('eventTeam').value||null,player:p,callers:selectedCallers,comment:'',phase:S.activePhase};
-  $('fnPreview').textContent=gfn(mock,g,false);$('fnCard').style.display='';
-  $('btnCopyFn').onclick=()=>{navigator.clipboard.writeText($('fnPreview').textContent).then(()=>{$('btnCopyFn').textContent='Copied';$('btnCopyFn').classList.add('copied');setTimeout(()=>{$('btnCopyFn').textContent='Copy';$('btnCopyFn').classList.remove('copied');},2000);});};}
-['eventType','eventTeam','eventPlayer'].forEach(id=>{$(id).addEventListener('input',updateFP);$(id).addEventListener('change',updateFP);});
 
 // Audio drop
 const aD=$('eventAudioDrop'),aI=$('eventAudioFile');let pA=null;
@@ -504,7 +504,7 @@ async function doLogEvent(){
   const audioFile=pA;const team=$('eventTeam').value||null;
   if(player&&live&&team){try{await apiPost('/players',{name:player,team:team});}catch{}}
   try{const res=await apiPost('/games/'+S.activeGame+'/events',{type,phase:S.activePhase,minute,team,player:player||null,callers:live?[...selectedCallers]:[],comment:'',hasAudio:!!audioFile,audioFileName:audioFile?audioFile.name:null});
-  $('eventPlayer').value='';$('eventComment').value='';pA=null;$('fnCard').style.display='none';
+  $('eventPlayer').value='';$('eventComment').value='';pA=null;
   if(audioFile)enqueueAudio(S.activeGame,res.id,audioFile);await loadGame(S.activeGame);
   if(player&&live&&team){try{const hp=await loadPlayers(g.homeTeam);const ap=await loadPlayers(g.awayTeam);S._gamePlayers=[...hp,...ap];}catch{}}
   renderEL();updateSug();}catch(e){mtAlert('Failed: '+e.message);}}
