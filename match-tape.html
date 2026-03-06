@@ -253,6 +253,9 @@ function cNick(id){const c=S.callers.find(c=>c.id===id);return c?(c.nick||c.name
 function cFull(id){const c=S.callers.find(c=>c.id===id);return c?(c.nick?c.name+' ('+c.nick+')':c.name):id||'';}
 function callersDisp(ids){if(!ids||!ids.length)return'';return ids.map(cNick).filter(Boolean).join(' & ');}
 function en(id){return(S.eventTypes.find(e=>e.id===id)||{}).name||id;}
+const _etShort={'try':'TRY','penalty-goal':'PEN','field-goal':'FLD','conversion':'CON','sin-bin':'SIN','send-off':'OFF','injury':'INJ','key-moment':'KEY','grab':'GRB','score':'SCR','highlights':'HLT'};
+function enShort(id){return _etShort[id]||(en(id).substring(0,3).toUpperCase());}
+function phShort(ph){return ph==='pre'?'PRE':ph==='post'?'PST':'LIV';}
 function ec(id){return(S.eventTypes.find(e=>e.id===id)||{}).category||'moment';}
 function gg(){return S.currentGame;}
 function rd(v){return(v||v===0)?'Round '+v:'';}
@@ -636,7 +639,7 @@ async function doSearch(){const p=new URLSearchParams(),q=$('archSearch').value.
   try{const res=await api('/archive?'+p.toString());const c=$('archResults');if(!res.length){c.innerHTML='<div class="empty-state">No matching events.</div>';return;}
     c.innerHTML=res.map(r=>{r.callers=r.callers||[];r.hasAudio=!!r.has_audio;r.starred=!!r.starred;const cat=ec(r.type);
       return'<div class="archive-item'+(r.starred?' starred':'')+'">'+ 
-      '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:90px;max-width:90px"><span class="event-type-badge '+cat+'" style="white-space:nowrap">'+en(r.type)+'</span><div style="display:flex;gap:4px;align-items:center"><span class="event-phase-tag '+(r.phase==='pre'?'pre':r.phase==='post'?'post':'live-tag')+'">'+(r.phase==='pre'?'PRE':r.phase==='post'?'POST':'LIVE')+'</span><button class="copy-btn" data-a="adel" data-id="'+r.id+'" style="color:var(--error);font-size:8px;padding:2px 6px">Del</button></div></div>'+
+      '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:62px;max-width:62px"><span class="event-type-badge '+cat+'" style="white-space:nowrap;cursor:default" title="'+en(r.type)+'">'+enShort(r.type)+'</span><div style="display:flex;gap:4px;align-items:center"><span class="event-phase-tag '+(r.phase==='pre'?'pre':r.phase==='post'?'post':'live-tag')+'" style="cursor:default" title="'+(r.phase==='pre'?'Pre-game':r.phase==='post'?'Post-game':'Live')+'">'+phShort(r.phase)+'</span><button class="copy-btn" data-a="adel" data-id="'+r.id+'" style="color:var(--error);font-size:8px;padding:2px 6px">Del</button></div></div>'+
       '<div style="flex:1"><div class="event-desc">'+(r.player||'Grab')+(r.team?' \u2014 '+tn(r.team):'')+'</div>'+
       (r.transcript?'<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:2px;font-style:italic">'+((r.transcript.length>60)?r.transcript.substring(0,60)+'...':r.transcript)+'</div>':'')+
       '<div class="archive-game-info">'+tn(r.home_team)+' v '+tn(r.away_team)+' \xb7 '+rd(r.round)+'</div></div>'+
