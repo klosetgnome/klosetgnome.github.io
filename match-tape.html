@@ -64,7 +64,7 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 .phase-btn:hover{border-color:var(--accent);color:var(--accent)}.phase-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .phase-btn.active.live{background:var(--error);border-color:var(--error);animation:livePulse 2s ease infinite}
 @keyframes livePulse{0%,100%{opacity:1}50%{opacity:0.8}}
-.session-actions{display:flex;gap:10px;flex-wrap:wrap}
+.session-exports{display:flex;gap:8px;flex-wrap:wrap}
 /* Log event row with inline clock */
 .live-clock-inline{display:none;margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;align-items:center;gap:4px}
 .live-clock-inline.visible{display:flex}
@@ -116,13 +116,13 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
 .star-btn{font-size:12px;padding:2px 6px;line-height:1}.star-btn:hover{border-color:var(--warning);color:var(--warning)}
 .star-btn.starred{border-color:var(--warning);color:var(--warning);background:var(--warning-glow)}
 .audio-drop{border:1px dashed var(--border);border-radius:var(--radius);padding:10px 14px;text-align:center;cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;transition:all 0.2s}
-.audio-drop-lg{padding:32px 20px;border-width:2px;border-color:var(--accent);border-style:dashed;background:color-mix(in srgb,var(--accent) 3%,transparent);display:flex;flex-direction:column;align-items:center;gap:10px}
-.audio-drop-lg:hover{background:color-mix(in srgb,var(--accent) 8%,transparent);border-color:var(--accent)}
-.audio-drop-lg.dragover{background:color-mix(in srgb,var(--accent) 12%,transparent);border-color:var(--accent);border-style:solid}
-.audio-drop-lg.has-audio{border-color:var(--success);background:color-mix(in srgb,var(--success) 5%,transparent)}
-.audio-drop-icon{width:40px;height:40px;color:var(--accent);opacity:0.6}.audio-drop-icon svg{width:100%;height:100%}
-.audio-drop-text{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-primary)}
-.audio-drop-hint{font-family:var(--mono);font-size:9px;letter-spacing:0.5px;color:var(--text-muted);text-transform:none}
+.audio-drop-lg{padding:24px 20px;border-width:1px;border-color:var(--border);border-style:dashed;background:transparent;display:flex;flex-direction:column;align-items:center;gap:8px}
+.audio-drop-lg:hover{background:color-mix(in srgb,var(--accent) 4%,transparent);border-color:var(--accent)}
+.audio-drop-lg.dragover{background:color-mix(in srgb,var(--accent) 10%,transparent);border-color:var(--accent);border-style:solid}
+.audio-drop-lg.has-audio{border-color:var(--success);background:color-mix(in srgb,var(--success) 3%,transparent)}
+.audio-drop-icon{width:28px;height:28px;color:var(--text-muted);opacity:0.4}.audio-drop-icon svg{width:100%;height:100%}
+.audio-drop-text{font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
+.audio-drop-hint{font-family:var(--mono);font-size:9px;letter-spacing:0.5px;color:var(--text-muted);text-transform:none;opacity:0.5}
 .audio-drop:hover,.audio-drop.dragover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 .audio-drop.has-audio{border-style:solid;border-color:var(--success);color:var(--success);background:var(--success-glow)}
 .mc-list{display:flex;flex-direction:column;gap:6px}
@@ -188,14 +188,13 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
     <div class="card"><div class="card-header"><span class="card-label">Recent Games</span></div><div class="card-body"><div class="game-grid" id="recentGamesGrid"></div></div></div>
   </div>
   <div class="view" id="view-session">
-    <div class="game-banner"><div class="game-banner-teams" id="gameBannerTeams"></div><div class="game-banner-meta" id="gameBannerMeta"></div><button class="game-banner-close" id="btnEndSession">End Session</button></div>
-    <div class="session-actions"><button class="btn btn-secondary" id="btnSessionVoxpro">Export for VoxPro</button><button class="btn btn-secondary" id="btnExportSummary">Export Match Summary</button></div>
+    <div class="game-banner"><div class="game-banner-teams" id="gameBannerTeams"></div><div class="session-exports"><button class="btn btn-secondary btn-sm" id="btnSessionVoxpro">Export for VoxPro</button><button class="btn btn-secondary btn-sm" id="btnExportSummary">Export Match Summary</button></div><div class="game-banner-meta" id="gameBannerMeta"></div><button class="game-banner-close" id="btnEndSession">End Session</button></div>
     <div class="phase-bar"><button class="phase-btn active" data-phase="pre">Pre-game</button><button class="phase-btn" data-phase="live">Live</button><button class="phase-btn" data-phase="post">Post-game</button></div>
     <div class="card"><div class="card-header"><span class="card-label">Log Event</span><div class="live-clock-inline" id="liveClock"><span class="clock-num" id="liveClockVal">0</span><span>'</span>&nbsp;<span>GAME MINUTE</span></div></div><div class="card-body">
       <div class="form-row"><div class="form-group"><span class="form-label">Event Type</span><select class="form-select" id="eventType"></select></div><div class="form-group"><span class="form-label">Team</span><select class="form-select" id="eventTeam"></select></div></div>
       <div class="form-row" style="margin-top:12px"><div class="form-group"><span class="form-label" id="playerLabel">Player / Speaker</span><input type="text" class="form-input" id="eventPlayer" placeholder="Name" list="playerSuggestions"><datalist id="playerSuggestions"></datalist></div><div class="form-group" id="callerGroup"><span class="form-label">Caller(s)</span><input type="text" class="form-input" id="callerInput" placeholder="Type caller name..." list="callerSuggest" style="margin-bottom:6px"><datalist id="callerSuggest"></datalist><div style="display:flex;flex-wrap:wrap;gap:6px;min-height:24px;padding:4px 8px" id="callerChips"></div></div></div>
       <input type="hidden" id="eventComment" value="">
-      <div class="form-row" style="margin-top:16px"><div class="form-group" style="flex:2"><div class="audio-drop audio-drop-lg" id="eventAudioDrop"><div class="audio-drop-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div><div class="audio-drop-text">Drop commentary audio here or click to browse</div><div class="audio-drop-hint">Event logs automatically when audio is dropped</div><input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div></div>
+      <div class="form-row" style="margin-top:16px"><div class="form-group" style="flex:2"><div class="audio-drop audio-drop-lg" id="eventAudioDrop"><div class="audio-drop-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div><div class="audio-drop-text">Drop grab here or click to browse</div><div class="audio-drop-hint">Event logs automatically when audio is dropped</div><input type="file" id="eventAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div></div>
       <button class="btn btn-success" id="btnLogEvent" style="display:none">Log Event</button>
     </div></div>
     <div class="card"><div class="card-header"><span class="card-label">Event Timeline</span><span class="card-label" id="evCount" style="color:var(--accent)">0</span></div><div class="card-body"><div class="event-list" id="evList"><div class="empty-state">No events logged yet.</div></div></div></div>
@@ -491,7 +490,7 @@ async function atA(f){
   // Auto-log
   await doLogEvent();
   // Reset drop zone
-  if(txt)txt.textContent='Drop commentary audio here or click to browse';if(hint)hint.textContent='Event logs automatically when audio is dropped';if(icon)icon.style.display='';
+  if(txt)txt.textContent='Drop grab here or click to browse';if(hint)hint.textContent='Event logs automatically when audio is dropped';if(icon)icon.style.display='';
   aD.classList.remove('has-audio');
 }
 
