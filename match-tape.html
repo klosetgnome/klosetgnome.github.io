@@ -176,7 +176,7 @@ input[type="datetime-local"]{color-scheme:light}
     </div></div>
     <div class="card" id="filenamePreviewCard" style="display:none"><div class="card-header"><span class="card-label">Generated Filename</span></div><div class="card-body"><div class="event-filename"><span class="event-filename-text" id="filenamePreview"></span><button class="copy-btn" id="btnCopyFilename">Copy</button></div></div></div>
     <div class="card"><div class="card-header"><span class="card-label">Event Timeline</span><span class="card-label" id="eventCount" style="color:var(--accent)">0 events</span></div><div class="card-body"><div class="event-list" id="eventList"><div class="empty-state">No events logged yet. Start logging as the game unfolds.</div></div></div></div>
-    <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-secondary" id="btnExportSummary">Export Match Summary</button></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-secondary" id="btnSessionVoxpro">Export for VoxPro</button><button class="btn btn-secondary" id="btnExportSummary">Export Match Summary</button></div>
   </div>
   <!-- ARCHIVE -->
   <div class="view" id="view-archive">
@@ -196,6 +196,7 @@ input[type="datetime-local"]{color-scheme:light}
   </div>
 </div>
 <footer><a href="index.html"><span style="color:var(--accent)">dev.</span>nialfernandes.com</a><span style="color:var(--text-muted);margin:0 8px">|</span><a href="privacy.html">Privacy Policy</a></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 (function(){
 'use strict';
@@ -463,28 +464,83 @@ function searchArchive(){
   c.querySelectorAll('[data-action="ac"]').forEach(b=>{b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.text).then(()=>{b.textContent='Copied';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2000);});});});
 }
 
-// VoxPro export — downloads clean filenames (no devNFcom)
-$('btnVoxproExport').addEventListener('click',()=>{
-  // Gather current search results or all starred
-  let items=[];
+// ── VoxPro Zip Export (shared logic) ──
+function gameFolder(g){return sanitize(teamName(g.homeTeam))+'_v_'+sanitize(teamName(g.awayTeam))+(g.round?'_Round_'+g.round:'');}
+function buildVoxProZip(games){
+  const zip=new JSZip();
+  const rootFolder=zip.folder('NRL_HIGHLIGHTS_2026');
+  const grabsFolder=zip.folder('NRL_HIGHLIGHTS_2026/NRL_GRABS_2026');
+  let totalFiles=0;
+  games.forEach(g=>{
+    const gf=rootFolder.folder(gameFolder(g));
+    ['pre','live','post'].forEach(phase=>{
+      const phaseEvts=g.events.filter(e=>e.phase===phase&&e.hasAudio);
+      if(!phaseEvts.length)return;
+      const phaseLabel=phase==='pre'?'Pre-game':phase==='live'?'Live':'Post-game';
+      const pf=gf.folder(phaseLabel);
+      phaseEvts.forEach(ev=>{
+        const cleanFn=generateFilename(ev,g,false)+'.mp3';
+        // Placeholder until R2 is connected — will be replaced with actual audio blob
+        pf.file(cleanFn,'[Audio placeholder — will contain processed MP3 when R2 backend is connected]\n\nEvent: '+cleanFn+'\nGame: '+teamName(g.homeTeam)+' v '+teamName(g.awayTeam)+'\nPhase: '+phaseLabel+'\n');
+        totalFiles++;
+        // Duplicate starred clips into NRL_GRABS_2026
+        if(ev.starred){
+          grabsFolder.file(cleanFn,'[Audio placeholder — starred grab]\n\n'+cleanFn+'\n');
+        }
+      });
+    });
+    // Also include starred events without audio in grabs folder as reference
+    g.events.filter(e=>e.starred&&!e.hasAudio).forEach(ev=>{
+      const cleanFn=generateFilename(ev,g,false)+'.txt';
+      grabsFolder.file(cleanFn,'[No audio attached — metadata only]\n\n'+generateFilename(ev,g,false)+'\nGame: '+teamName(g.homeTeam)+' v '+teamName(g.awayTeam)+'\n');
+    });
+  });
+  return{zip,totalFiles};
+}
+async function downloadZip(zip,filename){
+  const blob=await zip.generateAsync({type:'blob'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),200);
+}
+
+// Session: export current game
+$('btnSessionVoxpro').addEventListener('click',async()=>{
+  const g=getGame();if(!g)return alert('No active game.');
+  if(!g.events.some(e=>e.hasAudio))return alert('No audio assets to export. Attach audio to events first.');
+  const btn=$('btnSessionVoxpro');btn.disabled=true;btn.textContent='Building zip...';
+  try{
+    const{zip,totalFiles}=buildVoxProZip([g]);
+    await downloadZip(zip,'VoxPro_'+gameFolder(g)+'.zip');
+    btn.textContent=totalFiles+' files exported';
+    setTimeout(()=>{btn.textContent='Export for VoxPro';btn.disabled=false;},3000);
+  }catch(e){alert('Export failed: '+e.message);btn.textContent='Export for VoxPro';btn.disabled=false;}
+});
+
+// Archive: export filtered results across multiple games
+$('btnVoxproExport').addEventListener('click',async()=>{
+  // Collect games that have matching events with audio
+  const q=$('archiveSearch').value.trim().toLowerCase();
+  const tf=$('archiveTeam').value,tyf=$('archiveType').value,cf=$('archiveCaller').value;
+  const matchingGames=new Map();
   state.games.forEach(g=>{g.events.forEach(ev=>{
     if(starOnly&&!ev.starred)return;
-    if(!ev.hasAudio)return; // Only export events with audio
-    items.push({event:ev,game:g});
+    if(!ev.hasAudio)return;
+    const fn=generateFilename(ev,g,false);
+    const s=[ev.player||'',ev.team?teamName(ev.team):'',eventTypeName(ev.type),callerDisplay(ev.caller),ev.comment||'',fn,teamName(g.homeTeam),teamName(g.awayTeam),roundDisplay(g.round)].join(' ').toLowerCase();
+    if(q&&!s.includes(q))return;if(tf&&ev.team!==tf)return;if(tyf&&ev.type!==tyf)return;if(cf&&ev.caller!==cf)return;
+    matchingGames.set(g.id,g);
   });});
-  if(!items.length){alert('No audio assets to export. Star events with audio attached, then try again.');return;}
-  // Generate clean filenames list
-  let manifest='VOXPRO EXPORT MANIFEST\n'+'='.repeat(40)+'\n\n';
-  manifest+='Files to copy to smb://syd-pas-001/VoxPro Exports/NRL HIGHLIGHTS/NRL HIGHLIGHTS 2026\n\n';
-  items.forEach(({event:ev,game:g})=>{
-    const cleanFn=generateFilename(ev,g,false)+'.mp3';
-    manifest+=cleanFn+'\n';
-  });
-  manifest+='\n'+'─'.repeat(40)+'\n'+items.length+' file(s) · Generated '+new Date().toLocaleString('en-AU',{hour12:false})+'\n';
-  const blob=new Blob([manifest],{type:'text/plain'}),url=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=url;a.download='VoxPro_Export_Manifest_'+new Date().toISOString().slice(0,10)+'.txt';
-  a.click();setTimeout(()=>URL.revokeObjectURL(url),100);
-  alert('Export manifest generated. When R2 backend is connected, this will download the actual audio files with clean filenames.');
+  const games=Array.from(matchingGames.values());
+  if(!games.length){alert('No audio assets match your current filters.');return;}
+  const btn=$('btnVoxproExport');btn.disabled=true;btn.textContent='Building zip...';
+  try{
+    const{zip,totalFiles}=buildVoxProZip(games);
+    const datestamp=new Date().toISOString().slice(0,10);
+    await downloadZip(zip,'VoxPro_Export_'+datestamp+'.zip');
+    btn.textContent=totalFiles+' files · '+games.length+' game'+(games.length>1?'s':'');
+    setTimeout(()=>{btn.textContent='Export for VoxPro';btn.disabled=false;},3000);
+  }catch(e){alert('Export failed: '+e.message);btn.textContent='Export for VoxPro';btn.disabled=false;}
 });
 
 // MISSION CONTROL
