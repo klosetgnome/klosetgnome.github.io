@@ -211,6 +211,11 @@ input[type="datetime-local"]{color-scheme:light}[data-theme="dark"] input[type="
   <div class="view active" id="view-dashboard">
     <div class="info-hero"><div class="info-hero-graphic"><svg viewBox="0 0 80 80" fill="none"><rect x="6" y="14" width="48" height="32" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="30" cy="30" r="8" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M27 27l8 6-8 6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/><path d="M60 20v18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="60" cy="22" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M12 56h8M24 52h8M36 56h8M48 52h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="64" x2="58" y2="64" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><div><div class="info-hero-title">Match Tape</div><div class="info-hero-desc">NRL highlights production tool. Log <span class="hl">tries</span>, <span class="hl">scoring events</span>, and <span class="hl">key moments</span> during live games. Drop commentary audio to auto-generate tagged filenames with <span class="hl">producer comments</span>.</div></div></div>
     <div class="card"><div class="card-header"><span class="card-label">Coming Up</span></div><div class="card-body"><div class="game-grid" id="recentGamesGrid"></div></div></div>
+    <div class="card"><div class="card-header"><span class="card-label">Quick File</span></div><div class="card-body">
+      <div class="form-row"><div class="form-group" style="flex:2"><span class="form-label">Game</span><select class="form-select" id="qfGame"><option value="">Select game…</option></select></div><div class="form-group" style="max-width:140px"><span class="form-label">Phase</span><select class="form-select" id="qfPhase"><option value="pre">Pre-game</option><option value="post" selected>Post-game</option></select></div></div>
+      <div class="form-row" style="margin-top:10px"><div class="form-group"><span class="form-label">Speaker</span><input type="text" class="form-input" id="qfSpeaker" placeholder="Name (optional)" list="qfSpeakerList"><datalist id="qfSpeakerList"></datalist></div><div class="form-group"><span class="form-label">Host(s)</span><div class="caller-grid" id="qfCallerGrid"></div></div></div>
+      <div class="form-row" style="margin-top:10px"><div class="form-group"><div class="audio-drop" id="qfAudioDrop" style="padding:14px;cursor:pointer"><span style="font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">Drop audio to file to selected game</span><input type="file" id="qfAudioFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4" style="display:none"></div></div></div>
+    </div></div>
     <div class="card"><div class="card-header"><span class="card-label">Start a Game Session</span></div><div class="card-body">
       <div class="form-row"><div class="form-group" style="flex:3"><span class="form-label">Pick from draw</span><select class="form-select" id="fixturePicker"><option value="">— Manual entry —</option></select></div></div>
       <div id="manualGameFields">
@@ -519,6 +524,7 @@ document.querySelectorAll('.phase-btn').forEach(b=>{b.addEventListener('click',(
 // ═══ DASHBOARD ═══
 async function renderD(){pT();pC();if(!$('newGameKickoff').value)$('newGameKickoff').value=defKO();selectedCT=[];renderCtChips();await populateFixturePicker();
   try{S.games=await api('/games');}catch{S.games=[];}
+  populateQF();
   const gr=$('recentGamesGrid');if(!gr)return;if(!S.games.length){gr.innerHTML='<div class="empty-state">No upcoming fixtures. Import a draw in Mission Control.</div>';return;}
   const now=new Date();
   const upcoming=S.games.filter(g=>!g.kickoff||new Date(g.kickoff)>=now).sort((a,b)=>new Date(a.kickoff||'9999')-new Date(b.kickoff||'9999')).slice(0,3);
@@ -716,6 +722,49 @@ $('btnSessionVoxpro').addEventListener('click',async()=>{const g=gg();if(!g||!(g
   if(missing.length){if(!await mtConfirm(missing.join(' and ')+' not yet captured. Export anyway?'))return;}
   const btn=$('btnSessionVoxpro');btn.disabled=true;btn.textContent='Fetching audio...';
   try{const{z,n}=await bVP([g],(done,total)=>{btn.textContent='Fetching '+done+'/'+total+'...';});btn.textContent='Zipping...';await dlZ(z,'VoxPro_'+gF(g)+'.zip');btn.textContent=n+' exported';setTimeout(()=>{btn.textContent='VoxPro Export';btn.disabled=false;},3000);}catch(e){mtAlert(e.message);btn.textContent='VoxPro Export';btn.disabled=false;}});
+
+// ═══ QUICK FILE ═══
+let qfSelectedCallers=[];
+function populateQF(){
+  const sel=$('qfGame');if(!sel)return;
+  const prev=sel.value;sel.innerHTML='<option value="">Select game\u2026</option>';
+  const sorted=[...S.games].sort((a,b)=>(b.round||0)-(a.round||0)||(new Date(b.kickoff||0)-new Date(a.kickoff||0)));
+  sorted.forEach(g=>{const o=document.createElement('option');o.value=g.id;o.textContent='R'+g.round+' \xb7 '+tn(g.home_team)+' v '+tn(g.away_team);sel.appendChild(o);});
+  if(prev)sel.value=prev;
+  // Speaker suggestions from callers
+  const dl=$('qfSpeakerList');if(dl)dl.innerHTML=S.callers.map(c=>'<option value="'+(c.nick||c.name)+'">').join('');
+  renderQFCallers();
+}
+function renderQFCallers(){
+  const c=$('qfCallerGrid');if(!c)return;
+  c.innerHTML=S.callers.map(cl=>{const on=qfSelectedCallers.includes(cl.id);
+    return'<label class="caller-pill'+(on?' on':'')+'" data-cid="'+cl.id+'"><span class="cp-mark">'+(on?'\u2713':'')+'</span><span class="cp-name">'+(cl.nick||cl.name)+'</span></label>';}).join('');
+  c.querySelectorAll('.caller-pill').forEach(p=>{p.addEventListener('click',()=>{
+    const id=p.dataset.cid;if(qfSelectedCallers.includes(id))qfSelectedCallers=qfSelectedCallers.filter(x=>x!==id);else qfSelectedCallers.push(id);renderQFCallers();});});
+}
+(function(){
+  const dz=$('qfAudioDrop'),fi=$('qfAudioFile');
+  dz.addEventListener('click',()=>fi.click());
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');if(e.dataTransfer.files[0])qfDrop(e.dataTransfer.files[0]);});
+  fi.addEventListener('change',()=>{if(fi.files[0])qfDrop(fi.files[0]);fi.value='';});
+})();
+async function qfDrop(file){
+  const gameId=$('qfGame').value;const phase=$('qfPhase').value;
+  if(!gameId)return mtAlert('Select a game first.');
+  const speaker=$('qfSpeaker').value.trim()||null;
+  const g=S.games.find(g=>g.id===gameId);
+  try{
+    const res=await apiPost('/games/'+gameId+'/events',{type:'grab',phase,minute:null,team:null,player:speaker,callers:[...qfSelectedCallers],comment:'',hasAudio:true,audioFileName:file.name});
+    enqueueAudio(gameId,res.id,file);
+    $('qfSpeaker').value='';
+    // Brief confirmation
+    const dz=$('qfAudioDrop');const orig=dz.innerHTML;
+    dz.innerHTML='<span style="font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--success)">\u2713 Filed to '+tn(g.home_team)+' v '+tn(g.away_team)+' '+phase+'</span>';
+    setTimeout(()=>{dz.innerHTML=orig;},2500);
+  }catch(e){mtAlert('Failed: '+e.message);}
+}
 
 // ═══ ARCHIVE ═══
 let starO=false;
