@@ -488,14 +488,17 @@ function renderCallerGrid(){
   const eb=$('btnEditCT'),showSet=(!hasCT||callerEditMode);
   if(eb)eb.style.display=hasCT&&!callerEditMode?'':'none';
   // Append Set button inline as DOM element (not innerHTML to preserve handlers)
-  if(showSet&&cids.length){const sb=document.createElement('button');sb.className='btn btn-primary';sb.style.cssText='font-size:8px;padding:3px 10px;letter-spacing:1px';sb.textContent='Set';sb.addEventListener('click',async()=>{if(!selectedCallers.length)return mtAlert('Tick at least one name.');if(S.activeGame){await saveCallTeam(S.activeGame,selectedCallers);}callerEditMode=false;selectedCallers=[];renderCallerGrid();});c.appendChild(sb);}
+  if(showSet&&cids.length){const sb=document.createElement('button');sb.className='btn btn-primary';sb.style.cssText='font-size:8px;padding:3px 10px;letter-spacing:1px';sb.textContent='Set';sb.addEventListener('click',async()=>{if(!selectedCallers.length)return mtAlert('Tick at least one name.');if(S.activeGame){const ok=await saveCallTeam(S.activeGame,selectedCallers);if(!ok)return;}callerEditMode=false;selectedCallers=[];renderCallerGrid();});c.appendChild(sb);}
 }
 function resetCallerGrid(){selectedCallers=[];callerEditMode=false;renderCallerGrid();}
 
 async function saveCallTeam(gameId,callerIds){
   const ph=S.activePhase||'live';
-  try{await apiPost('/games/'+gameId+'/call-team',{callerIds,phase:ph});}catch{}
-  await loadGame(gameId);
+  try{
+    const res=await apiPost('/games/'+gameId+'/call-team',{callerIds,phase:ph});
+    if(res.error){mtAlert(res.error);return false;}
+  }catch(e){mtAlert('Failed to save call team: '+e.message);return false;}
+  await loadGame(gameId);return true;
 }
 
 // Call team tag input (dashboard)
